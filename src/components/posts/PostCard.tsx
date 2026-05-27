@@ -25,12 +25,12 @@ function isVideo(url: string) {
 }
 
 export function PostCard({ post, currentUserId }: PostCardProps) {
-  const [liked, setLiked] = useState(post.likes.some(l => l.userId === currentUserId))
-  const [likeCount, setLikeCount] = useState(post._count.likes)
+  const [liked, setLiked] = useState((post.likes ?? []).some(l => l.userId === currentUserId))
+  const [likeCount, setLikeCount] = useState(post._count?.likes ?? 0)
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
-  const [localComments, setLocalComments] = useState(post.comments)
+  const [localComments, setLocalComments] = useState(post.comments ?? [])
 
   const category = post.feeling && categoryConfig[post.feeling] ? categoryConfig[post.feeling] : null
   const CategoryIcon = category?.icon

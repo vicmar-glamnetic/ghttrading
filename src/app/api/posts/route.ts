@@ -85,8 +85,16 @@ export async function POST(req: Request) {
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
         _count: { select: { likes: true, comments: true } },
-        likes: false,
-        comments: false,
+        likes: { where: { userId: session.user.id }, select: { userId: true } },
+        comments: {
+          take: 3,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            author: { select: { id: true, name: true, image: true, username: true } },
+            _count: { select: { likes: true } },
+            likes: { where: { userId: session.user.id }, select: { userId: true } },
+          },
+        },
       },
     })
 
