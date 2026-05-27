@@ -118,9 +118,7 @@ export function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 mr-4 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-linear-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
-            <span className="text-black font-black text-sm">G</span>
-          </div>
+          <img src="/logo.png" alt="GHT Trading" className="w-9 h-9 rounded-lg object-contain" />
           <div className="hidden sm:block">
             <span className="font-black text-white text-sm tracking-tight">GHT</span>
             <span className="font-light text-yellow-500 text-sm ml-1">Trading</span>
