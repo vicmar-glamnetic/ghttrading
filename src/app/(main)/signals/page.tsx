@@ -21,9 +21,11 @@ export default function SignalsPage() {
     })
   }, [])
 
-  const filtered = filter === 'all' ? posts
-    : posts.filter(p => p.feeling === `signal-${filter}`)
+  function handlePostDeleted(postId: string) {
+    setPosts(prev => prev.filter(p => p.id !== postId))
+  }
 
+  const filtered = filter === 'all' ? posts : posts.filter(p => p.feeling === `signal-${filter}`)
   const buyCount = posts.filter(p => p.feeling === 'signal-buy').length
   const sellCount = posts.filter(p => p.feeling === 'signal-sell').length
 
@@ -37,11 +39,11 @@ export default function SignalsPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Signals', value: posts.length, icon: Zap, color: 'text-yellow-500', bg: 'bg-yellow-500/10 border-yellow-500/20' },
-          { label: 'BUY Signals', value: buyCount, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },
-          { label: 'SELL Signals', value: sellCount, icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/20' },
+          { label: 'Total Signals', value: posts.length,  icon: Zap,         color: 'text-yellow-500', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+          { label: 'BUY Signals',   value: buyCount,       icon: TrendingUp,  color: 'text-green-400',  bg: 'bg-green-400/10  border-green-400/20'  },
+          { label: 'SELL Signals',  value: sellCount,      icon: TrendingDown, color: 'text-red-400',   bg: 'bg-red-400/10    border-red-400/20'    },
         ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`rounded-xl border p-3 text-center ${bg} bg-[#16161f]`}>
+          <div key={label} className={`rounded-xl border p-3 text-center bg-[#16161f] ${bg}`}>
             <Icon className={`w-5 h-5 mx-auto mb-1 ${color}`} />
             <p className={`text-2xl font-black ${color}`}>{value}</p>
             <p className="text-xs text-[#5a5a72] mt-0.5">{label}</p>
@@ -55,7 +57,9 @@ export default function SignalsPage() {
           <button key={f} onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all capitalize ${
               filter === f
-                ? f === 'buy' ? 'badge-buy' : f === 'sell' ? 'badge-sell' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                ? f === 'buy'  ? 'badge-buy'
+                : f === 'sell' ? 'badge-sell'
+                : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
                 : 'text-[#5a5a72] hover:bg-[#1e1e2c] border border-transparent'
             }`}>
             {f === 'all' ? 'All Signals' : `${f.toUpperCase()} Only`}
@@ -65,7 +69,7 @@ export default function SignalsPage() {
 
       {loading ? (
         <div className="space-y-4">
-          {[1,2,3].map(i => <div key={i} className="h-40 bg-[#16161f] rounded-xl border border-[#2a2a3a] animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-40 bg-[#16161f] rounded-xl border border-[#2a2a3a] animate-pulse" />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
@@ -73,7 +77,14 @@ export default function SignalsPage() {
           <p className="text-[#5a5a72]">No signals yet. Be the first to post one!</p>
         </div>
       ) : (
-        filtered.map(post => <PostCard key={post.id} post={post} currentUserId={session?.user?.id || ''} />)
+        filtered.map(post => (
+          <PostCard
+            key={post.id}
+            post={post}
+            currentUserId={session?.user?.id || ''}
+            onDelete={handlePostDeleted}
+          />
+        ))
       )}
     </div>
   )

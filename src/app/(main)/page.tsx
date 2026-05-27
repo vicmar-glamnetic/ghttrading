@@ -7,6 +7,8 @@ import { PostCard } from '@/components/posts/PostCard'
 import { TrendingUp, Zap } from 'lucide-react'
 import type { PostWithDetails } from '@/types'
 
+type Filter = 'all' | 'signals' | 'analysis'
+
 function PostSkeleton() {
   return (
     <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4 animate-pulse space-y-3">
@@ -32,6 +34,7 @@ export default function FeedPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [filter, setFilter] = useState<Filter>('all')
 
   const loadPosts = useCallback(async (cursor?: string) => {
     const url = cursor ? `/api/posts?cursor=${cursor}` : '/api/posts'
@@ -56,6 +59,22 @@ export default function FeedPage() {
     setLoadingMore(false)
   }
 
+  function handlePostDeleted(postId: string) {
+    setPosts(prev => prev.filter(p => p.id !== postId))
+  }
+
+  const filtered = posts.filter(p => {
+    if (filter === 'signals') return p.feeling === 'signal-buy' || p.feeling === 'signal-sell'
+    if (filter === 'analysis') return p.feeling === 'analysis'
+    return true
+  })
+
+  const filterTabs: { id: Filter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'signals', label: 'Signals' },
+    { id: 'analysis', label: 'Analysis' },
+  ]
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -65,15 +84,19 @@ export default function FeedPage() {
           <h2 className="font-bold text-[#f0f0f8]">Trading Feed</h2>
         </div>
         <div className="flex gap-2 text-xs">
-          <button className="px-3 py-1.5 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg font-semibold">
-            All
-          </button>
-          <button className="px-3 py-1.5 text-[#5a5a72] hover:bg-[#1e1e2c] rounded-lg transition-colors">
-            Signals
-          </button>
-          <button className="px-3 py-1.5 text-[#5a5a72] hover:bg-[#1e1e2c] rounded-lg transition-colors">
-            Analysis
-          </button>
+          {filterTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                filter === tab.id
+                  ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                  : 'text-[#5a5a72] hover:bg-[#1e1e2c] border border-transparent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -81,20 +104,34 @@ export default function FeedPage() {
 
       {loading ? (
         <>{[1, 2, 3].map(i => <PostSkeleton key={i} />)}</>
-      ) : posts.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
           <TrendingUp className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-[#f0f0f8] mb-2">Welcome to GHT Community!</h3>
-          <p className="text-[#5a5a72] text-sm">Share your first signal or analysis to get started.</p>
+          <h3 className="text-lg font-bold text-[#f0f0f8] mb-2">
+            {filter === 'all' ? 'Welcome to GHT Community!' : `No ${filter} posts yet`}
+          </h3>
+          <p className="text-[#5a5a72] text-sm">
+            {filter === 'all' ? 'Share your first signal or analysis to get started.' : 'Be the first to post one!'}
+          </p>
         </div>
       ) : (
-        posts.map(post => <PostCard key={post.id} post={post} currentUserId={session?.user?.id || ''} />)
+        filtered.map(post => (
+          <PostCard
+            key={post.id}
+            post={post}
+            currentUserId={session?.user?.id || ''}
+            onDelete={handlePostDeleted}
+          />
+        ))
       )}
 
-      {nextCursor && (
-        <button onClick={handleLoadMore} disabled={loadingMore}
-          className="w-full py-3 bg-[#16161f] rounded-xl border border-[#2a2a3a] hover:border-yellow-500/30 text-sm text-yellow-500 font-medium transition-all disabled:opacity-50">
-          {loadingMore ? 'Loading...' : 'Load more posts'}
+      {nextCursor && filter === 'all' && (
+        <button
+          onClick={handleLoadMore}
+          disabled={loadingMore}
+          className="w-full py-3 bg-[#16161f] rounded-xl border border-[#2a2a3a] hover:border-yellow-500/30 text-sm text-yellow-500 font-medium transition-all disabled:opacity-50"
+        >
+          {loadingMore ? 'Loading…' : 'Load more posts'}
         </button>
       )}
     </div>

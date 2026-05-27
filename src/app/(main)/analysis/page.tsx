@@ -18,6 +18,10 @@ export default function AnalysisPage() {
     })
   }, [])
 
+  function handlePostDeleted(postId: string) {
+    setPosts(prev => prev.filter(p => p.id !== postId))
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
@@ -31,7 +35,9 @@ export default function AnalysisPage() {
           <BarChart2 className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
           <p className="text-[#5a5a72]">No analysis posts yet.</p>
         </div>
-      ) : posts.map(post => <PostCard key={post.id} post={post} currentUserId={session?.user?.id || ''} />)}
+      ) : posts.map(post => (
+        <PostCard key={post.id} post={post} currentUserId={session?.user?.id || ''} onDelete={handlePostDeleted} />
+      ))}
     </div>
   )
 }
