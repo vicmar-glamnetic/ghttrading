@@ -1,7 +1,5 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
 import { useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
@@ -43,8 +41,6 @@ export default function RegisterPage() {
         setError(data.error || 'Registration failed')
         return
       }
-
-      // Auto sign in after registration
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,

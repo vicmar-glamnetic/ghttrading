@@ -1,7 +1,4 @@
 'use client'
-
-export const dynamic = 'force-dynamic'
-
 import { useState, useEffect, use } from 'react'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
