@@ -32,6 +32,7 @@ model User {
   stripeCustomerId   String?
   stripeSubId        String?
   subscriptionEnd    DateTime?
+  sessionToken       String?  @unique  // single-session enforcement
 
   accounts          Account[]
   sessions          Session[]

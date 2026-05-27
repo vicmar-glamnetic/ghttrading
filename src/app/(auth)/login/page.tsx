@@ -17,6 +17,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
 
   const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const sessionReplaced = searchParams.get('reason') === 'session_replaced'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,6 +36,11 @@ function LoginForm() {
   return (
     <div className="bg-[#16161f] rounded-2xl border border-[#2a2a3a] p-8 shadow-2xl">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {sessionReplaced && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-lg p-3 text-sm">
+            You were signed out because your account was logged in on another device.
+          </div>
+        )}
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg p-3 text-sm">
             {error}

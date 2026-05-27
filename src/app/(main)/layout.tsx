@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { Navbar } from '@/components/layout/Navbar'
 import { LeftSidebar } from '@/components/layout/LeftSidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
+import { SessionGuard } from '@/components/SessionGuard'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -10,6 +11,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
+      <SessionGuard />
       <Navbar />
       <div className="max-w-7xl mx-auto pt-14 px-4">
         <div className="flex gap-5 py-5">
