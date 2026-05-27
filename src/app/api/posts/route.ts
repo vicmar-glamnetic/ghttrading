@@ -11,23 +11,35 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url)
     const cursor = searchParams.get('cursor')
+    const userId = searchParams.get('userId')   // filter by specific author
     const limit = 10
 
-    // Get IDs of people the user follows
-    const following = await db.follow.findMany({
-      where: { followerId: session.user.id },
-      select: { followingId: true },
-    })
-    const followingIds = following.map((f: { followingId: string }) => f.followingId)
+    let whereClause: Record<string, unknown>
 
-    const posts = await db.post.findMany({
-      where: {
+    if (userId) {
+      // Profile view — show only that user's public posts (or own posts for own profile)
+      whereClause = {
+        authorId: userId,
+        ...(userId !== session.user.id ? { privacy: 'public' } : {}),
+      }
+    } else {
+      // Main feed — own posts + followed + public
+      const following = await db.follow.findMany({
+        where: { followerId: session.user.id },
+        select: { followingId: true },
+      })
+      const followingIds = following.map((f: { followingId: string }) => f.followingId)
+      whereClause = {
         OR: [
           { authorId: session.user.id },
           { authorId: { in: followingIds } },
           { privacy: 'public' },
         ],
-      },
+      }
+    }
+
+    const posts = await db.post.findMany({
+      where: whereClause,
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
         _count: { select: { likes: true, comments: true } },
