@@ -4,24 +4,14 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
-import { Settings, CreditCard, Shield } from 'lucide-react'
+import { Settings, Shield } from 'lucide-react'
 
 export default function SettingsPage() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState('profile')
-  const [stripeLoading, setStripeLoading] = useState(false)
-
-  async function handleSubscribe() {
-    setStripeLoading(true)
-    const res = await fetch('/api/stripe/create-subscription', { method: 'POST' })
-    const data = await res.json()
-    if (data.url) window.location.href = data.url
-    setStripeLoading(false)
-  }
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: Settings },
-    { id: 'subscription', label: 'Subscription', icon: CreditCard },
     { id: 'privacy', label: 'Privacy', icon: Shield },
   ]
 
@@ -77,37 +67,6 @@ export default function SettingsPage() {
               />
             </div>
             <Button>Save Changes</Button>
-          </div>
-        )}
-
-        {activeTab === 'subscription' && (
-          <div className="max-w-md space-y-6">
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">Current Plan</h3>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                  Free
-                </span>
-              </div>
-              <p className="text-sm text-gray-600">Enjoy the community for free</p>
-            </div>
-
-            <div className="border-2 border-blue-500 rounded-xl p-4 bg-blue-50">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-blue-800">Premium</h3>
-                <span className="text-xl font-bold text-blue-600">$2<span className="text-sm font-normal">/month</span></span>
-              </div>
-              <ul className="space-y-1 text-sm text-blue-700 mb-4">
-                <li>✓ Unlimited posts</li>
-                <li>✓ Priority support</li>
-                <li>✓ Premium badge</li>
-                <li>✓ Advanced analytics</li>
-                <li>✓ No ads</li>
-              </ul>
-              <Button onClick={handleSubscribe} loading={stripeLoading} className="w-full">
-                Upgrade to Premium
-              </Button>
-            </div>
           </div>
         )}
 
