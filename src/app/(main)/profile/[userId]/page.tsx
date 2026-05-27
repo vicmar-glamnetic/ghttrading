@@ -67,11 +67,8 @@ function AvatarUploadOverlay({ userId, currentImage, currentName, onUpdated }: {
   return (
     <div className="relative group cursor-pointer" onClick={() => inputRef.current?.click()}>
       <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-[#0a0a0f] bg-[#1e1e2c]">
-        {currentImage ? (
-          <Image src={currentImage} alt={currentName || 'Avatar'} width={96} height={96} className="w-full h-full object-cover" unoptimized={currentImage.startsWith('data:')} />
-        ) : (
-          <Avatar src={currentImage} name={currentName} size="xl" />
-        )}
+        {/* Always use Avatar — it now handles data: URLs and image errors internally */}
+        <Avatar src={currentImage} name={currentName} className="w-full h-full" />
       </div>
       <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         {uploading
@@ -341,7 +338,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
               />
             ) : (
               <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-[#0a0a0f]">
-                <Avatar src={profile.image} name={profile.name} size="xl" />
+                <Avatar src={profile.image} name={profile.name} className="w-full h-full" />
               </div>
             )}
 
