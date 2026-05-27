@@ -17,6 +17,7 @@ interface FriendsData {
   pendingSent:     FriendReqWithReceiver[]
   friends:         FriendReqFull[]
   suggestions:     Trader[]
+  currentUserId:   string
 }
 
 type Tab = 'requests' | 'friends' | 'discover'
@@ -256,8 +257,8 @@ export default function FriendsPage() {
                     </button>
                   </div>
                 ) : data.friends.map(f => {
-                  // The "other" person
-                  const other = f.sender.id === f.receiver.id ? f.sender : f.receiver
+                  // Show the person who is NOT the current user
+                  const other = f.sender.id === data.currentUserId ? f.receiver : f.sender
                   return (
                     <div key={f.id} className="flex items-center gap-3 p-4 hover:bg-[#1e1e2c] transition-colors">
                       <Link href={`/profile/${other.id}`} className="shrink-0">

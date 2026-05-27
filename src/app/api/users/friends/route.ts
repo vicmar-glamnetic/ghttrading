@@ -55,13 +55,17 @@ export async function GET() {
 
     // Suggestions — random active traders you haven't connected with
     const suggestions = await db.user.findMany({
-      where: { id: { notIn: Array.from(friendIds) } },
+      where: {
+        id: { notIn: Array.from(friendIds) },
+        NOT: { id: uid }, // extra safety — never show yourself
+      },
       select: { id: true, name: true, image: true, username: true, bio: true },
       take: 10,
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json({ pendingReceived, pendingSent, friends, suggestions })
+    // Include currentUserId so the page can identify which side is "you"
+    return NextResponse.json({ pendingReceived, pendingSent, friends, suggestions, currentUserId: uid })
   } catch (error) {
     console.error('[FRIENDS_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
