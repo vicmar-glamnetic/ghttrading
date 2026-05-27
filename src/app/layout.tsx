@@ -6,9 +6,18 @@ import { Providers } from '@/components/Providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'GHT Community',
-  description: 'Connect with your community on GHT Trading',
-  icons: { icon: '/favicon.ico' },
+  title: {
+    default: 'GHT Trading Community',
+    template: '%s · GHT Trading',
+  },
+  description: 'Premium gold trading signals, market analysis, and community — powered by GHT Trading.',
+  icons: {
+    icon: [
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
