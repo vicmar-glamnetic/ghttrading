@@ -9,12 +9,12 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   if (!session?.user) redirect('/login')
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#0a0a0f]">
       <Navbar />
-      <div className="max-w-6xl mx-auto pt-16 px-4">
-        <div className="flex gap-4 py-4">
+      <div className="max-w-7xl mx-auto pt-14 px-4">
+        <div className="flex gap-5 py-5">
           <LeftSidebar />
-          <main className="flex-1 min-w-0 max-w-2xl mx-auto">{children}</main>
+          <main className="flex-1 min-w-0 max-w-2xl mx-auto space-y-4">{children}</main>
           <RightSidebar />
         </div>
       </div>

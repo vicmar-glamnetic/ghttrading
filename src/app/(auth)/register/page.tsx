@@ -5,10 +5,12 @@ import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { TrendingUp, Eye, EyeOff } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' })
+  const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -19,16 +21,8 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
-
+    if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return }
+    if (formData.password.length < 6) { setError('Password must be at least 6 characters'); return }
     setLoading(true)
     try {
       const res = await fetch('/api/auth/register', {
@@ -37,15 +31,8 @@ export default function RegisterPage() {
         body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Registration failed')
-        return
-      }
-      const result = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      })
+      if (!res.ok) { setError(data.error || 'Registration failed'); return }
+      const result = await signIn('credentials', { email: formData.email, password: formData.password, redirect: false })
       if (result?.ok) router.push('/')
     } finally {
       setLoading(false)
@@ -53,63 +40,66 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center px-4 relative overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <span className="text-white font-bold text-3xl">G</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-yellow-400 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
+            <TrendingUp className="w-8 h-8 text-black" />
           </div>
-          <h1 className="text-3xl font-bold text-blue-600">GHT Community</h1>
-          <p className="text-gray-600 mt-1">Create a new account</p>
+          <h1 className="text-3xl font-black text-white">Join <span className="text-yellow-500">GHT</span></h1>
+          <p className="text-[#9090a8] mt-2 text-sm">Free access to premium gold signals</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-8">
+        <div className="bg-[#16161f] rounded-2xl border border-[#2a2a3a] p-8 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{error}</div>
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg p-3 text-sm">{error}</div>
             )}
-            <input
-              value={formData.name}
-              onChange={e => update('name', e.target.value)}
-              placeholder="Full name"
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="email"
-              value={formData.email}
-              onChange={e => update('email', e.target.value)}
-              placeholder="Email address"
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="password"
-              value={formData.password}
-              onChange={e => update('password', e.target.value)}
-              placeholder="New password (min 6 chars)"
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="password"
-              value={formData.confirmPassword}
-              onChange={e => update('confirmPassword', e.target.value)}
-              placeholder="Confirm password"
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <Button type="submit" loading={loading} className="w-full py-3 text-base bg-green-500 hover:bg-green-600">
-              Create Account
+            {[
+              { field: 'name', label: 'Full Name', type: 'text', placeholder: 'John Doe' },
+              { field: 'email', label: 'Email', type: 'email', placeholder: 'trader@example.com' },
+            ].map(({ field, label, type, placeholder }) => (
+              <div key={field}>
+                <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">{label}</label>
+                <input type={type} value={formData[field as keyof typeof formData]}
+                  onChange={e => update(field, e.target.value)} placeholder={placeholder} required
+                  className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+                />
+              </div>
+            ))}
+            <div>
+              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Password</label>
+              <div className="relative">
+                <input type={showPw ? 'text' : 'password'} value={formData.password}
+                  onChange={e => update('password', e.target.value)} placeholder="Min 6 characters" required
+                  className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-4 py-3 pr-10 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+                />
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5a5a72] hover:text-[#9090a8] transition-colors">
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Confirm Password</label>
+              <input type="password" value={formData.confirmPassword}
+                onChange={e => update('confirmPassword', e.target.value)} placeholder="Repeat password" required
+                className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+              />
+            </div>
+            <Button type="submit" variant="gold" loading={loading} className="w-full py-3 text-base">
+              Create Free Account
             </Button>
           </form>
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-6">
+        <p className="text-center text-sm text-[#5a5a72] mt-6">
           Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 font-semibold hover:underline">
-            Log in
-          </Link>
+          <Link href="/login" className="text-yellow-500 font-semibold hover:text-yellow-400 transition-colors">Sign In</Link>
         </p>
       </div>
     </div>
