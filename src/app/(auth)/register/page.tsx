@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -47,8 +48,8 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
-            <img src="/logo.png" alt="GHT Trading" className="w-full h-full object-contain drop-shadow-2xl" />
+          <div className="mb-4">
+            <Image src="/logo.png" alt="GHT Trading" width={96} height={96} className="mx-auto" priority />
           </div>
           <h1 className="text-3xl font-black text-white">Join <span className="text-yellow-500">GHT</span></h1>
           <p className="text-[#9090a8] mt-2 text-sm">Free access to premium gold signals</p>
