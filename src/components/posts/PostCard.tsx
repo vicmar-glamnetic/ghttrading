@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
+import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { timeAgo, formatNumber, cn } from '@/lib/utils'
 import {
   ThumbsUp, MessageCircle, Share2, MoreHorizontal,
@@ -146,6 +147,10 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
   const [localComments, setLocalComments] = useState(post.comments ?? [])
   const [commentCount, setCommentCount] = useState(post._count?.comments ?? 0)
   const [visible, setVisible] = useState(true)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+
+  // Only images go into the lightbox; videos stay inline
+  const imageUrls = (post.images ?? []).filter(m => !isVideo(m))
 
   const isOwner = post.author.id === currentUserId
   const category = post.feeling && categoryConfig[post.feeling] ? categoryConfig[post.feeling] : null
@@ -230,36 +235,64 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
       </div>
 
       {/* Media */}
-      {post.images.length > 0 && (
+      {(post.images ?? []).length > 0 && (
         <div className={cn('gap-0.5', post.images.length === 1 ? 'block' : 'grid grid-cols-2')}>
-          {post.images.slice(0, 4).map((media, i) => (
-            <div key={i} className={cn('relative bg-[#0a0a0f]', post.images.length === 1 ? 'aspect-video' : 'aspect-square')}>
-              {isVideo(media) ? (
-                <div className="relative w-full h-full group">
-                  <video src={media} className="w-full h-full object-cover" controls={false} />
-                  <div
-                    className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-all cursor-pointer"
-                    onClick={e => {
-                      const v = e.currentTarget.previousElementSibling as HTMLVideoElement
-                      v.paused ? v.play() : v.pause()
-                    }}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center border border-yellow-500/50">
-                      <Play className="w-5 h-5 text-yellow-500 ml-0.5" fill="currentColor" />
+          {post.images.slice(0, 4).map((media, i) => {
+            const imgIndexInLightbox = imageUrls.indexOf(media)
+            return (
+              <div key={i} className={cn('relative bg-[#0a0a0f] overflow-hidden', post.images.length === 1 ? 'aspect-video' : 'aspect-square')}>
+                {isVideo(media) ? (
+                  /* ── Video stays inline ── */
+                  <div className="relative w-full h-full group">
+                    <video src={media} className="w-full h-full object-cover" controls={false} />
+                    <div
+                      className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-all cursor-pointer"
+                      onClick={e => {
+                        const v = e.currentTarget.previousElementSibling as HTMLVideoElement
+                        v.paused ? v.play() : v.pause()
+                      }}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center border border-yellow-500/50">
+                        <Play className="w-5 h-5 text-yellow-500 ml-0.5" fill="currentColor" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <Image src={media} alt="" fill className="object-cover" unoptimized={media.startsWith('data:')} />
-              )}
-              {i === 3 && post.images.length > 4 && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xl font-bold">
-                  +{post.images.length - 4}
-                </div>
-              )}
-            </div>
-          ))}
+                ) : (
+                  /* ── Image opens lightbox ── */
+                  <button
+                    className="relative w-full h-full group block"
+                    onClick={() => setLightboxIndex(imgIndexInLightbox)}
+                    type="button"
+                  >
+                    {media.startsWith('data:') ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={media} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Image src={media} alt="" fill className="object-cover" />
+                    )}
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    {/* "+N more" badge on 4th tile */}
+                    {i === 3 && post.images.length > 4 && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-2xl font-black">
+                        +{post.images.length - 4}
+                      </div>
+                    )}
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
+      )}
+
+      {/* Image lightbox portal */}
+      {lightboxIndex !== null && imageUrls.length > 0 && (
+        <ImageLightbox
+          images={imageUrls}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
 
       {/* Stats */}
