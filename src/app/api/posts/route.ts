@@ -34,8 +34,8 @@ export async function GET(req: Request) {
       whereClause = {
         groupId: null,
         OR: [
-          { authorId: session.user.id },
-          { authorId: { in: followingIds } },
+          { authorId: session.user.id, pageId: null },
+          { authorId: { in: followingIds }, pageId: null },
           { pageId: { in: followedPageIds } },
           { privacy: 'public', pageId: null },
         ],
