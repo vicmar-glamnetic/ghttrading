@@ -23,13 +23,28 @@ function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const result = await signIn('credentials', { email, password, redirect: false })
-    setLoading(false)
-    if (result?.error) {
-      setError('Invalid email or password')
-    } else {
-      router.push(callbackUrl)
-      router.refresh()
+    try {
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20000)
+      )
+      const result = await Promise.race([
+        signIn('credentials', { email, password, redirect: false }),
+        timeout,
+      ])
+      if (result?.error) {
+        setError('Invalid email or password')
+      } else {
+        router.push(callbackUrl)
+        router.refresh()
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message === 'timeout') {
+        setError('Server is taking too long to respond. Please try again in a moment.')
+      } else {
+        setError('Something went wrong. Please try again.')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 

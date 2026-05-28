@@ -58,15 +58,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id
         token.username = (user as { username?: string }).username
         token.sessionToken = (user as { sessionToken?: string }).sessionToken
+        token.lastVerified = Date.now()
       } else if (token.id) {
-        // Subsequent requests — verify the session token still matches the DB
-        const dbUser = await db.user.findUnique({
-          where: { id: token.id as string },
-          select: { sessionToken: true },
-        })
-        if (!dbUser || dbUser.sessionToken !== token.sessionToken) {
-          // Another device logged in and replaced the session token
-          token.error = 'SessionInvalid'
+        // Only hit the DB once every 5 minutes — SessionGuard calls update()
+        // on the same interval, so invalidation still propagates quickly.
+        const FIVE_MIN = 5 * 60 * 1000
+        const due = !token.lastVerified || Date.now() - (token.lastVerified as number) > FIVE_MIN
+        if (due) {
+          const dbUser = await db.user.findUnique({
+            where: { id: token.id as string },
+            select: { sessionToken: true },
+          })
+          if (!dbUser || dbUser.sessionToken !== token.sessionToken) {
+            token.error = 'SessionInvalid'
+          } else {
+            token.lastVerified = Date.now()
+          }
         }
       }
       return token
