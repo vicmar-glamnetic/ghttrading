@@ -18,6 +18,8 @@ const sizes = {
   xl: 'w-20 h-20 text-xl',
 }
 
+const sizePx = { xs: 24, sm: 32, md: 40, lg: 48, xl: 80 }
+
 export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
   const [imgError, setImgError] = useState(false)
 
@@ -43,8 +45,9 @@ export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
           <Image
             src={src}
             alt={name || 'Avatar'}
-            fill
-            className="object-cover"
+            width={sizePx[size]}
+            height={sizePx[size]}
+            className="absolute inset-0 w-full h-full object-cover"
             onError={() => setImgError(true)}
           />
         )

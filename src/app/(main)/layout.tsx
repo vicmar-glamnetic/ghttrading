@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { Navbar } from '@/components/layout/Navbar'
 import { LeftSidebar } from '@/components/layout/LeftSidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { SessionGuard } from '@/components/SessionGuard'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
@@ -16,10 +17,11 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       <div className="max-w-7xl mx-auto pt-14 px-4">
         <div className="flex gap-5 py-5">
           <LeftSidebar />
-          <main className="flex-1 min-w-0 max-w-2xl mx-auto space-y-4">{children}</main>
+          <main className="flex-1 min-w-0 max-w-2xl mx-auto space-y-4 pb-20 lg:pb-0">{children}</main>
           <RightSidebar />
         </div>
       </div>
+      <MobileBottomNav />
     </div>
   )
 }
