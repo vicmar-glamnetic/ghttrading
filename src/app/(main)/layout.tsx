@@ -17,7 +17,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       <div className="max-w-7xl mx-auto pt-14 px-4">
         <div className="flex gap-5 py-5">
           <LeftSidebar />
-          <main className="flex-1 min-w-0 max-w-2xl mx-auto space-y-4 pb-20 lg:pb-0">{children}</main>
+          <main className="flex-1 min-w-0 max-w-2xl mx-auto space-y-4 pb-28 lg:pb-0">{children}</main>
           <RightSidebar />
         </div>
       </div>
