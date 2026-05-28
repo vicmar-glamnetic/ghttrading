@@ -69,7 +69,9 @@ export async function GET(req: Request) {
       nextCursor = next?.id
     }
 
-    return NextResponse.json({ posts, nextCursor })
+    return NextResponse.json({ posts, nextCursor }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
+    })
   } catch (error) {
     console.error('[POSTS_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -41,7 +41,9 @@ export async function GET() {
       }),
     ])
 
-    return NextResponse.json({ myGroups, discover })
+    return NextResponse.json({ myGroups, discover }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
+    })
   } catch (error) {
     console.error('[GROUPS_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -65,7 +65,9 @@ export async function GET() {
     })
 
     // Include currentUserId so the page can identify which side is "you"
-    return NextResponse.json({ pendingReceived, pendingSent, friends, suggestions, currentUserId: uid })
+    return NextResponse.json({ pendingReceived, pendingSent, friends, suggestions, currentUserId: uid }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
+    })
   } catch (error) {
     console.error('[FRIENDS_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
