@@ -1,4 +1,4 @@
-import type { User, Post, Comment, Like, Follow, FriendRequest, Notification, JournalEntry, Group, GroupMember } from '@/generated/prisma/client'
+import type { User, Post, Comment, Like, Follow, FriendRequest, Notification, JournalEntry, Group, GroupMember, Page, PageFollow } from '@/generated/prisma/client'
 
 export type UserWithCounts = User & {
   _count: {
@@ -28,6 +28,12 @@ export type FriendRequestWithUsers = FriendRequest & {
   receiver: Pick<User, 'id' | 'name' | 'image' | 'username'>
 }
 
+export type PageWithDetails = Page & {
+  owner: Pick<User, 'id' | 'name' | 'image' | 'username'>
+  _count: { followers: number; posts: number }
+  isFollowing: boolean
+}
+
 export type GroupWithDetails = Group & {
   owner: Pick<User, 'id' | 'name' | 'image' | 'username'>
   _count: { members: number; posts: number }
@@ -35,4 +41,4 @@ export type GroupWithDetails = Group & {
   myMembership: Pick<GroupMember, 'role' | 'status'> | null
 }
 
-export type { User, Post, Comment, Like, Follow, FriendRequest, Notification, JournalEntry, Group, GroupMember }
+export type { User, Post, Comment, Like, Follow, FriendRequest, Notification, JournalEntry, Group, GroupMember, Page, PageFollow }

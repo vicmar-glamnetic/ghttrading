@@ -24,18 +24,20 @@ export async function GET(req: Request) {
         ...(userId !== session.user.id ? { privacy: 'public' } : {}),
       }
     } else {
-      // Main feed — own posts + followed + public, never group posts
-      const following = await db.follow.findMany({
-        where: { followerId: session.user.id },
-        select: { followingId: true },
-      })
+      // Main feed — own posts + followed users + followed pages + public, never group posts
+      const [following, pageFollows] = await Promise.all([
+        db.follow.findMany({ where: { followerId: session.user.id }, select: { followingId: true } }),
+        db.pageFollow.findMany({ where: { followerId: session.user.id }, select: { pageId: true } }),
+      ])
       const followingIds = following.map((f: { followingId: string }) => f.followingId)
+      const followedPageIds = pageFollows.map((f: { pageId: string }) => f.pageId)
       whereClause = {
         groupId: null,
         OR: [
           { authorId: session.user.id },
           { authorId: { in: followingIds } },
-          { privacy: 'public' },
+          { pageId: { in: followedPageIds } },
+          { privacy: 'public', pageId: null },
         ],
       }
     }

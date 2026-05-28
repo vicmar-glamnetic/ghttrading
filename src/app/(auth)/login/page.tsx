@@ -55,7 +55,12 @@ function LoginForm() {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Password</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider">Password</label>
+            <Link href="/forgot-password" className="text-xs text-[#5a5a72] hover:text-yellow-500 transition-colors">
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}

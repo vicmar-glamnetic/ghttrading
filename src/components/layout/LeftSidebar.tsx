@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import {
   Home, BookOpen, Bell, Settings, Users,
-  Zap, BarChart2, Globe, Clock, NotebookPen, UsersRound,
+  Zap, BarChart2, Globe, Clock, NotebookPen, UsersRound, Flag,
 } from 'lucide-react'
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/signals',      label: 'Signals',       icon: Zap         },
   { href: '/analysis',     label: 'Analysis',      icon: BarChart2   },
   { href: '/education',    label: 'Education',     icon: BookOpen    },
+  { href: '/pages',        label: 'Pages',         icon: Flag        },
   { href: '/groups',       label: 'Groups',        icon: UsersRound  },
   { href: '/friends',      label: 'Traders',       icon: Users       },
   { href: '/journal',      label: 'My Journal',    icon: NotebookPen },
