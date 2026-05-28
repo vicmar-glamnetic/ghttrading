@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Flag, Plus, X, BadgeCheck } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
@@ -164,6 +165,7 @@ function CreatePageModal({ onClose, onCreate }: { onClose: () => void; onCreate:
 type Tab = 'mine' | 'following' | 'discover'
 
 export default function PagesPage() {
+  const router = useRouter()
   const [data, setData] = useState<PagesData | null>(null)
   const [loading, setLoading] = useState(true)
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({})
@@ -202,9 +204,8 @@ export default function PagesPage() {
   }
 
   function handleCreated(page: PageSummary) {
-    setData(d => d ? { ...d, myPages: [page, ...d.myPages] } : d)
     setShowCreate(false)
-    setActiveTab('mine')
+    router.push(`/pages/${page.id}`)
   }
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
@@ -279,8 +280,8 @@ export default function PagesPage() {
                   key={page.id}
                   page={page}
                   isOwn={activeTab === 'mine'}
-                  isFollowing={page.followers.length > 0}
-                  onFollow={() => handleFollow(page.id, page.followers.length > 0)}
+                  isFollowing={(page.followers ?? []).length > 0}
+                  onFollow={() => handleFollow(page.id, (page.followers ?? []).length > 0)}
                   following={followingMap[page.id] ?? false}
                 />
               ))}

@@ -9,7 +9,7 @@ import { timeAgo, formatNumber, cn } from '@/lib/utils'
 import {
   ThumbsUp, MessageCircle, Share2, MoreHorizontal,
   TrendingUp, TrendingDown, BarChart2, BookOpen,
-  Globe, Lock, Users, Play, Trash2,
+  Globe, Lock, Users, Play, Trash2, Flag, BadgeCheck,
 } from 'lucide-react'
 import type { PostWithDetails } from '@/types'
 
@@ -204,14 +204,47 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between p-4">
         <div className="flex items-center gap-3">
-          <Link href={`/profile/${post.author.id}`}>
-            <Avatar src={post.author.image} name={post.author.name} size="md" />
-          </Link>
+          {post.group ? (
+            <Link href={`/groups/${post.group.id}`}>
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-[#2a2a3a] flex items-center justify-center overflow-hidden shrink-0">
+                {post.group.image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={post.group.image} alt={post.group.name} className="w-full h-full object-cover" />
+                  : <Users className="w-5 h-5 text-yellow-500" />}
+              </div>
+            </Link>
+          ) : post.page ? (
+            <Link href={`/pages/${post.page.id}`}>
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-[#2a2a3a] flex items-center justify-center overflow-hidden shrink-0">
+                {post.page.image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={post.page.image} alt={post.page.name} className="w-full h-full object-cover" />
+                  : <Flag className="w-5 h-5 text-yellow-500" />}
+              </div>
+            </Link>
+          ) : (
+            <Link href={`/profile/${post.author.id}`}>
+              <Avatar src={post.author.image} name={post.author.name} size="md" />
+            </Link>
+          )}
           <div>
             <div className="flex items-center gap-2">
-              <Link href={`/profile/${post.author.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors">
-                {post.author.name}
-              </Link>
+              {post.group ? (
+                <Link href={`/groups/${post.group.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors">
+                  {post.group.name}
+                </Link>
+              ) : post.page ? (
+                <div className="flex items-center gap-1">
+                  <Link href={`/pages/${post.page.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors">
+                    {post.page.name}
+                  </Link>
+                  {post.page.verified && <BadgeCheck className="w-3.5 h-3.5 text-yellow-500" />}
+                </div>
+              ) : (
+                <Link href={`/profile/${post.author.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors">
+                  {post.author.name}
+                </Link>
+              )}
               {category && CategoryIcon && (
                 <span className={cn('flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold', category.className)}>
                   <CategoryIcon className="w-3 h-3" />
@@ -219,10 +252,22 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
                 </span>
               )}
             </div>
+            {(post.group || post.page) && (
+              <p className="text-[11px] text-[#5a5a72]">
+                by{' '}
+                <Link href={`/profile/${post.author.id}`} className="hover:text-yellow-500 transition-colors">
+                  {post.author.name}
+                </Link>
+              </p>
+            )}
             <div className="flex items-center gap-1.5 text-xs text-[#5a5a72] mt-0.5">
               <span>{timeAgo(post.createdAt)}</span>
-              <span>·</span>
-              {post.privacy === 'public' ? <Globe className="w-3 h-3" /> : post.privacy === 'friends' ? <Users className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+              {!post.group && !post.page && (
+                <>
+                  <span>·</span>
+                  {post.privacy === 'public' ? <Globe className="w-3 h-3" /> : post.privacy === 'friends' ? <Users className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                </>
+              )}
             </div>
           </div>
         </div>

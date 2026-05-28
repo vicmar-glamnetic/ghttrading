@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Users, Plus, Lock, Globe, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
@@ -22,7 +23,7 @@ interface GroupsData {
 }
 
 function GroupCard({ group, onJoin, joining }: { group: GroupSummary; onJoin: () => void; joining: boolean }) {
-  const isMember = group.members.length > 0
+  const isMember = (group.members ?? []).length > 0
 
   return (
     <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden hover:border-[#3a3a4a] transition-colors">
@@ -151,6 +152,7 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
 }
 
 export default function GroupsPage() {
+  const router = useRouter()
   const [data, setData] = useState<GroupsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [joiningMap, setJoiningMap] = useState<Record<string, boolean>>({})
@@ -186,9 +188,8 @@ export default function GroupsPage() {
   }
 
   function handleCreated(group: GroupSummary) {
-    setData(d => d ? { ...d, myGroups: [group, ...d.myGroups] } : d)
     setShowCreate(false)
-    setActiveTab('mine')
+    router.push(`/groups/${group.id}`)
   }
 
   const tabs = [

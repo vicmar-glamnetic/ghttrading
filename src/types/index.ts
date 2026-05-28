@@ -17,6 +17,8 @@ export type PostWithDetails = Post & {
     _count: { likes: number }
     likes: Pick<Like, 'userId'>[]
   })[]
+  group?: { id: string; name: string; image: string | null } | null
+  page?: { id: string; name: string; image: string | null; verified: boolean } | null
 }
 
 export type NotificationWithSender = Notification & {

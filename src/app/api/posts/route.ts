@@ -46,6 +46,7 @@ export async function GET(req: Request) {
       where: whereClause,
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
+        page: { select: { id: true, name: true, image: true, verified: true } },
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId: session.user.id }, select: { userId: true } },
         comments: {

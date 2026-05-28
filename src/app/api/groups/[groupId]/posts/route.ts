@@ -22,6 +22,7 @@ export async function GET(
       where: { groupId },
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
+        group: { select: { id: true, name: true, image: true } },
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId: session.user.id }, select: { userId: true } },
         comments: {
@@ -86,6 +87,7 @@ export async function POST(
       },
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
+        group: { select: { id: true, name: true, image: true } },
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId: uid }, select: { userId: true } },
         comments: { take: 3, orderBy: { createdAt: 'desc' }, include: { author: { select: { id: true, name: true, image: true, username: true } }, _count: { select: { likes: true } }, likes: { where: { userId: uid }, select: { userId: true } } } },
