@@ -7,17 +7,19 @@ import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import {
   Home, BookOpen, Bell, Settings, Users,
-  Zap, BarChart2, Globe, Clock,
+  Zap, BarChart2, Globe, Clock, NotebookPen, UsersRound,
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/',             label: 'Feed',          icon: Home     },
-  { href: '/signals',      label: 'Signals',       icon: Zap      },
-  { href: '/analysis',     label: 'Analysis',      icon: BarChart2 },
-  { href: '/education',    label: 'Education',     icon: BookOpen },
-  { href: '/friends',      label: 'Traders',       icon: Users    },
-  { href: '/notifications',label: 'Notifications', icon: Bell     },
-  { href: '/settings',     label: 'Settings',      icon: Settings },
+  { href: '/',             label: 'Feed',          icon: Home        },
+  { href: '/signals',      label: 'Signals',       icon: Zap         },
+  { href: '/analysis',     label: 'Analysis',      icon: BarChart2   },
+  { href: '/education',    label: 'Education',     icon: BookOpen    },
+  { href: '/groups',       label: 'Groups',        icon: UsersRound  },
+  { href: '/friends',      label: 'Traders',       icon: Users       },
+  { href: '/journal',      label: 'My Journal',    icon: NotebookPen },
+  { href: '/notifications',label: 'Notifications', icon: Bell        },
+  { href: '/settings',     label: 'Settings',      icon: Settings    },
 ]
 
 // Gold trading sessions in UTC hours

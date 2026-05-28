@@ -17,19 +17,21 @@ export async function GET(req: Request) {
     let whereClause: Record<string, unknown>
 
     if (userId) {
-      // Profile view — show only that user's public posts (or own posts for own profile)
+      // Profile view — show only that user's public posts (or own posts for own profile), never group posts
       whereClause = {
         authorId: userId,
+        groupId: null,
         ...(userId !== session.user.id ? { privacy: 'public' } : {}),
       }
     } else {
-      // Main feed — own posts + followed + public
+      // Main feed — own posts + followed + public, never group posts
       const following = await db.follow.findMany({
         where: { followerId: session.user.id },
         select: { followingId: true },
       })
       const followingIds = following.map((f: { followingId: string }) => f.followingId)
       whereClause = {
+        groupId: null,
         OR: [
           { authorId: session.user.id },
           { authorId: { in: followingIds } },

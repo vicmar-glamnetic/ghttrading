@@ -45,6 +45,9 @@ model User {
   followers         Follow[]       @relation("Followers")
   sentRequests      FriendRequest[] @relation("SentRequests")
   receivedRequests  FriendRequest[] @relation("ReceivedRequests")
+  journalEntries    JournalEntry[]
+  ownedGroups       Group[]         @relation("GroupOwner")
+  groupMemberships  GroupMember[]
 
   @@map("users")
 }
@@ -100,10 +103,15 @@ model Post {
   updatedAt DateTime @updatedAt
 
   authorId  String
+  groupId   String?
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  group     Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   comments  Comment[]
   likes     Like[]
 
+  @@index([authorId, createdAt])
+  @@index([privacy, createdAt])
+  @@index([groupId, createdAt])
   @@map("posts")
 }
 
@@ -122,6 +130,7 @@ model Comment {
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies   Comment[] @relation("CommentReplies")
 
+  @@index([postId, createdAt])
   @@map("comments")
 }
 
@@ -166,6 +175,7 @@ model FriendRequest {
   receiver   User @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+  @@index([receiverId, status])
   @@map("friend_requests")
 }
 
@@ -182,5 +192,55 @@ model Notification {
   receiver   User    @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
   sender     User?   @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
 
+  @@index([receiverId, read, createdAt])
   @@map("notifications")
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  title     String?
+  content   String
+  mood      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, createdAt])
+  @@map("journal_entries")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  image       String?
+  coverImage  String?
+  privacy     String   @default("public")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ownerId  String
+  owner    User          @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  GroupMember[]
+  posts    Post[]
+
+  @@index([privacy, createdAt])
+  @@map("groups")
+}
+
+model GroupMember {
+  role     String   @default("member")
+  status   String   @default("active")
+  joinedAt DateTime @default(now())
+
+  userId  String
+  groupId String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+  @@index([groupId, status])
+  @@map("group_members")
 }
