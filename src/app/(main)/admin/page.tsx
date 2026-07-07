@@ -46,6 +46,26 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<string>('')
   const [showAdd, setShowAdd] = useState(false)
 
+  // PayPal plan setup
+  const [ppLoading, setPpLoading] = useState(false)
+  const [ppPlanId, setPpPlanId] = useState('')
+  const [ppError, setPpError] = useState('')
+  const [ppCopied, setPpCopied] = useState(false)
+
+  async function setupPaypal() {
+    setPpLoading(true); setPpError(''); setPpPlanId('')
+    try {
+      const res = await fetch('/api/admin/paypal/setup', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) setPpPlanId(data.planId)
+      else setPpError(data.error || 'Setup failed')
+    } catch {
+      setPpError('Setup failed')
+    } finally {
+      setPpLoading(false)
+    }
+  }
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -124,6 +144,35 @@ export default function AdminPage() {
             <p className={`text-2xl font-black ${color}`}>{value}</p>
           </div>
         ))}
+      </div>
+
+      {/* PayPal plan setup */}
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-ink">PayPal billing</p>
+            <p className="text-xs text-ink3">Create the $5/mo subscription plan (needs PAYPAL_CLIENT_ID &amp; SECRET set first).</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={setupPaypal} loading={ppLoading} className="text-xs shrink-0">
+            Set up $5/mo plan
+          </Button>
+        </div>
+        {ppError && <p className="text-xs text-red-400 mt-2">{ppError}</p>}
+        {ppPlanId && (
+          <div className="mt-3 rounded-lg bg-sunken border border-line p-3">
+            <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">Plan created ✓ — set this as NEXT_PUBLIC_PAYPAL_PLAN_ID</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs text-yellow-500 font-mono break-all flex-1">{ppPlanId}</code>
+              <button
+                onClick={async () => { await navigator.clipboard.writeText(ppPlanId); setPpCopied(true); setTimeout(() => setPpCopied(false), 1200) }}
+                className="text-xs text-ink3 hover:text-yellow-500 shrink-0"
+              >
+                {ppCopied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <p className="text-[10px] text-ink3 mt-2">Add it to your env (locally + Vercel), then redeploy. Run this once only.</p>
+          </div>
+        )}
       </div>
 
       {/* search + filter */}
