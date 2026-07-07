@@ -62,10 +62,8 @@ export default function LivePage() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl sm:text-3xl font-black text-ink tracking-wide flex items-center justify-center gap-3">
-          <span className="text-yellow-500/60">‹‹‹</span>
+        <h1 className="text-2xl sm:text-3xl font-black text-ink tracking-wide">
           GHT Live
-          <span className="text-yellow-500/60">›››</span>
         </h1>
         <p className="text-ink2 text-sm mt-2 max-w-xl mx-auto">
           Latest videos from our educators. Watch, learn, and stay ahead of the market.
