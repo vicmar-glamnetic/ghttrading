@@ -4,7 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { randomUUID } from 'crypto'
 import { db } from './db'
-import { authConfig } from './auth.config'
+import { authConfig, stripLargePicture } from './auth.config'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -44,7 +44,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image,
+          // Keep large/data-URI avatars out of the JWT (see stripLargePicture).
+          image: user.image && !user.image.startsWith('data:') && user.image.length <= 512 ? user.image : null,
           username: user.username,
           role: user.role,
           sessionToken,
@@ -79,7 +80,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
       }
-      return token
+      // Never let an oversized avatar bloat the session cookie.
+      return stripLargePicture(token)
     },
     async session({ session, token }) {
       if (token) {
