@@ -229,6 +229,17 @@ model JournalEntry {
   @@map("journal_entries")
 }
 
+// Email verification codes for new sign-ups (anti-bot / real-email check).
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  code      String
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@map("email_verification_codes")
+}
+
 // Single-row config for the live webinar (managed by coaches/admins).
 model LiveWebinar {
   id        String   @id @default("default")

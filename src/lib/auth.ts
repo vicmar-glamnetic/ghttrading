@@ -33,6 +33,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!passwordsMatch) return null
 
+        // Block sign-in until the email is verified (new sign-ups must confirm).
+        if (!user.emailVerified) return null
+
         // Generate a new session token — this invalidates all other active sessions
         const sessionToken = randomUUID()
         await db.user.update({

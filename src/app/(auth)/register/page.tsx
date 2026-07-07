@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { Turnstile } from '@/components/Turnstile'
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function RegisterPage() {
@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
 
   function update(field: string, value: string) {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -28,12 +29,12 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password }),
+        body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password, turnstileToken }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Registration failed'); return }
-      const result = await signIn('credentials', { email: formData.email, password: formData.password, redirect: false })
-      if (result?.ok) router.push('/')
+      // Account created (unverified) — go confirm the emailed code.
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
     } finally {
       setLoading(false)
     }
@@ -92,6 +93,7 @@ export default function RegisterPage() {
                 className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-ink placeholder-ink3 transition-colors"
               />
             </div>
+            <Turnstile onToken={setTurnstileToken} />
             <Button type="submit" variant="gold" loading={loading} className="w-full py-3 text-base">
               Create Free Account
             </Button>

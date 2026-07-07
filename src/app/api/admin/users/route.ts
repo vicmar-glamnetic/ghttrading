@@ -78,6 +78,7 @@ export async function POST(req: Request) {
       password: hashedPassword,
       username,
       role: chosenRole,
+      emailVerified: new Date(), // admin-created accounts are trusted/verified
       // Free-access roles are marked comped so billing never paywalls them.
       subscriptionStatus: FREE_ROLES.includes(chosenRole) ? 'comp' : 'free',
     },

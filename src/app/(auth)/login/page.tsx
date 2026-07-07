@@ -18,6 +18,7 @@ function LoginForm() {
 
   const callbackUrl = searchParams.get('callbackUrl') || '/'
   const sessionReplaced = searchParams.get('reason') === 'session_replaced'
+  const justVerified = searchParams.get('verified') === '1'
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -51,6 +52,11 @@ function LoginForm() {
   return (
     <div className="bg-surface rounded-2xl border border-line p-8 shadow-2xl">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {justVerified && (
+          <div className="bg-green-500/10 border border-green-500/30 text-green-400 rounded-lg p-3 text-sm">
+            Email verified! You can now sign in.
+          </div>
+        )}
         {sessionReplaced && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-lg p-3 text-sm">
             You were signed out because your account was logged in on another device.
@@ -58,7 +64,8 @@ function LoginForm() {
         )}
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg p-3 text-sm">
-            {error}
+            {error}{' '}
+            <Link href={`/verify-email?email=${encodeURIComponent(email)}`} className="underline hover:text-red-300">Need to verify your email?</Link>
           </div>
         )}
         <div>
