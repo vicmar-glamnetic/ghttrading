@@ -24,11 +24,21 @@ export async function POST(req: Request) {
     const session = await auth()
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { title, content, mood } = await req.json()
+    const { title, content, mood, symbol, direction, result, pnl, tradedAt } = await req.json()
     if (!content?.trim()) return NextResponse.json({ error: 'Content is required' }, { status: 400 })
 
     const entry = await db.journalEntry.create({
-      data: { title, content, mood, authorId: session.user.id },
+      data: {
+        title,
+        content,
+        mood,
+        symbol: symbol || null,
+        direction: direction || null,
+        result: result || null,
+        pnl: pnl === '' || pnl == null ? null : Number(pnl),
+        tradedAt: tradedAt ? new Date(tradedAt) : null,
+        authorId: session.user.id,
+      },
     })
 
     return NextResponse.json(entry, { status: 201 })

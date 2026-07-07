@@ -8,17 +8,21 @@ import { useEffect, useState } from 'react'
 import {
   Home, BookOpen, Bell, Settings, Users,
   Zap, BarChart2, Globe, Clock, NotebookPen, UsersRound, Flag,
+  LineChart, Lightbulb, CalendarDays,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/',             label: 'Feed',          icon: Home        },
+  { href: '/chart',        label: 'Trading View',  icon: LineChart   },
   { href: '/signals',      label: 'Signals',       icon: Zap         },
+  { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb   },
   { href: '/analysis',     label: 'Analysis',      icon: BarChart2   },
   { href: '/education',    label: 'Education',     icon: BookOpen    },
   { href: '/pages',        label: 'Pages',         icon: Flag        },
   { href: '/groups',       label: 'Groups',        icon: UsersRound  },
   { href: '/friends',      label: 'Traders',       icon: Users       },
   { href: '/journal',      label: 'My Journal',    icon: NotebookPen },
+  { href: '/calendar',     label: 'Calendar',      icon: CalendarDays},
   { href: '/notifications',label: 'Notifications', icon: Bell        },
   { href: '/settings',     label: 'Settings',      icon: Settings    },
 ]

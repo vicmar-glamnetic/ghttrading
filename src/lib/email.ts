@@ -1,13 +1,21 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazily construct the client so a missing key doesn't crash the build /
+// page-data collection — it only errors if we actually try to send an email.
+let _resend: Resend | null = null
+function getResend() {
+  const key = process.env.RESEND_API_KEY
+  if (!key) throw new Error('RESEND_API_KEY is not set — cannot send email')
+  if (!_resend) _resend = new Resend(key)
+  return _resend
+}
 const FROM = process.env.RESEND_FROM_EMAIL || 'GHT Trading <onboarding@resend.dev>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://community.ghttrading.co'
 
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to: email,
     subject: 'Reset your GHT Trading password',

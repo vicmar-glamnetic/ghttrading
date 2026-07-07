@@ -35,12 +35,21 @@ export async function PUT(
     if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (entry.authorId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { title, content, mood } = await req.json()
+    const { title, content, mood, symbol, direction, result, pnl, tradedAt } = await req.json()
     if (!content?.trim()) return NextResponse.json({ error: 'Content is required' }, { status: 400 })
 
     const updated = await db.journalEntry.update({
       where: { id: entryId },
-      data: { title, content, mood },
+      data: {
+        title,
+        content,
+        mood,
+        symbol: symbol || null,
+        direction: direction || null,
+        result: result || null,
+        pnl: pnl === '' || pnl == null ? null : Number(pnl),
+        tradedAt: tradedAt ? new Date(tradedAt) : null,
+      },
     })
 
     return NextResponse.json(updated)

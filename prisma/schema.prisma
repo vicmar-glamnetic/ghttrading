@@ -46,6 +46,7 @@ model User {
   sentRequests      FriendRequest[] @relation("SentRequests")
   receivedRequests  FriendRequest[] @relation("ReceivedRequests")
   journalEntries    JournalEntry[]
+  tradeIdeas        TradeIdea[]
   ownedGroups       Group[]         @relation("GroupOwner")
   groupMemberships  GroupMember[]
   ownedPages        Page[]          @relation("PageOwner")
@@ -209,11 +210,43 @@ model JournalEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Trade metadata (all optional — an entry can be a pure note)
+  tradedAt  DateTime?   // the day the trade was placed; drives the calendar
+  symbol    String?     // e.g. XAUUSD
+  direction String?     // buy | sell
+  result    String?     // win | loss | breakeven
+  pnl       Float?      // realised profit/loss for the day/trade
+
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId, createdAt])
+  @@index([authorId, tradedAt])
   @@map("journal_entries")
+}
+
+model TradeIdea {
+  id           String   @id @default(cuid())
+  symbol       String                       // e.g. BTC, XAUUSD
+  direction    String                       // buy | sell
+  entryLow     Float?                        // entry range low
+  entryHigh    Float?                        // entry range high (== low for a single price)
+  slLow        Float?                        // stop-loss range low
+  slHigh       Float?                        // stop-loss range high
+  takeProfits  Json     @default("[]")       // [{ price: number, pips?: number, hit?: boolean }]
+  currentPrice Float?                        // optional live/quoted price; null renders as "--"
+  status       String   @default("pending")  // pending | tp_hit | sl_hit
+  notes        String?
+  isPublic     Boolean  @default(false)      // shared to the community board vs. private
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, createdAt])
+  @@index([isPublic, createdAt])
+  @@map("trade_ideas")
 }
 
 model Group {

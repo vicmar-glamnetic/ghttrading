@@ -2,14 +2,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Home, Users, Flag, UsersRound, NotebookPen } from 'lucide-react'
+import { Home, LineChart, Lightbulb, CalendarDays, NotebookPen } from 'lucide-react'
 
 const items = [
-  { href: '/',        label: 'Feed',    icon: Home        },
-  { href: '/friends', label: 'Traders', icon: Users       },
-  { href: '/groups',  label: 'Groups',  icon: UsersRound  },
-  { href: '/pages',   label: 'Pages',   icon: Flag        },
-  { href: '/journal', label: 'Journal', icon: NotebookPen },
+  { href: '/',         label: 'Feed',     icon: Home         },
+  { href: '/chart',    label: 'Chart',    icon: LineChart    },
+  { href: '/ideas',    label: 'Ideas',    icon: Lightbulb    },
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/journal',  label: 'Journal',  icon: NotebookPen  },
 ]
 
 export function MobileBottomNav() {

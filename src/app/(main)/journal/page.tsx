@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft } from 'lucide-react'
+import Link from 'next/link'
+import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -9,8 +10,24 @@ interface JournalEntry {
   title: string | null
   content: string
   mood: string | null
+  symbol: string | null
+  direction: string | null
+  result: string | null
+  pnl: number | null
+  tradedAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+const results = [
+  { value: 'win',        label: '✅ Win',        cls: 'text-green-400' },
+  { value: 'loss',       label: '❌ Loss',       cls: 'text-red-400'   },
+  { value: 'breakeven',  label: '➖ Break-even', cls: 'text-[#9090a8]' },
+]
+
+function fmtMoney(n: number) {
+  const s = n >= 0 ? '+' : '-'
+  return `${s}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const moods = [
@@ -36,6 +53,11 @@ export default function JournalPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [mood, setMood] = useState('')
+  const [symbol, setSymbol] = useState('')
+  const [direction, setDirection] = useState('')
+  const [result, setResult] = useState('')
+  const [pnl, setPnl] = useState('')
+  const [tradedAt, setTradedAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [mobileShowEditor, setMobileShowEditor] = useState(false)
@@ -54,11 +76,20 @@ export default function JournalPage() {
 
   useEffect(() => { load() }, [load])
 
+  function resetTradeFields() {
+    setSymbol('')
+    setDirection('')
+    setResult('')
+    setPnl('')
+    setTradedAt('')
+  }
+
   function openNew() {
     setSelected(null)
     setTitle('')
     setContent('')
     setMood('')
+    resetTradeFields()
     setMode('new')
     setMobileShowEditor(true)
   }
@@ -73,18 +104,30 @@ export default function JournalPage() {
     setTitle(entry.title ?? '')
     setContent(entry.content)
     setMood(entry.mood ?? '')
+    setSymbol(entry.symbol ?? '')
+    setDirection(entry.direction ?? '')
+    setResult(entry.result ?? '')
+    setPnl(entry.pnl == null ? '' : String(entry.pnl))
+    setTradedAt(entry.tradedAt ? entry.tradedAt.slice(0, 10) : '')
     setMode('edit')
   }
 
   async function handleSave() {
     if (!content.trim()) return
+    const tradePayload = {
+      symbol: symbol.trim().toUpperCase() || null,
+      direction: direction || null,
+      result: result || null,
+      pnl: pnl.trim() === '' ? null : pnl,
+      tradedAt: tradedAt || null,
+    }
     setSaving(true)
     try {
       if (mode === 'new') {
         const res = await fetch('/api/journal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title || null, content, mood: mood || null }),
+          body: JSON.stringify({ title: title || null, content, mood: mood || null, ...tradePayload }),
         })
         const created = await res.json()
         setEntries(e => [created, ...e])
@@ -94,7 +137,7 @@ export default function JournalPage() {
         const res = await fetch(`/api/journal/${selected.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title || null, content, mood: mood || null }),
+          body: JSON.stringify({ title: title || null, content, mood: mood || null, ...tradePayload }),
         })
         const updated = await res.json()
         setEntries(e => e.map(x => x.id === updated.id ? updated : x))
@@ -135,9 +178,14 @@ export default function JournalPage() {
           <BookOpen className="w-5 h-5 text-yellow-500" />
           <h1 className="font-bold text-[#f0f0f8] text-lg">My Journal</h1>
         </div>
-        <Button variant="gold" size="sm" onClick={openNew} className="gap-1.5 text-xs">
-          <Plus className="w-3.5 h-3.5" /> New Entry
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/calendar" className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-1">
+            <CalendarDays className="w-3.5 h-3.5" /> Calendar
+          </Link>
+          <Button variant="gold" size="sm" onClick={openNew} className="gap-1.5 text-xs">
+            <Plus className="w-3.5 h-3.5" /> New Entry
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-4 h-[calc(100vh-10rem)]">
@@ -171,10 +219,17 @@ export default function JournalPage() {
                   onClick={() => openEntry(entry)}
                   className={`w-full text-left p-3 border-b border-[#2a2a3a] hover:bg-[#1e1e2c] transition-colors ${selected?.id === entry.id ? 'bg-[#1e1e2c] border-l-2 border-l-yellow-500' : ''}`}
                 >
-                  <p className="text-sm font-semibold text-[#f0f0f8] truncate">
-                    {entry.title || 'Untitled'}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#f0f0f8] truncate">
+                      {entry.title || 'Untitled'}
+                    </p>
+                    {entry.pnl != null && (
+                      <span className={`text-xs font-bold shrink-0 ${entry.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(entry.pnl)}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#5a5a72] truncate mt-0.5">
+                    {entry.symbol ? <span className="text-[#9090a8] font-medium">{entry.symbol} · </span> : null}{entry.content}
                   </p>
-                  <p className="text-xs text-[#5a5a72] truncate mt-0.5">{entry.content}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[10px] text-[#3a3a4a]">
                       {formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}
@@ -228,6 +283,52 @@ export default function JournalPage() {
                   </button>
                 ))}
               </div>
+              {/* Trade details (optional) — powers the trading calendar */}
+              <div className="px-4 py-3 border-b border-[#2a2a3a] space-y-3">
+                <p className="text-[10px] font-bold text-[#5a5a72] uppercase tracking-wider">Trade details (optional) · shown on your calendar</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={symbol}
+                    onChange={e => setSymbol(e.target.value)}
+                    placeholder="Symbol (e.g. XAUUSD)"
+                    className="bg-[#0d0d14] border border-[#2a2a3a] rounded-lg px-2.5 py-1.5 text-sm text-[#f0f0f8] outline-none focus:border-yellow-500/40 placeholder-[#3a3a4a] uppercase"
+                  />
+                  <input
+                    type="date"
+                    value={tradedAt}
+                    onChange={e => setTradedAt(e.target.value)}
+                    className="bg-[#0d0d14] border border-[#2a2a3a] rounded-lg px-2.5 py-1.5 text-sm text-[#f0f0f8] outline-none focus:border-yellow-500/40 scheme-dark"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setDirection(direction === 'buy' ? '' : 'buy')}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${direction === 'buy' ? 'bg-green-400/10 border-green-400/50 text-green-400' : 'border-[#2a2a3a] text-[#5a5a72] hover:text-[#9090a8]'}`}>
+                    ▲ Buy
+                  </button>
+                  <button onClick={() => setDirection(direction === 'sell' ? '' : 'sell')}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${direction === 'sell' ? 'bg-red-400/10 border-red-400/50 text-red-400' : 'border-[#2a2a3a] text-[#5a5a72] hover:text-[#9090a8]'}`}>
+                    ▼ Sell
+                  </button>
+                  <span className="w-px bg-[#2a2a3a] mx-1" />
+                  {results.map(r => (
+                    <button key={r.value} onClick={() => setResult(result === r.value ? '' : r.value)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${result === r.value ? `bg-[#0d0d14] border-[#3a3a4a] ${r.cls}` : 'border-[#2a2a3a] text-[#5a5a72] hover:text-[#9090a8]'}`}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#5a5a72]">P&L $</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={pnl}
+                    onChange={e => setPnl(e.target.value)}
+                    placeholder="e.g. 250 or -80"
+                    className="w-32 bg-[#0d0d14] border border-[#2a2a3a] rounded-lg px-2.5 py-1.5 text-sm text-[#f0f0f8] outline-none focus:border-yellow-500/40 placeholder-[#3a3a4a]"
+                  />
+                </div>
+              </div>
               <textarea
                 value={content}
                 onChange={e => setContent(e.target.value)}
@@ -246,6 +347,20 @@ export default function JournalPage() {
                     </span>
                     {selected.mood && <span className="text-xs text-[#9090a8]">· {moodLabel(selected.mood)}</span>}
                   </div>
+                  {(selected.symbol || selected.direction || selected.result || selected.pnl != null) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      {selected.symbol && <span className="text-xs font-bold text-[#f0f0f8] bg-[#0d0d14] border border-[#2a2a3a] rounded px-1.5 py-0.5">{selected.symbol}</span>}
+                      {selected.direction && (
+                        <span className={`text-xs font-bold rounded px-1.5 py-0.5 ${selected.direction === 'buy' ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+                          {selected.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
+                        </span>
+                      )}
+                      {selected.result && <span className="text-xs text-[#9090a8]">{results.find(r => r.value === selected.result)?.label}</span>}
+                      {selected.pnl != null && (
+                        <span className={`text-xs font-bold ${selected.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(selected.pnl)}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
                   <button onClick={() => startEdit(selected)} className="p-1.5 rounded-lg text-[#5a5a72] hover:text-yellow-500 hover:bg-[#2a2a3a] transition-colors">
