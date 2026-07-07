@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
-import { hasAccess, BILLING, getPricePhp } from '@/lib/billing'
+import { hasAccess, BILLING, PAYPAL, getPricePhp } from '@/lib/billing'
 import { LogoutButton } from './LogoutButton'
+import { PayPalSubscribe } from './PayPalSubscribe'
 import { Crown, Check } from 'lucide-react'
 
 export const metadata = { title: 'Upgrade · GHT Trading' }
@@ -49,9 +50,20 @@ export default async function UpgradePage() {
           </ul>
         </div>
 
-        {/* payment instructions */}
+        {/* PayPal — instant recurring subscription */}
+        {PAYPAL.enabled && (
+          <div className="bg-surface border border-line rounded-2xl p-5 mb-4">
+            <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">Subscribe with PayPal or card</p>
+            <p className="text-xs text-ink3 mb-3">${BILLING.priceUsd}/month · cancel anytime · instant access</p>
+            <PayPalSubscribe clientId={PAYPAL.clientId} planId={PAYPAL.planId} userId={session.user.id} />
+          </div>
+        )}
+
+        {/* GCash / Maya — manual fallback */}
         <div className="bg-surface border border-line rounded-2xl p-5">
-          <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-3">How to pay</p>
+          <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-3">
+            {PAYPAL.enabled ? 'Prefer GCash / Maya?' : 'How to pay'}
+          </p>
           <ol className="space-y-3 text-sm text-ink">
             <li className="flex gap-2.5">
               <span className="shrink-0 w-5 h-5 rounded-full bg-elevated text-ink2 text-xs font-bold flex items-center justify-center">1</span>

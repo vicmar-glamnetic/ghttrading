@@ -37,6 +37,15 @@ export async function getPricePhp(): Promise<{ php: number; live: boolean }> {
   return { php: Math.round(BILLING.priceUsd * BILLING.fallbackRate), live: false }
 }
 
+// PayPal subscription config (client-safe values).
+export const PAYPAL = {
+  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+  planId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID || '',
+  get enabled() {
+    return Boolean(this.clientId && this.planId)
+  },
+}
+
 // Roles and subscription states that always have access.
 const FREE_ROLES = ['admin', 'coach']
 const ACTIVE_STATUSES = ['active', 'comp']

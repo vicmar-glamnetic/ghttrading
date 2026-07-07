@@ -32,6 +32,7 @@ model User {
   subscriptionStatus String   @default("free")
   stripeCustomerId   String?
   stripeSubId        String?
+  paypalSubscriptionId String?
   subscriptionEnd    DateTime?
   sessionToken       String?  @unique  // single-session enforcement
 
