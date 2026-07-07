@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { timeAgo, formatNumber, cn } from '@/lib/utils'
 import {
-  ThumbsUp, MessageCircle, Share2, MoreHorizontal,
+  ThumbsUp, MessageCircle, MoreHorizontal,
   TrendingUp, TrendingDown, BarChart2, BookOpen,
   Globe, Lock, Users, Play, Trash2, Flag, BadgeCheck,
 } from 'lucide-react'
@@ -364,7 +364,6 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
         {[
           { icon: ThumbsUp, label: liked ? 'Liked' : 'Like', active: liked, onClick: handleLike, filled: liked },
           { icon: MessageCircle, label: 'Comment', active: showComments, onClick: () => setShowComments(!showComments), filled: false },
-          { icon: Share2, label: 'Share', active: false, onClick: () => {}, filled: false },
         ].map(({ icon: Icon, label, active, onClick, filled }) => (
           <button key={label} onClick={onClick}
             className={cn(

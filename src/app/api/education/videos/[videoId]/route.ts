@@ -9,7 +9,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ vide
   const { videoId } = await params
   const video = await db.educatorVideo.findUnique({ where: { id: videoId }, select: { authorId: true } })
   if (!video) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  // Coaches can remove their own; admins can remove any.
   if (session.user.role !== 'admin' && video.authorId !== session.user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
