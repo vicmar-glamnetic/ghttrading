@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Avatar } from '@/components/ui/Avatar'
-import { Bell, Search, Home, Users, TrendingUp, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon } from 'lucide-react'
+import { Bell, Search, Home, Users, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { useTheme } from '@/components/ThemeProvider'
 
@@ -176,9 +176,6 @@ export function Navbar() {
           </Link>
           <Link href="/friends" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
             <Users className="w-5 h-5" />
-          </Link>
-          <Link href="/signals" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
-            <TrendingUp className="w-5 h-5" />
           </Link>
 
           {/* Light / dark toggle */}

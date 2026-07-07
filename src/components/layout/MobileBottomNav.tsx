@@ -6,8 +6,8 @@ import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Lightbulb, CalendarDays, NotebookPen, Menu, X,
-  CandlestickChart, Zap, BarChart2, Radio, BookOpen, Users, Bell, Settings,
-  Shield, User, LogOut, Newspaper,
+  CandlestickChart, BarChart2, Radio, BookOpen, Users, Bell, Settings,
+  Shield, User, LogOut,
 } from 'lucide-react'
 
 const items = [
@@ -22,11 +22,9 @@ const allNav = [
   { href: '/',              label: 'Feed',          icon: Home            },
   { href: '/chart',         label: 'Trading View',  icon: LineChart       },
   { href: '/trading',       label: 'Trading',       icon: CandlestickChart },
-  { href: '/signals',       label: 'Signals',       icon: Zap             },
   { href: '/ideas',         label: 'Trade Ideas',   icon: Lightbulb       },
   { href: '/analysis',      label: 'Analysis',      icon: BarChart2       },
   { href: '/live',          label: 'Live',          icon: Radio           },
-  { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/education',     label: 'Education',     icon: BookOpen        },
   { href: '/friends',       label: 'Traders',       icon: Users           },
   { href: '/journal',       label: 'My Journal',    icon: NotebookPen     },
