@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Home, BookOpen, Bell, Settings, Users,
-  BarChart2, Globe, NotebookPen,
+  Globe, NotebookPen,
   LineChart, Lightbulb, CalendarDays, Shield, CandlestickChart, Radio,
 } from 'lucide-react'
 
@@ -15,7 +15,6 @@ const navItems = [
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
   { href: '/trading',      label: 'Trading',       icon: CandlestickChart },
   { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb       },
-  { href: '/analysis',     label: 'Analysis',      icon: BarChart2       },
   { href: '/live',         label: 'Live',          icon: Radio           },
   { href: '/education',    label: 'Education',     icon: BookOpen        },
   { href: '/friends',      label: 'Traders',       icon: Users           },

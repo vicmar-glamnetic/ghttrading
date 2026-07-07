@@ -6,7 +6,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Lightbulb, CalendarDays, NotebookPen, Menu, X,
-  CandlestickChart, BarChart2, Radio, BookOpen, Users, Bell, Settings,
+  CandlestickChart, Radio, BookOpen, Users, Bell, Settings,
   Shield, User, LogOut,
 } from 'lucide-react'
 
@@ -23,7 +23,6 @@ const allNav = [
   { href: '/chart',         label: 'Trading View',  icon: LineChart       },
   { href: '/trading',       label: 'Trading',       icon: CandlestickChart },
   { href: '/ideas',         label: 'Trade Ideas',   icon: Lightbulb       },
-  { href: '/analysis',      label: 'Analysis',      icon: BarChart2       },
   { href: '/live',          label: 'Live',          icon: Radio           },
   { href: '/education',     label: 'Education',     icon: BookOpen        },
   { href: '/friends',       label: 'Traders',       icon: Users           },

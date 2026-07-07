@@ -40,6 +40,17 @@ function fmtRange(low: number | null, high: number | null) {
   return fmtNum(low ?? high)
 }
 
+function timeAgo(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const mins = Math.round((Date.now() - d.getTime()) / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.round(hrs / 24)}d ago`
+}
+
 // Build a clean order ticket to paste into MT5.
 function mt5Ticket(idea: TradeIdea) {
   const lines = [
@@ -90,6 +101,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
           <span className="text-[10px] font-black uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5">Trade Idea</span>
           <Avatar src={idea.author.image} name={idea.author.name} size="xs" />
           <span className="font-bold text-ink truncate">{idea.symbol}</span>
+          <span className="text-[10px] text-ink3 shrink-0">· {timeAgo(idea.createdAt)}</span>
         </div>
         <span className={`text-xs font-black rounded px-2 py-0.5 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'} ${idea.status === 'sl_hit' ? 'opacity-60' : ''}`}>
           {isBuy ? 'BUY' : 'SELL'}
@@ -172,7 +184,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
 
 /* ---------- editor modal ---------- */
 const EMPTY = {
-  symbol: '', direction: 'buy' as 'buy' | 'sell', entryLow: '', entryHigh: '',
+  symbol: 'XAUUSD', direction: 'buy' as 'buy' | 'sell', entryLow: '', entryHigh: '',
   slLow: '', slHigh: '', currentPrice: '', status: 'pending' as TradeIdea['status'],
   notes: '', isPublic: true,
   takeProfits: [{ price: '', pips: '', hit: false }] as { price: string; pips: string; hit: boolean }[],
