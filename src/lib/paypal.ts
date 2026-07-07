@@ -78,8 +78,8 @@ export async function createMonthlyPlan(priceUsd: number) {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: 'GHT Trading Community Membership',
+      description: 'Monthly membership to the GHT Trading community',
       type: 'SERVICE',
-      category: 'ONLINE_SUBSCRIPTION_SERVICES',
     }),
   })
   if (!productRes.ok) throw new Error(`Create product failed: ${await productRes.text()}`)
