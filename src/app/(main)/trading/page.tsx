@@ -1,5 +1,5 @@
-// GHT Terminal — embeds the MetaTrader 5 Web Terminal so members can trade
-// directly with their own MT5 account + broker server.
+// Trading — embeds the MetaTrader 5 Web Terminal so members can trade
+// directly with their own MT5 account + broker server (version=5 = MetaTrader 5).
 //
 // The web terminal lets the user pick/search their broker server in the
 // "Connect to account" dialog. To pin a specific broker, append e.g.
@@ -7,15 +7,15 @@
 const MT5_TERMINAL_URL =
   'https://trade.mql5.com/trade?startup_mode=connect_account&lang=en&save_password=on&version=5'
 
-export const metadata = { title: 'Terminal · GHT Trading' }
+export const metadata = { title: 'Trading · GHT Trading' }
 
-export default function TerminalPage() {
+export default function TradingPage() {
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-2xl sm:text-3xl font-black text-ink tracking-wide flex items-center justify-center gap-3">
           <span className="text-yellow-500/60">‹‹‹</span>
-          GHT Terminal
+          Trading
           <span className="text-yellow-500/60">›››</span>
         </h1>
         <p className="text-ink2 text-sm mt-2 max-w-xl mx-auto">
