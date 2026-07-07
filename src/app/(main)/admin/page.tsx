@@ -77,6 +77,17 @@ export default function AdminPage() {
     load()
   }
 
+  async function changeSub(u: AdminUser, subscriptionStatus: string) {
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, subscriptionStatus } : x))
+    const res = await fetch(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscriptionStatus }),
+    })
+    if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Update failed'); }
+    load()
+  }
+
   async function remove(u: AdminUser) {
     if (!confirm(`Delete ${u.name || u.email}? This cannot be undone.`)) return
     setUsers(prev => prev.filter(x => x.id !== u.id))
@@ -176,9 +187,24 @@ export default function AdminPage() {
                     </select>
                   </td>
                   <td className="p-3 hidden sm:table-cell">
-                    <span className={`text-xs font-semibold rounded-full px-2 py-1 capitalize ${subBadge(u.subscriptionStatus)}`}>
-                      {u.subscriptionStatus}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold rounded-full px-2 py-1 capitalize ${subBadge(u.subscriptionStatus)}`}>
+                        {u.subscriptionStatus}
+                      </span>
+                      {u.role === 'member' && (
+                        ['active', 'comp'].includes(u.subscriptionStatus) ? (
+                          <button onClick={() => changeSub(u, 'free')}
+                            className="text-[10px] font-semibold text-ink3 hover:text-red-400 transition-colors">
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button onClick={() => changeSub(u, 'active')}
+                            className="text-[10px] font-semibold text-green-400 hover:text-green-300 transition-colors">
+                            Activate
+                          </button>
+                        )
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 hidden md:table-cell text-ink3 text-xs">
                     {format(new Date(u.createdAt), 'MMM d, yyyy')}

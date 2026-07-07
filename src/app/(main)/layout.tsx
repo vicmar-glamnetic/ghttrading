@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { hasAccess } from '@/lib/billing'
 import { Navbar } from '@/components/layout/Navbar'
 import { LeftSidebar } from '@/components/layout/LeftSidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
@@ -9,6 +10,8 @@ import { SessionGuard } from '@/components/SessionGuard'
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  // Paywall (off unless PAYWALL_ENABLED): non-members go to /upgrade.
+  if (!hasAccess(session.user)) redirect('/upgrade')
 
   return (
     <div className="min-h-screen bg-app">

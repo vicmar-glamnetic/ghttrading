@@ -48,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.image && !user.image.startsWith('data:') && user.image.length <= 512 ? user.image : null,
           username: user.username,
           role: user.role,
+          subscriptionStatus: user.subscriptionStatus,
           sessionToken,
         }
       },
@@ -60,6 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id
         token.username = (user as { username?: string }).username
         token.role = (user as { role?: string }).role
+        token.subscriptionStatus = (user as { subscriptionStatus?: string }).subscriptionStatus
         token.sessionToken = (user as { sessionToken?: string }).sessionToken
         token.lastVerified = Date.now()
       } else if (token.id) {
@@ -70,12 +72,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (due) {
           const dbUser = await db.user.findUnique({
             where: { id: token.id as string },
-            select: { sessionToken: true, role: true },
+            select: { sessionToken: true, role: true, subscriptionStatus: true },
           })
           if (!dbUser || dbUser.sessionToken !== token.sessionToken) {
             token.error = 'SessionInvalid'
           } else {
             token.role = dbUser.role // pick up role changes
+            token.subscriptionStatus = dbUser.subscriptionStatus // pick up billing changes
             token.lastVerified = Date.now()
           }
         }
@@ -88,6 +91,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string
         session.user.username = token.username as string
         session.user.role = (token.role as string) ?? 'member'
+        session.user.subscriptionStatus = (token.subscriptionStatus as string) ?? 'free'
         if (token.error) {
           session.error = token.error as string
         }
