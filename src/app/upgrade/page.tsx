@@ -8,11 +8,19 @@ import { Crown, Check } from 'lucide-react'
 
 export const metadata = { title: 'Upgrade · GHT Trading' }
 
-export default async function UpgradePage() {
+export default async function UpgradePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>
+}) {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  // Admins can preview the page (to test the PayPal flow) via ?preview=1,
+  // even while the paywall is off.
+  const { preview } = await searchParams
+  const previewing = preview === '1' && session.user.role === 'admin'
   // Already a member (or paywall off) — no need to be here.
-  if (hasAccess(session.user)) redirect('/')
+  if (!previewing && hasAccess(session.user)) redirect('/')
 
   const { php } = await getPricePhp()
 
