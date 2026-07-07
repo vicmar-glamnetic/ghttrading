@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
-import { hasAccess, BILLING } from '@/lib/billing'
+import { hasAccess, BILLING, getPricePhp } from '@/lib/billing'
 import { LogoutButton } from './LogoutButton'
 import { Crown, Check } from 'lucide-react'
 
@@ -12,6 +12,8 @@ export default async function UpgradePage() {
   if (!session?.user) redirect('/login')
   // Already a member (or paywall off) — no need to be here.
   if (hasAccess(session.user)) redirect('/')
+
+  const { php } = await getPricePhp()
 
   const perks = [
     'Live trading signals & market analysis',
@@ -31,7 +33,7 @@ export default async function UpgradePage() {
           <p className="text-ink2 text-sm mt-1">
             Unlock the full GHT Trading community for{' '}
             <span className="text-yellow-500 font-bold">${BILLING.priceUsd}/month</span>
-            {' '}(₱{BILLING.pricePhp}).
+            {' '}(≈ ₱{php.toLocaleString('en-PH')} today).
           </p>
         </div>
 
@@ -54,7 +56,7 @@ export default async function UpgradePage() {
             <li className="flex gap-2.5">
               <span className="shrink-0 w-5 h-5 rounded-full bg-elevated text-ink2 text-xs font-bold flex items-center justify-center">1</span>
               <div>
-                Send <span className="font-bold text-yellow-500">₱{BILLING.pricePhp}</span> via GCash to:
+                Send <span className="font-bold text-yellow-500">≈ ₱{php.toLocaleString('en-PH')}</span> (${BILLING.priceUsd}) via GCash to:
                 <div className="mt-1.5 rounded-lg bg-sunken border border-line px-3 py-2">
                   <p className="font-mono text-ink font-semibold">{BILLING.gcashNumber}</p>
                   <p className="text-xs text-ink3">{BILLING.gcashName}</p>
