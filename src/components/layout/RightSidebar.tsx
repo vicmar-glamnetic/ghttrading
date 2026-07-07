@@ -31,11 +31,11 @@ const goldFacts = [
 
 function GoldPriceWidget() {
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#2a2a3a]">
+    <div className="bg-surface rounded-xl border border-line overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
         <Activity className="w-4 h-4 text-yellow-500" />
-        <span className="text-sm font-bold text-[#f0f0f8]">XAUUSD · Gold</span>
-        <span className="ml-auto text-[10px] text-[#5a5a72] bg-[#0a0a0f] border border-[#2a2a3a] rounded px-1.5 py-0.5">
+        <span className="text-sm font-bold text-ink">XAUUSD · Gold</span>
+        <span className="ml-auto text-[10px] text-ink3 bg-app border border-line rounded px-1.5 py-0.5">
           Indicative
         </span>
       </div>
@@ -43,7 +43,7 @@ function GoldPriceWidget() {
       {/* Main price */}
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-black text-[#f0f0f8]">{gold.price}</span>
+          <span className="text-2xl font-black text-ink">{gold.price}</span>
           <span className={`text-sm font-bold flex items-center gap-0.5 ${gold.up ? 'text-green-400' : 'text-red-400'}`}>
             {gold.up ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             {gold.changePct}
@@ -55,15 +55,15 @@ function GoldPriceWidget() {
       </div>
 
       {/* Bid / Ask / High / Low */}
-      <div className="grid grid-cols-2 gap-px bg-[#2a2a3a] border-t border-[#2a2a3a]">
+      <div className="grid grid-cols-2 gap-px bg-line border-t border-line">
         {[
           { label: 'Bid',  value: gold.bid,  color: 'text-red-400'   },
           { label: 'Ask',  value: gold.ask,  color: 'text-green-400' },
           { label: 'High', value: gold.high, color: 'text-green-400' },
           { label: 'Low',  value: gold.low,  color: 'text-red-400'   },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#16161f] px-3 py-2">
-            <p className="text-[10px] text-[#5a5a72] uppercase tracking-wider">{label}</p>
+          <div key={label} className="bg-surface px-3 py-2">
+            <p className="text-[10px] text-ink3 uppercase tracking-wider">{label}</p>
             <p className={`text-xs font-bold ${color}`}>{value}</p>
           </div>
         ))}
@@ -75,12 +75,12 @@ function GoldPriceWidget() {
 function GoldFactWidget() {
   const fact = goldFacts[new Date().getDay() % goldFacts.length]
   return (
-    <div className="bg-[#16161f] rounded-xl border border-yellow-500/20 p-3">
+    <div className="bg-surface rounded-xl border border-yellow-500/20 p-3">
       <div className="flex items-center gap-2 mb-1.5">
         <Star className="w-3.5 h-3.5 text-yellow-500" fill="currentColor" />
         <span className="text-xs font-bold text-yellow-500">Gold Fact</span>
       </div>
-      <p className="text-xs text-[#9090a8] leading-relaxed">{fact}</p>
+      <p className="text-xs text-ink2 leading-relaxed">{fact}</p>
     </div>
   )
 }
@@ -108,22 +108,22 @@ function TradersToFollow() {
   if (!suggestions.length) return null
 
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#2a2a3a]">
+    <div className="bg-surface rounded-xl border border-line overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
         <Users className="w-4 h-4 text-yellow-500" />
-        <span className="text-sm font-bold text-[#f0f0f8]">Traders to Follow</span>
+        <span className="text-sm font-bold text-ink">Traders to Follow</span>
       </div>
-      <div className="divide-y divide-[#2a2a3a]">
+      <div className="divide-y divide-line">
         {suggestions.map(user => (
-          <div key={user.id} className="flex items-center gap-2 p-3 hover:bg-[#1e1e2c] transition-colors">
+          <div key={user.id} className="flex items-center gap-2 p-3 hover:bg-elevated transition-colors">
             <Link href={`/profile/${user.id}`} className="shrink-0">
               <Avatar src={user.image} name={user.name} size="sm" />
             </Link>
             <div className="flex-1 min-w-0">
-              <Link href={`/profile/${user.id}`} className="text-xs font-semibold text-[#f0f0f8] hover:text-yellow-500 truncate block transition-colors">
+              <Link href={`/profile/${user.id}`} className="text-xs font-semibold text-ink hover:text-yellow-500 truncate block transition-colors">
                 {user.name || 'Trader'}
               </Link>
-              <p className="text-[10px] text-[#5a5a72] truncate">@{user.username || 'trader'}</p>
+              <p className="text-[10px] text-ink3 truncate">@{user.username || 'trader'}</p>
             </div>
             <Button
               variant={followed.has(user.id) ? 'secondary' : 'outline'}
@@ -147,7 +147,7 @@ export function RightSidebar() {
       <GoldFactWidget />
       <TradersToFollow />
 
-      <div className="text-xs text-[#5a5a72] px-1 space-y-1">
+      <div className="text-xs text-ink3 px-1 space-y-1">
         <div className="flex flex-wrap gap-x-2">
           <Link href="/privacy" className="hover:text-yellow-500 transition-colors">Privacy</Link>
           <Link href="/terms" className="hover:text-yellow-500 transition-colors">Terms</Link>

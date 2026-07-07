@@ -9,17 +9,17 @@ type Filter = 'all' | 'signals' | 'analysis'
 
 function PostSkeleton() {
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4 animate-pulse space-y-3">
+    <div className="bg-surface rounded-xl border border-line p-4 animate-pulse space-y-3">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#2a2a3a]" />
+        <div className="w-10 h-10 rounded-full bg-line" />
         <div className="space-y-1.5">
-          <div className="h-3 w-28 bg-[#2a2a3a] rounded" />
-          <div className="h-2 w-20 bg-[#2a2a3a] rounded" />
+          <div className="h-3 w-28 bg-line rounded" />
+          <div className="h-2 w-20 bg-line rounded" />
         </div>
       </div>
       <div className="space-y-2">
-        <div className="h-3 w-full bg-[#2a2a3a] rounded" />
-        <div className="h-3 w-4/5 bg-[#2a2a3a] rounded" />
+        <div className="h-3 w-full bg-line rounded" />
+        <div className="h-3 w-4/5 bg-line rounded" />
       </div>
     </div>
   )
@@ -67,7 +67,7 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-yellow-500" />
-          <h2 className="font-bold text-[#f0f0f8]">Trading Feed</h2>
+          <h2 className="font-bold text-ink">Trading Feed</h2>
         </div>
         <div className="flex gap-2 text-xs">
           {filterTabs.map(tab => (
@@ -77,7 +77,7 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
               className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
                 filter === tab.id
                   ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                  : 'text-[#5a5a72] hover:bg-[#1e1e2c] border border-transparent'
+                  : 'text-ink3 hover:bg-elevated border border-transparent'
               }`}
             >
               {tab.label}
@@ -89,12 +89,12 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
       <CreatePost onPostCreated={post => setPosts(prev => [post as PostWithDetails, ...prev])} />
 
       {filtered.length === 0 ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
           <TrendingUp className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-[#f0f0f8] mb-2">
+          <h3 className="text-lg font-bold text-ink mb-2">
             {filter === 'all' ? 'Welcome to GHT Community!' : `No ${filter} posts yet`}
           </h3>
-          <p className="text-[#5a5a72] text-sm">
+          <p className="text-ink3 text-sm">
             {filter === 'all' ? 'Share your first signal or analysis to get started.' : 'Be the first to post one!'}
           </p>
         </div>
@@ -113,7 +113,7 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
         <button
           onClick={loadMore}
           disabled={loadingMore}
-          className="w-full py-3 bg-[#16161f] rounded-xl border border-[#2a2a3a] hover:border-yellow-500/30 text-sm text-yellow-500 font-medium transition-all disabled:opacity-50"
+          className="w-full py-3 bg-surface rounded-xl border border-line hover:border-yellow-500/30 text-sm text-yellow-500 font-medium transition-all disabled:opacity-50"
         >
           {loadingMore ? <PostSkeleton /> : 'Load more posts'}
         </button>

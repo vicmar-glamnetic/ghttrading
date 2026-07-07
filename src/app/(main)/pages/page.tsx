@@ -42,28 +42,28 @@ function PageCard({ page, isFollowing, onFollow, following, isOwn }: {
   isOwn: boolean
 }) {
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden hover:border-[#3a3a4a] transition-colors">
-      <div className="h-16 bg-linear-to-br from-yellow-500/10 to-[#1e1e2c] flex items-center justify-center">
+    <div className="bg-surface rounded-xl border border-line overflow-hidden hover:border-line2 transition-colors">
+      <div className="h-16 bg-linear-to-br from-yellow-500/10 to-elevated flex items-center justify-center">
         {page.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={page.image} alt={page.name} className="w-12 h-12 rounded-full object-cover border-2 border-[#16161f]" />
+          <img src={page.image} alt={page.name} className="w-12 h-12 rounded-full object-cover border-2 border-surface" />
         ) : (
-          <div className="w-12 h-12 rounded-full bg-yellow-500/20 border-2 border-[#16161f] flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-yellow-500/20 border-2 border-surface flex items-center justify-center">
             <Flag className="w-5 h-5 text-yellow-500" />
           </div>
         )}
       </div>
       <div className="p-3">
         <div className="flex items-start gap-1 mb-0.5">
-          <Link href={`/pages/${page.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors leading-tight flex-1 truncate">
+          <Link href={`/pages/${page.id}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors leading-tight flex-1 truncate">
             {page.name}
           </Link>
           {page.verified && <BadgeCheck className="w-4 h-4 text-yellow-500 shrink-0" />}
         </div>
-        <p className="text-[10px] text-[#5a5a72] mb-1">{categoryLabel(page.category)}</p>
-        {page.description && <p className="text-xs text-[#5a5a72] line-clamp-2 mb-2">{page.description}</p>}
+        <p className="text-[10px] text-ink3 mb-1">{categoryLabel(page.category)}</p>
+        {page.description && <p className="text-xs text-ink3 line-clamp-2 mb-2">{page.description}</p>}
         <div className="flex items-center justify-between mt-2">
-          <p className="text-[10px] text-[#3a3a4a]">{page._count.followers.toLocaleString()} followers</p>
+          <p className="text-[10px] text-line2">{page._count.followers.toLocaleString()} followers</p>
           {isOwn ? (
             <Link href={`/pages/${page.id}`}>
               <Button variant="outline" size="sm" className="text-xs">Manage</Button>
@@ -116,41 +116,41 @@ function CreatePageModal({ onClose, onCreate }: { onClose: () => void; onCreate:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-[#16161f] rounded-2xl border border-[#2a2a3a] p-6 w-full max-w-md shadow-2xl">
+      <div className="relative bg-surface rounded-2xl border border-line p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-[#f0f0f8]">Create a Page</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-[#5a5a72] hover:text-[#f0f0f8] hover:bg-[#2a2a3a] transition-colors">
+          <h2 className="font-bold text-ink">Create a Page</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-ink3 hover:text-ink hover:bg-line transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{error}</p>}
           <div>
-            <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Page Name *</label>
+            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Page Name *</label>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. GHT Gold Signals, XAU Daily Analysis…"
               required
-              className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 transition-colors"
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Description</label>
+            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Description</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="What is this page about?"
               rows={3}
-              className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors resize-none"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Category</label>
+            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Category</label>
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] transition-colors"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink transition-colors"
             >
               {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
@@ -215,9 +215,9 @@ export default function PagesPage() {
   ]
 
   const emptyMessages: Record<Tab, { icon: React.ReactNode; text: string; action?: React.ReactNode }> = {
-    mine:      { icon: <Flag className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />, text: "You haven't created any pages yet", action: <button onClick={() => setShowCreate(true)} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">Create your first page →</button> },
-    following: { icon: <Flag className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />, text: "You're not following any pages yet", action: <button onClick={() => setActiveTab('discover')} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">Discover pages →</button> },
-    discover:  { icon: <Flag className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />, text: 'No pages to discover yet', action: <button onClick={() => setShowCreate(true)} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">Create the first one →</button> },
+    mine:      { icon: <Flag className="w-10 h-10 text-line mx-auto mb-3" />, text: "You haven't created any pages yet", action: <button onClick={() => setShowCreate(true)} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">Create your first page →</button> },
+    following: { icon: <Flag className="w-10 h-10 text-line mx-auto mb-3" />, text: "You're not following any pages yet", action: <button onClick={() => setActiveTab('discover')} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">Discover pages →</button> },
+    discover:  { icon: <Flag className="w-10 h-10 text-line mx-auto mb-3" />, text: 'No pages to discover yet', action: <button onClick={() => setShowCreate(true)} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">Create the first one →</button> },
   }
 
   const currentList = activeTab === 'mine' ? (data?.myPages ?? []) : activeTab === 'following' ? (data?.following ?? []) : (data?.discover ?? [])
@@ -229,24 +229,24 @@ export default function PagesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Flag className="w-5 h-5 text-yellow-500" />
-          <h1 className="font-bold text-[#f0f0f8] text-lg">Pages</h1>
+          <h1 className="font-bold text-ink text-lg">Pages</h1>
         </div>
         <Button variant="gold" size="sm" onClick={() => setShowCreate(true)} className="gap-1.5 text-xs">
           <Plus className="w-3.5 h-3.5" /> Create Page
         </Button>
       </div>
 
-      <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
-        <div className="flex border-b border-[#2a2a3a]">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
+        <div className="flex border-b border-line">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? 'border-b-2 border-yellow-500 text-yellow-500' : 'text-[#5a5a72] hover:bg-[#1e1e2c] hover:text-[#9090a8]'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? 'border-b-2 border-yellow-500 text-yellow-500' : 'text-ink3 hover:bg-elevated hover:text-ink2'}`}
             >
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-yellow-500 text-black' : 'bg-[#2a2a3a] text-[#9090a8]'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-yellow-500 text-black' : 'bg-line text-ink2'}`}>
                   {tab.count}
                 </span>
               )}
@@ -258,11 +258,11 @@ export default function PagesPage() {
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-pulse">
               {[1,2,3,4,5,6].map(i => (
-                <div key={i} className="rounded-xl border border-[#2a2a3a] overflow-hidden">
-                  <div className="h-16 bg-[#2a2a3a]" />
+                <div key={i} className="rounded-xl border border-line overflow-hidden">
+                  <div className="h-16 bg-line" />
                   <div className="p-3 space-y-2">
-                    <div className="h-3 w-3/4 bg-[#2a2a3a] rounded" />
-                    <div className="h-2 w-1/2 bg-[#2a2a3a] rounded" />
+                    <div className="h-3 w-3/4 bg-line rounded" />
+                    <div className="h-2 w-1/2 bg-line rounded" />
                   </div>
                 </div>
               ))}
@@ -270,7 +270,7 @@ export default function PagesPage() {
           ) : currentList.length === 0 ? (
             <div className="py-12 text-center">
               {emptyMessages[activeTab].icon}
-              <p className="text-[#5a5a72] text-sm">{emptyMessages[activeTab].text}</p>
+              <p className="text-ink3 text-sm">{emptyMessages[activeTab].text}</p>
               {emptyMessages[activeTab].action}
             </div>
           ) : (

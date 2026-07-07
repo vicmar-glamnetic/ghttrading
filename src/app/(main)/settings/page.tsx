@@ -68,19 +68,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
-      <div className="flex items-center gap-3 p-4 border-b border-[#2a2a3a]">
+    <div className="bg-surface rounded-xl border border-line overflow-hidden">
+      <div className="flex items-center gap-3 p-4 border-b border-line">
         <Settings className="w-5 h-5 text-yellow-500" />
-        <h1 className="text-lg font-bold text-[#f0f0f8]">Settings</h1>
+        <h1 className="text-lg font-bold text-ink">Settings</h1>
       </div>
 
-      <div className="flex border-b border-[#2a2a3a]">
+      <div className="flex border-b border-line">
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'border-b-2 border-yellow-500 text-yellow-500'
-                : 'text-[#5a5a72] hover:bg-[#1e1e2c] hover:text-[#9090a8]'
+                : 'text-ink3 hover:bg-elevated hover:text-ink2'
             }`}>
             <tab.icon className="w-4 h-4" />
             {tab.label}
@@ -107,39 +107,39 @@ export default function SettingsPage() {
                 <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
                   {uploading ? 'Uploading…' : 'Change Photo'}
                 </Button>
-                <p className="text-xs text-[#5a5a72] mt-1">JPG, PNG up to 8MB</p>
+                <p className="text-xs text-ink3 mt-1">JPG, PNG up to 8MB</p>
               </div>
             </div>
 
             {/* Name */}
             <div>
-              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Full Name</label>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Full Name</label>
               <input
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] transition-colors"
+                className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink transition-colors"
               />
             </div>
 
             {/* Email (read-only) */}
             <div>
-              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Email</label>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Email</label>
               <input
                 defaultValue={session?.user?.email || ''}
                 disabled
-                className="w-full bg-[#1e1e2c] border border-[#2a2a3a] rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] opacity-50 cursor-not-allowed transition-colors"
+                className="w-full bg-elevated border border-line rounded-lg px-3 py-2.5 text-sm outline-none text-ink opacity-50 cursor-not-allowed transition-colors"
               />
             </div>
 
             {/* Bio */}
             <div>
-              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Bio</label>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Bio</label>
               <textarea
                 rows={3}
                 value={bio}
                 onChange={e => setBio(e.target.value)}
                 placeholder="Tell the community about yourself…"
-                className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] resize-none transition-colors"
+                className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 resize-none transition-colors"
               />
             </div>
 
@@ -155,12 +155,12 @@ export default function SettingsPage() {
               { label: 'Default post visibility', desc: 'Who can see your posts by default' },
               { label: 'Friend requests', desc: 'Who can send you friend requests' },
             ].map(item => (
-              <div key={item.label} className="flex items-center justify-between py-3 border-b border-[#2a2a3a]">
+              <div key={item.label} className="flex items-center justify-between py-3 border-b border-line">
                 <div>
-                  <p className="text-sm font-medium text-[#f0f0f8]">{item.label}</p>
-                  <p className="text-xs text-[#5a5a72]">{item.desc}</p>
+                  <p className="text-sm font-medium text-ink">{item.label}</p>
+                  <p className="text-xs text-ink3">{item.desc}</p>
                 </div>
-                <select className="bg-[#1e1e2c] border border-[#2a2a3a] text-sm text-[#9090a8] rounded-lg px-2 py-1.5 outline-none focus:border-yellow-500/50">
+                <select className="bg-elevated border border-line text-sm text-ink2 rounded-lg px-2 py-1.5 outline-none focus:border-yellow-500/50">
                   <option>Public</option>
                   <option>Traders Only</option>
                   <option>Only me</option>

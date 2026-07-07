@@ -121,16 +121,16 @@ export default function FriendsPage() {
   }) {
     const loading = action === 'loading'
     return (
-      <div className="flex items-center gap-3 p-4 hover:bg-[#1e1e2c] transition-colors">
+      <div className="flex items-center gap-3 p-4 hover:bg-elevated transition-colors">
         <Link href={`/profile/${user.id}`} className="shrink-0">
           <Avatar src={user.image} name={user.name} size="md" />
         </Link>
         <div className="flex-1 min-w-0">
-          <Link href={`/profile/${user.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors block truncate">
+          <Link href={`/profile/${user.id}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors block truncate">
             {user.name || 'Trader'}
           </Link>
-          <p className="text-xs text-[#5a5a72] truncate">@{user.username || 'trader'}</p>
-          {user.bio && <p className="text-xs text-[#9090a8] truncate mt-0.5">{user.bio}</p>}
+          <p className="text-xs text-ink3 truncate">@{user.username || 'trader'}</p>
+          {user.bio && <p className="text-xs text-ink2 truncate mt-0.5">{user.bio}</p>}
         </div>
         <div className="flex gap-1.5 shrink-0">
           {sentPending ? (
@@ -158,12 +158,12 @@ export default function FriendsPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Users className="w-5 h-5 text-yellow-500" />
-        <h1 className="font-bold text-[#f0f0f8] text-lg">Traders</h1>
+        <h1 className="font-bold text-ink text-lg">Traders</h1>
       </div>
 
-      <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
         {/* Tabs */}
-        <div className="flex border-b border-[#2a2a3a]">
+        <div className="flex border-b border-line">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -171,13 +171,13 @@ export default function FriendsPage() {
               className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'border-b-2 border-yellow-500 text-yellow-500'
-                  : 'text-[#5a5a72] hover:bg-[#1e1e2c] hover:text-[#9090a8]'
+                  : 'text-ink3 hover:bg-elevated hover:text-ink2'
               }`}
             >
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  activeTab === tab.id ? 'bg-yellow-500 text-black' : 'bg-[#2a2a3a] text-[#9090a8]'
+                  activeTab === tab.id ? 'bg-yellow-500 text-black' : 'bg-line text-ink2'
                 }`}>
                   {tab.count}
                 </span>
@@ -190,12 +190,12 @@ export default function FriendsPage() {
           <div className="p-6 space-y-4 animate-pulse">
             {[1,2,3].map(i => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#2a2a3a]" />
+                <div className="w-10 h-10 rounded-full bg-line" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-3 w-32 bg-[#2a2a3a] rounded" />
-                  <div className="h-2 w-24 bg-[#2a2a3a] rounded" />
+                  <div className="h-3 w-32 bg-line rounded" />
+                  <div className="h-2 w-24 bg-line rounded" />
                 </div>
-                <div className="w-20 h-7 bg-[#2a2a3a] rounded-lg" />
+                <div className="w-20 h-7 bg-line rounded-lg" />
               </div>
             ))}
           </div>
@@ -208,11 +208,11 @@ export default function FriendsPage() {
           <>
             {/* ── Requests tab ── */}
             {activeTab === 'requests' && (
-              <div className="divide-y divide-[#2a2a3a]">
+              <div className="divide-y divide-line">
                 {(data?.pendingReceived.length === 0 && data?.pendingSent.length === 0) ? (
                   <div className="p-10 text-center">
-                    <UserPlus className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />
-                    <p className="text-[#5a5a72] text-sm">No pending requests</p>
+                    <UserPlus className="w-10 h-10 text-line mx-auto mb-3" />
+                    <p className="text-ink3 text-sm">No pending requests</p>
                     <button onClick={() => setActiveTab('discover')} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">
                       Discover traders →
                     </button>
@@ -247,11 +247,11 @@ export default function FriendsPage() {
 
             {/* ── Friends tab ── */}
             {activeTab === 'friends' && (
-              <div className="divide-y divide-[#2a2a3a]">
+              <div className="divide-y divide-line">
                 {!data?.friends.length ? (
                   <div className="p-10 text-center">
-                    <UserCheck className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />
-                    <p className="text-[#5a5a72] text-sm">No friends yet</p>
+                    <UserCheck className="w-10 h-10 text-line mx-auto mb-3" />
+                    <p className="text-ink3 text-sm">No friends yet</p>
                     <button onClick={() => setActiveTab('discover')} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">
                       Find traders to connect with →
                     </button>
@@ -260,15 +260,15 @@ export default function FriendsPage() {
                   // Show the person who is NOT the current user
                   const other = f.sender.id === data.currentUserId ? f.receiver : f.sender
                   return (
-                    <div key={f.id} className="flex items-center gap-3 p-4 hover:bg-[#1e1e2c] transition-colors">
+                    <div key={f.id} className="flex items-center gap-3 p-4 hover:bg-elevated transition-colors">
                       <Link href={`/profile/${other.id}`} className="shrink-0">
                         <Avatar src={other.image} name={other.name} size="md" />
                       </Link>
                       <div className="flex-1 min-w-0">
-                        <Link href={`/profile/${other.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors block truncate">
+                        <Link href={`/profile/${other.id}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors block truncate">
                           {other.name || 'Trader'}
                         </Link>
-                        <p className="text-xs text-[#5a5a72] truncate">@{other.username || 'trader'}</p>
+                        <p className="text-xs text-ink3 truncate">@{other.username || 'trader'}</p>
                       </div>
                       <Link href={`/profile/${other.id}`}>
                         <Button variant="outline" size="sm" className="text-xs shrink-0">View</Button>
@@ -283,38 +283,38 @@ export default function FriendsPage() {
             {activeTab === 'discover' && (
               <div>
                 {/* Search bar */}
-                <div className="p-3 border-b border-[#2a2a3a]">
-                  <div className="flex items-center gap-2 bg-[#0a0a0f] border border-[#2a2a3a] rounded-lg px-3 py-2 focus-within:border-yellow-500/50 transition-colors">
-                    <Search className="w-4 h-4 text-[#5a5a72] shrink-0" />
+                <div className="p-3 border-b border-line">
+                  <div className="flex items-center gap-2 bg-app border border-line rounded-lg px-3 py-2 focus-within:border-yellow-500/50 transition-colors">
+                    <Search className="w-4 h-4 text-ink3 shrink-0" />
                     <input
                       value={searchQ}
                       onChange={e => setSearchQ(e.target.value)}
                       placeholder="Search traders by name or username…"
-                      className="bg-transparent text-sm outline-none w-full text-[#f0f0f8] placeholder-[#5a5a72]"
+                      className="bg-transparent text-sm outline-none w-full text-ink placeholder-ink3"
                     />
                     {searching && <div className="w-3.5 h-3.5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin shrink-0" />}
                   </div>
                 </div>
 
-                <div className="divide-y divide-[#2a2a3a]">
+                <div className="divide-y divide-line">
                   {displayList.length === 0 ? (
                     <div className="p-10 text-center">
-                      <Users className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />
-                      <p className="text-[#5a5a72] text-sm">
+                      <Users className="w-10 h-10 text-line mx-auto mb-3" />
+                      <p className="text-ink3 text-sm">
                         {searchQ.length >= 2 ? 'No traders found' : 'No suggestions available'}
                       </p>
                     </div>
                   ) : displayList.map(user => (
-                    <div key={user.id} className="flex items-center gap-3 p-4 hover:bg-[#1e1e2c] transition-colors">
+                    <div key={user.id} className="flex items-center gap-3 p-4 hover:bg-elevated transition-colors">
                       <Link href={`/profile/${user.id}`} className="shrink-0">
                         <Avatar src={user.image} name={user.name} size="md" />
                       </Link>
                       <div className="flex-1 min-w-0">
-                        <Link href={`/profile/${user.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors block truncate">
+                        <Link href={`/profile/${user.id}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors block truncate">
                           {user.name || 'Trader'}
                         </Link>
-                        <p className="text-xs text-[#5a5a72] truncate">@{user.username || 'trader'}</p>
-                        {user.bio && <p className="text-xs text-[#9090a8] truncate mt-0.5">{user.bio}</p>}
+                        <p className="text-xs text-ink3 truncate">@{user.username || 'trader'}</p>
+                        {user.bio && <p className="text-xs text-ink2 truncate mt-0.5">{user.bio}</p>}
                       </div>
                       <div className="flex gap-1.5 shrink-0">
                         <Button

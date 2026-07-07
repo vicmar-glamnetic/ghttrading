@@ -28,6 +28,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  role               String   @default("member") // admin | coach | member
   subscriptionStatus String   @default("free")
   stripeCustomerId   String?
   stripeSubId        String?

@@ -10,10 +10,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variants = {
   primary: 'bg-yellow-500 hover:bg-yellow-400 text-black font-semibold',
   gold: 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 text-black font-semibold shadow-lg',
-  secondary: 'bg-[#1e1e2c] hover:bg-[#2a2a3a] text-[#f0f0f8] border border-[#2a2a3a]',
-  ghost: 'hover:bg-[#1e1e2c] text-[#9090a8] hover:text-[#f0f0f8]',
+  secondary: 'bg-elevated hover:bg-line text-ink border border-line',
+  ghost: 'hover:bg-elevated text-ink2 hover:text-ink',
   danger: 'bg-red-600 hover:bg-red-500 text-white',
-  outline: 'border border-[#2a2a3a] hover:border-yellow-500 text-[#9090a8] hover:text-yellow-500',
+  outline: 'border border-line hover:border-yellow-500 text-ink2 hover:text-yellow-500',
 }
 
 const sizes = {
@@ -28,7 +28,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:ring-offset-2 focus:ring-offset-[#0a0a0f] disabled:opacity-40 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:ring-offset-2 focus:ring-offset-app disabled:opacity-40 disabled:cursor-not-allowed',
         variants[variant],
         sizes[size],
         className

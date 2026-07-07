@@ -62,12 +62,12 @@ function PostMenu({ postId, isOwner, onDelete }: { postId: string; isOwner: bool
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="p-1.5 hover:bg-[#1e1e2c] rounded-lg transition-colors"
+        className="p-1.5 hover:bg-elevated rounded-lg transition-colors"
       >
-        <MoreHorizontal className="w-4 h-4 text-[#5a5a72]" />
+        <MoreHorizontal className="w-4 h-4 text-ink3" />
       </button>
       {open && (
-        <div className="absolute right-0 top-8 z-50 w-40 bg-[#1e1e2c] border border-[#2a2a3a] rounded-xl shadow-2xl overflow-hidden">
+        <div className="absolute right-0 top-8 z-50 w-40 bg-elevated border border-line rounded-xl shadow-2xl overflow-hidden">
           <button
             onClick={handleDelete}
             disabled={deleting}
@@ -116,7 +116,7 @@ function CommentRow({
         <Avatar src={comment.author.image} name={comment.author.name} size="xs" />
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="bg-[#1e1e2c] rounded-2xl px-3 py-2 border border-[#2a2a3a]">
+        <div className="bg-elevated rounded-2xl px-3 py-2 border border-line">
           <Link href={`/profile/${comment.author.id}`} className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
             {comment.author.name}
           </Link>
@@ -127,7 +127,7 @@ function CommentRow({
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 self-center p-1.5 hover:bg-red-500/10 rounded-lg transition-all text-[#5a5a72] hover:text-red-400 disabled:opacity-50"
+          className="opacity-0 group-hover:opacity-100 self-center p-1.5 hover:bg-red-500/10 rounded-lg transition-all text-ink3 hover:text-red-400 disabled:opacity-50"
           title="Delete comment"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -200,13 +200,13 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
   if (!visible) return null
 
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] hover:border-[#3a3a4a] overflow-hidden transition-all duration-200">
+    <div className="bg-surface rounded-xl border border-line hover:border-line2 overflow-hidden transition-all duration-200">
       {/* Header */}
       <div className="flex items-start justify-between p-4">
         <div className="flex items-center gap-3">
           {post.group ? (
             <Link href={`/groups/${post.group.id}`}>
-              <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-[#2a2a3a] flex items-center justify-center overflow-hidden shrink-0">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-line flex items-center justify-center overflow-hidden shrink-0">
                 {post.group.image
                   // eslint-disable-next-line @next/next/no-img-element
                   ? <img src={post.group.image} alt={post.group.name} className="w-full h-full object-cover" />
@@ -215,7 +215,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
             </Link>
           ) : post.page ? (
             <Link href={`/pages/${post.page.id}`}>
-              <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-[#2a2a3a] flex items-center justify-center overflow-hidden shrink-0">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-line flex items-center justify-center overflow-hidden shrink-0">
                 {post.page.image
                   // eslint-disable-next-line @next/next/no-img-element
                   ? <img src={post.page.image} alt={post.page.name} className="w-full h-full object-cover" />
@@ -230,18 +230,18 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
           <div>
             <div className="flex items-center gap-2">
               {post.group ? (
-                <Link href={`/groups/${post.group.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors">
+                <Link href={`/groups/${post.group.id}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors">
                   {post.group.name}
                 </Link>
               ) : post.page ? (
                 <div className="flex items-center gap-1">
-                  <Link href={`/pages/${post.page.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors">
+                  <Link href={`/pages/${post.page.id}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors">
                     {post.page.name}
                   </Link>
                   {post.page.verified && <BadgeCheck className="w-3.5 h-3.5 text-yellow-500" />}
                 </div>
               ) : (
-                <Link href={`/profile/${post.author.id}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors">
+                <Link href={`/profile/${post.author.id}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors">
                   {post.author.name}
                 </Link>
               )}
@@ -253,14 +253,14 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
               )}
             </div>
             {(post.group || post.page) && (
-              <p className="text-[11px] text-[#5a5a72]">
+              <p className="text-[11px] text-ink3">
                 by{' '}
                 <Link href={`/profile/${post.author.id}`} className="hover:text-yellow-500 transition-colors">
                   {post.author.name}
                 </Link>
               </p>
             )}
-            <div className="flex items-center gap-1.5 text-xs text-[#5a5a72] mt-0.5">
+            <div className="flex items-center gap-1.5 text-xs text-ink3 mt-0.5">
               <span>{timeAgo(post.createdAt)}</span>
               {!post.group && !post.page && (
                 <>
@@ -285,7 +285,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
           {post.images.slice(0, 4).map((media, i) => {
             const imgIndexInLightbox = imageUrls.indexOf(media)
             return (
-              <div key={i} className={cn('relative bg-[#0a0a0f] overflow-hidden', post.images.length === 1 ? 'aspect-video' : 'aspect-square')}>
+              <div key={i} className={cn('relative bg-app overflow-hidden', post.images.length === 1 ? 'aspect-video' : 'aspect-square')}>
                 {isVideo(media) ? (
                   /* ── Video stays inline ── */
                   <div className="relative w-full h-full group">
@@ -342,9 +342,9 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
 
       {/* Stats */}
       {(likeCount > 0 || commentCount > 0) && (
-        <div className="flex items-center justify-between px-4 py-2 border-t border-[#2a2a3a]">
+        <div className="flex items-center justify-between px-4 py-2 border-t border-line">
           {likeCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs text-[#5a5a72]">
+            <span className="flex items-center gap-1.5 text-xs text-ink3">
               <span className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
                 <ThumbsUp className="w-2.5 h-2.5 text-black" fill="currentColor" />
               </span>
@@ -352,7 +352,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
             </span>
           )}
           {commentCount > 0 && (
-            <button onClick={() => setShowComments(!showComments)} className="text-xs text-[#5a5a72] hover:text-yellow-500 transition-colors ml-auto">
+            <button onClick={() => setShowComments(!showComments)} className="text-xs text-ink3 hover:text-yellow-500 transition-colors ml-auto">
               {formatNumber(commentCount)} comment{commentCount !== 1 ? 's' : ''}
             </button>
           )}
@@ -360,7 +360,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
       )}
 
       {/* Action buttons */}
-      <div className="flex border-t border-[#2a2a3a]">
+      <div className="flex border-t border-line">
         {[
           { icon: ThumbsUp, label: liked ? 'Liked' : 'Like', active: liked, onClick: handleLike, filled: liked },
           { icon: MessageCircle, label: 'Comment', active: showComments, onClick: () => setShowComments(!showComments), filled: false },
@@ -369,7 +369,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
           <button key={label} onClick={onClick}
             className={cn(
               'flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold transition-colors',
-              active ? 'text-yellow-500' : 'text-[#5a5a72] hover:text-[#9090a8] hover:bg-[#1e1e2c]'
+              active ? 'text-yellow-500' : 'text-ink3 hover:text-ink2 hover:bg-elevated'
             )}>
             <Icon className="w-4 h-4" fill={filled ? 'currentColor' : 'none'} />
             {label}
@@ -379,13 +379,13 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
 
       {/* Comments section */}
       {showComments && (
-        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-[#2a2a3a] bg-[#12121a]">
+        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-line bg-[#12121a]">
           <form onSubmit={handleComment} className="flex gap-2">
             <input
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
               placeholder="Add a comment…"
-              className="flex-1 bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-xl px-4 py-2 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+              className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-4 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors"
             />
             <Button type="submit" variant="gold" size="sm" loading={submittingComment} disabled={!commentText.trim()}>
               Post

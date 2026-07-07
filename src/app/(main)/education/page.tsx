@@ -50,13 +50,13 @@ function CreateEducationPost({ onCreated }: { onCreated: (post: PostWithDetails)
   }
 
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4">
+    <div className="bg-surface rounded-xl border border-line p-4">
       {!expanded ? (
         <div className="flex gap-3 items-center">
           <Avatar src={session?.user?.image} name={session?.user?.name} size="md" />
           <button
             onClick={() => setExpanded(true)}
-            className="flex-1 bg-[#1e1e2c] hover:bg-[#24243a] border border-[#2a2a3a] hover:border-purple-500/30 rounded-xl px-4 py-3 text-left text-sm text-[#5a5a72] transition-all"
+            className="flex-1 bg-elevated hover:bg-[#24243a] border border-line hover:border-purple-500/30 rounded-xl px-4 py-3 text-left text-sm text-ink3 transition-all"
           >
             Share trading knowledge, tips, or tutorials…
           </button>
@@ -78,7 +78,7 @@ function CreateEducationPost({ onCreated }: { onCreated: (post: PostWithDetails)
                 value={content}
                 onChange={e => setContent(e.target.value)}
                 placeholder="Share trading knowledge, strategies, tips, or tutorials with the community…"
-                className="w-full resize-none bg-transparent outline-none text-[#f0f0f8] placeholder-[#5a5a72] text-sm min-h-25 leading-relaxed"
+                className="w-full resize-none bg-transparent outline-none text-ink placeholder-ink3 text-sm min-h-25 leading-relaxed"
                 rows={4}
               />
             </div>
@@ -88,11 +88,11 @@ function CreateEducationPost({ onCreated }: { onCreated: (post: PostWithDetails)
             <MediaUpload onUpload={setMediaFiles} existingFiles={mediaFiles} />
           )}
 
-          <div className="flex items-center justify-between pt-3 border-t border-[#2a2a3a]">
+          <div className="flex items-center justify-between pt-3 border-t border-line">
             <button
               type="button"
               onClick={() => setShowMedia(!showMedia)}
-              className="p-2 hover:bg-[#1e1e2c] rounded-lg text-[#5a5a72] hover:text-purple-400 transition-colors"
+              className="p-2 hover:bg-elevated rounded-lg text-ink3 hover:text-purple-400 transition-colors"
               title="Add photo or video"
             >
               <ImageIcon className="w-5 h-5" />
@@ -139,8 +139,8 @@ export default function EducationPage() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <BookOpen className="w-5 h-5 text-yellow-500" />
-        <h1 className="font-bold text-[#f0f0f8] text-lg">Education</h1>
-        <span className="ml-auto text-xs text-[#5a5a72] bg-[#16161f] border border-[#2a2a3a] rounded-full px-3 py-1">
+        <h1 className="font-bold text-ink text-lg">Education</h1>
+        <span className="ml-auto text-xs text-ink3 bg-surface border border-line rounded-full px-3 py-1">
           {posts.length} post{posts.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -152,14 +152,14 @@ export default function EducationPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-40 bg-[#16161f] rounded-xl border border-[#2a2a3a] animate-pulse" />
+            <div key={i} className="h-40 bg-surface rounded-xl border border-line animate-pulse" />
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
           <BookOpen className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-[#f0f0f8] mb-2">No education posts yet</h3>
-          <p className="text-[#5a5a72] text-sm">Share your first trading lesson above!</p>
+          <h3 className="text-lg font-bold text-ink mb-2">No education posts yet</h3>
+          <p className="text-ink3 text-sm">Share your first trading lesson above!</p>
         </div>
       ) : (
         posts.map(post => (

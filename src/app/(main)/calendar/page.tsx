@@ -96,7 +96,7 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-5 h-5 text-yellow-500" />
-          <h1 className="font-bold text-[#f0f0f8] text-lg">Trading Calendar</h1>
+          <h1 className="font-bold text-ink text-lg">Trading Calendar</h1>
         </div>
         <Link href="/journal" className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-1">
           <NotebookPen className="w-3.5 h-3.5" /> Log a trade
@@ -108,13 +108,13 @@ export default function CalendarPage() {
         {[
           { label: 'Net P&L', value: fmtMoney(stats.net), icon: stats.net >= 0 ? TrendingUp : TrendingDown, color: stats.net >= 0 ? 'text-green-400' : 'text-red-400', bg: stats.net >= 0 ? 'bg-green-400/10 border-green-400/20' : 'bg-red-400/10 border-red-400/20' },
           { label: 'Win Rate', value: stats.winRate == null ? '—' : `${stats.winRate}%`, icon: Target, color: 'text-yellow-500', bg: 'bg-yellow-500/10 border-yellow-500/20' },
-          { label: 'Wins', value: String(stats.wins), icon: TrendingUp, color: 'text-green-400', bg: 'bg-[#16161f] border-[#2a2a3a]' },
-          { label: 'Losses', value: String(stats.losses), icon: TrendingDown, color: 'text-red-400', bg: 'bg-[#16161f] border-[#2a2a3a]' },
+          { label: 'Wins', value: String(stats.wins), icon: TrendingUp, color: 'text-green-400', bg: 'bg-surface border-line' },
+          { label: 'Losses', value: String(stats.losses), icon: TrendingDown, color: 'text-red-400', bg: 'bg-surface border-line' },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className={`rounded-xl border p-3 ${bg}`}>
             <div className="flex items-center gap-1.5 mb-1">
               <Icon className={`w-3.5 h-3.5 ${color}`} />
-              <span className="text-[10px] text-[#5a5a72] uppercase tracking-wider">{label}</span>
+              <span className="text-[10px] text-ink3 uppercase tracking-wider">{label}</span>
             </div>
             <p className={`text-xl font-black ${color}`}>{value}</p>
           </div>
@@ -122,33 +122,33 @@ export default function CalendarPage() {
       </div>
 
       {/* Calendar card */}
-      <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
         {/* Month nav */}
-        <div className="flex items-center justify-between p-3 border-b border-[#2a2a3a]">
-          <button onClick={() => setMonth(m => subMonths(m, 1))} className="p-1.5 rounded-lg text-[#9090a8] hover:text-[#f0f0f8] hover:bg-[#1e1e2c] transition-colors">
+        <div className="flex items-center justify-between p-3 border-b border-line">
+          <button onClick={() => setMonth(m => subMonths(m, 1))} className="p-1.5 rounded-lg text-ink2 hover:text-ink hover:bg-elevated transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-3">
-            <h2 className="font-bold text-[#f0f0f8]">{format(month, 'MMMM yyyy')}</h2>
+            <h2 className="font-bold text-ink">{format(month, 'MMMM yyyy')}</h2>
             <button onClick={() => setMonth(startOfMonth(new Date()))} className="text-[10px] text-yellow-500 hover:text-yellow-400 border border-yellow-500/20 rounded-full px-2 py-0.5 transition-colors">
               Today
             </button>
           </div>
-          <button onClick={() => setMonth(m => addMonths(m, 1))} className="p-1.5 rounded-lg text-[#9090a8] hover:text-[#f0f0f8] hover:bg-[#1e1e2c] transition-colors">
+          <button onClick={() => setMonth(m => addMonths(m, 1))} className="p-1.5 rounded-lg text-ink2 hover:text-ink hover:bg-elevated transition-colors">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
         {/* Weekday header */}
-        <div className="grid grid-cols-7 border-b border-[#2a2a3a]">
+        <div className="grid grid-cols-7 border-b border-line">
           {WEEKDAYS.map(d => (
-            <div key={d} className="text-center text-[10px] font-bold text-[#5a5a72] uppercase tracking-wider py-2">{d}</div>
+            <div key={d} className="text-center text-[10px] font-bold text-ink3 uppercase tracking-wider py-2">{d}</div>
           ))}
         </div>
 
         {/* Day grid */}
         {loading ? (
-          <div className="p-8 text-center text-sm text-[#5a5a72]">Loading…</div>
+          <div className="p-8 text-center text-sm text-ink3">Loading…</div>
         ) : (
           <div className="grid grid-cols-7">
             {days.map(date => {
@@ -160,13 +160,13 @@ export default function CalendarPage() {
                 <button
                   key={date.toISOString()}
                   onClick={() => setSelectedDay(list.length ? date : null)}
-                  className={`min-h-[64px] sm:min-h-[84px] p-1.5 border-b border-r border-[#2a2a3a] text-left align-top transition-colors relative
+                  className={`min-h-[64px] sm:min-h-[84px] p-1.5 border-b border-r border-line text-left align-top transition-colors relative
                     ${inMonth ? '' : 'opacity-35'}
-                    ${list.length ? 'hover:bg-[#1e1e2c] cursor-pointer' : 'cursor-default'}
-                    ${isSel ? 'ring-1 ring-inset ring-yellow-500/50 bg-[#1e1e2c]' : ''}
+                    ${list.length ? 'hover:bg-elevated cursor-pointer' : 'cursor-default'}
+                    ${isSel ? 'ring-1 ring-inset ring-yellow-500/50 bg-elevated' : ''}
                     ${pnl != null ? (pnl >= 0 ? 'bg-green-400/[0.06]' : 'bg-red-400/[0.06]') : ''}`}
                 >
-                  <span className={`text-xs font-semibold ${isToday(date) ? 'bg-yellow-500 text-black rounded-full w-5 h-5 inline-flex items-center justify-center' : 'text-[#9090a8]'}`}>
+                  <span className={`text-xs font-semibold ${isToday(date) ? 'bg-yellow-500 text-black rounded-full w-5 h-5 inline-flex items-center justify-center' : 'text-ink2'}`}>
                     {format(date, 'd')}
                   </span>
                   {pnl != null && (
@@ -177,7 +177,7 @@ export default function CalendarPage() {
                   {list.length > 0 && (
                     <div className="mt-0.5 flex items-center gap-1 flex-wrap">
                       {pnl == null && <span className="w-1.5 h-1.5 rounded-full bg-yellow-500/60" />}
-                      <span className="text-[10px] text-[#5a5a72]">{list.length} {list.length === 1 ? 'note' : 'notes'}</span>
+                      <span className="text-[10px] text-ink3">{list.length} {list.length === 1 ? 'note' : 'notes'}</span>
                     </div>
                   )}
                 </button>
@@ -189,33 +189,33 @@ export default function CalendarPage() {
 
       {/* Selected day detail */}
       {selectedDay && (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4">
+        <div className="bg-surface rounded-xl border border-line p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-[#f0f0f8]">{format(selectedDay, 'EEEE, MMMM d, yyyy')}</h3>
-            <button onClick={() => setSelectedDay(null)} className="text-xs text-[#5a5a72] hover:text-[#f0f0f8]">Close</button>
+            <h3 className="font-bold text-ink">{format(selectedDay, 'EEEE, MMMM d, yyyy')}</h3>
+            <button onClick={() => setSelectedDay(null)} className="text-xs text-ink3 hover:text-ink">Close</button>
           </div>
           <div className="space-y-2">
             {selectedEntries.map(e => (
               <Link
                 key={e.id}
                 href="/journal"
-                className="block rounded-lg border border-[#2a2a3a] bg-[#0d0d14] p-3 hover:border-[#3a3a4a] transition-colors"
+                className="block rounded-lg border border-line bg-sunken p-3 hover:border-line2 transition-colors"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    {e.symbol && <span className="text-xs font-bold text-[#f0f0f8] bg-[#16161f] border border-[#2a2a3a] rounded px-1.5 py-0.5 shrink-0">{e.symbol}</span>}
+                    {e.symbol && <span className="text-xs font-bold text-ink bg-surface border border-line rounded px-1.5 py-0.5 shrink-0">{e.symbol}</span>}
                     {e.direction && (
                       <span className={`text-xs font-bold shrink-0 ${e.direction === 'buy' ? 'text-green-400' : 'text-red-400'}`}>
                         {e.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
                       </span>
                     )}
-                    <span className="text-sm font-semibold text-[#f0f0f8] truncate">{e.title || 'Untitled'}</span>
+                    <span className="text-sm font-semibold text-ink truncate">{e.title || 'Untitled'}</span>
                   </div>
                   {e.pnl != null && (
                     <span className={`text-sm font-black shrink-0 ${e.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(e.pnl)}</span>
                   )}
                 </div>
-                <p className="text-xs text-[#5a5a72] mt-1 line-clamp-2">{e.content}</p>
+                <p className="text-xs text-ink3 mt-1 line-clamp-2">{e.content}</p>
               </Link>
             ))}
           </div>

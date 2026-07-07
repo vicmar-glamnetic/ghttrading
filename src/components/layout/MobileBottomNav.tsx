@@ -17,7 +17,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-[#0d0d14]/95 backdrop-blur-md border-t border-[#2a2a3a]"
+      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-sunken/95 backdrop-blur-md border-t border-line"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-center justify-around h-16 px-1">
@@ -29,7 +29,7 @@ export function MobileBottomNav() {
               href={href}
               className={cn(
                 'flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl transition-colors',
-                active ? 'text-yellow-500' : 'text-[#5a5a72] active:text-[#9090a8]'
+                active ? 'text-yellow-500' : 'text-ink3 active:text-ink2'
               )}
             >
               <Icon className="w-6 h-6 shrink-0" />

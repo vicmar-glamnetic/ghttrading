@@ -33,7 +33,7 @@ export default function SignalsPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Zap className="w-5 h-5 text-yellow-500" />
-        <h1 className="font-bold text-[#f0f0f8] text-lg">Trading Signals</h1>
+        <h1 className="font-bold text-ink text-lg">Trading Signals</h1>
       </div>
 
       {/* Stats */}
@@ -43,10 +43,10 @@ export default function SignalsPage() {
           { label: 'BUY Signals',   value: buyCount,       icon: TrendingUp,  color: 'text-green-400',  bg: 'bg-green-400/10  border-green-400/20'  },
           { label: 'SELL Signals',  value: sellCount,      icon: TrendingDown, color: 'text-red-400',   bg: 'bg-red-400/10    border-red-400/20'    },
         ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`rounded-xl border p-3 text-center bg-[#16161f] ${bg}`}>
+          <div key={label} className={`rounded-xl border p-3 text-center bg-surface ${bg}`}>
             <Icon className={`w-5 h-5 mx-auto mb-1 ${color}`} />
             <p className={`text-2xl font-black ${color}`}>{value}</p>
-            <p className="text-xs text-[#5a5a72] mt-0.5">{label}</p>
+            <p className="text-xs text-ink3 mt-0.5">{label}</p>
           </div>
         ))}
       </div>
@@ -60,7 +60,7 @@ export default function SignalsPage() {
                 ? f === 'buy'  ? 'badge-buy'
                 : f === 'sell' ? 'badge-sell'
                 : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                : 'text-[#5a5a72] hover:bg-[#1e1e2c] border border-transparent'
+                : 'text-ink3 hover:bg-elevated border border-transparent'
             }`}>
             {f === 'all' ? 'All Signals' : `${f.toUpperCase()} Only`}
           </button>
@@ -69,12 +69,12 @@ export default function SignalsPage() {
 
       {loading ? (
         <div className="space-y-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-40 bg-[#16161f] rounded-xl border border-[#2a2a3a] animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-40 bg-surface rounded-xl border border-line animate-pulse" />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
           <Zap className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
-          <p className="text-[#5a5a72]">No signals yet. Be the first to post one!</p>
+          <p className="text-ink3">No signals yet. Be the first to post one!</p>
         </div>
       ) : (
         filtered.map(post => (

@@ -30,29 +30,29 @@ export default function PostPage({ params }: { params: Promise<{ postId: string 
     <div className="space-y-4">
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-2 text-sm text-[#9090a8] hover:text-yellow-500 transition-colors"
+        className="flex items-center gap-2 text-sm text-ink2 hover:text-yellow-500 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
       {loading ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4 animate-pulse space-y-3">
+        <div className="bg-surface rounded-xl border border-line p-4 animate-pulse space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#2a2a3a]" />
+            <div className="w-10 h-10 rounded-full bg-line" />
             <div className="space-y-1.5">
-              <div className="h-3 w-28 bg-[#2a2a3a] rounded" />
-              <div className="h-2 w-20 bg-[#2a2a3a] rounded" />
+              <div className="h-3 w-28 bg-line rounded" />
+              <div className="h-2 w-20 bg-line rounded" />
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-3 w-full bg-[#2a2a3a] rounded" />
-            <div className="h-3 w-4/5 bg-[#2a2a3a] rounded" />
+            <div className="h-3 w-full bg-line rounded" />
+            <div className="h-3 w-4/5 bg-line rounded" />
           </div>
         </div>
       ) : notFound ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
-          <p className="text-[#f0f0f8] font-semibold mb-1">Post not found</p>
-          <p className="text-[#5a5a72] text-sm">This post may have been deleted.</p>
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
+          <p className="text-ink font-semibold mb-1">Post not found</p>
+          <p className="text-ink3 text-sm">This post may have been deleted.</p>
         </div>
       ) : post ? (
         <PostCard

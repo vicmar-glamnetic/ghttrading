@@ -61,7 +61,7 @@ function ComposeBox({ pageId, onPost }: { pageId: string; onPost: (post: PostWit
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4 space-y-3">
+    <form onSubmit={handleSubmit} className="bg-surface rounded-xl border border-line p-4 space-y-3">
       <div className="flex gap-3">
         <Avatar src={session?.user?.image} name={session?.user?.name} size="sm" className="shrink-0" />
         <textarea
@@ -69,7 +69,7 @@ function ComposeBox({ pageId, onPost }: { pageId: string; onPost: (post: PostWit
           onChange={e => setContent(e.target.value)}
           placeholder="Post as this page…"
           rows={2}
-          className="flex-1 bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors resize-none"
+          className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
         />
       </div>
       {images.length > 0 && (
@@ -77,7 +77,7 @@ function ComposeBox({ pageId, onPost }: { pageId: string; onPost: (post: PostWit
           {images.map((img, i) => (
             <div key={i} className="relative group">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#2a2a3a]" />
+              <img src={img} alt="" className="w-16 h-16 object-cover rounded-lg border border-line" />
               <button type="button" onClick={() => setImages(imgs => imgs.filter((_, j) => j !== i))}
                 className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <X className="w-2.5 h-2.5" />
@@ -87,7 +87,7 @@ function ComposeBox({ pageId, onPost }: { pageId: string; onPost: (post: PostWit
         </div>
       )}
       <div className="flex items-center justify-between ml-9">
-        <label className="cursor-pointer text-[#5a5a72] hover:text-yellow-500 transition-colors p-1.5 rounded-lg hover:bg-[#2a2a3a]">
+        <label className="cursor-pointer text-ink3 hover:text-yellow-500 transition-colors p-1.5 rounded-lg hover:bg-line">
           <ImageIcon className="w-4 h-4" />
           <input type="file" accept="image/*,video/*" className="hidden" onChange={handleImage} />
         </label>
@@ -160,12 +160,12 @@ export default function PageDetailPage({ params }: { params: Promise<{ pageId: s
   if (notFound) {
     return (
       <div className="space-y-4">
-        <Link href="/pages" className="flex items-center gap-2 text-sm text-[#9090a8] hover:text-yellow-500 transition-colors">
+        <Link href="/pages" className="flex items-center gap-2 text-sm text-ink2 hover:text-yellow-500 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Pages
         </Link>
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
-          <p className="text-[#f0f0f8] font-semibold mb-1">Page not found</p>
-          <p className="text-[#5a5a72] text-sm">This page may have been deleted.</p>
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
+          <p className="text-ink font-semibold mb-1">Page not found</p>
+          <p className="text-ink3 text-sm">This page may have been deleted.</p>
         </div>
       </div>
     )
@@ -175,24 +175,24 @@ export default function PageDetailPage({ params }: { params: Promise<{ pageId: s
 
   return (
     <div className="space-y-4">
-      <Link href="/pages" className="flex items-center gap-2 text-sm text-[#9090a8] hover:text-yellow-500 transition-colors">
+      <Link href="/pages" className="flex items-center gap-2 text-sm text-ink2 hover:text-yellow-500 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Pages
       </Link>
 
       {loadingPage ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden animate-pulse">
-          <div className="h-24 bg-[#2a2a3a]" />
+        <div className="bg-surface rounded-xl border border-line overflow-hidden animate-pulse">
+          <div className="h-24 bg-line" />
           <div className="p-4 space-y-2">
-            <div className="h-5 w-48 bg-[#2a2a3a] rounded" />
-            <div className="h-3 w-full bg-[#2a2a3a] rounded" />
+            <div className="h-5 w-48 bg-line rounded" />
+            <div className="h-3 w-full bg-line rounded" />
           </div>
         </div>
       ) : page ? (
         <>
           {/* Page header */}
-          <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
+          <div className="bg-surface rounded-xl border border-line overflow-hidden">
             {/* Cover */}
-            <div className="h-24 bg-linear-to-br from-yellow-500/15 via-yellow-500/5 to-[#1e1e2c] relative">
+            <div className="h-24 bg-linear-to-br from-yellow-500/15 via-yellow-500/5 to-elevated relative">
               {page.coverImage && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={page.coverImage} alt="" className="w-full h-full object-cover" />
@@ -200,7 +200,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ pageId: s
             </div>
             <div className="px-4 pb-4">
               <div className="flex items-end justify-between gap-3 -mt-6 mb-3">
-                <div className="w-16 h-16 rounded-2xl bg-yellow-500/20 border-4 border-[#16161f] flex items-center justify-center shadow-lg overflow-hidden">
+                <div className="w-16 h-16 rounded-2xl bg-yellow-500/20 border-4 border-surface flex items-center justify-center shadow-lg overflow-hidden">
                   {page.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={page.image} alt={page.name} className="w-full h-full object-cover" />
@@ -226,19 +226,19 @@ export default function PageDetailPage({ params }: { params: Promise<{ pageId: s
               </div>
 
               <div className="flex items-center gap-1.5 mb-1">
-                <h1 className="font-bold text-[#f0f0f8] text-xl leading-tight">{page.name}</h1>
+                <h1 className="font-bold text-ink text-xl leading-tight">{page.name}</h1>
                 {page.verified && <BadgeCheck className="w-5 h-5 text-yellow-500 shrink-0" />}
               </div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-xs text-yellow-600 font-medium">{categoryLabel(page.category)}</span>
-                <span className="text-xs text-[#5a5a72]">{page._count.followers.toLocaleString()} followers</span>
-                <span className="text-xs text-[#5a5a72]">{page._count.posts} posts</span>
+                <span className="text-xs text-ink3">{page._count.followers.toLocaleString()} followers</span>
+                <span className="text-xs text-ink3">{page._count.posts} posts</span>
               </div>
-              {page.description && <p className="text-sm text-[#9090a8] leading-relaxed">{page.description}</p>}
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#2a2a3a]">
+              {page.description && <p className="text-sm text-ink2 leading-relaxed">{page.description}</p>}
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line">
                 <Avatar src={page.owner.image} name={page.owner.name} size="xs" />
-                <span className="text-xs text-[#5a5a72]">Page by</span>
-                <Link href={`/profile/${page.owner.id}`} className="text-xs text-[#f0f0f8] hover:text-yellow-500 transition-colors font-medium">
+                <span className="text-xs text-ink3">Page by</span>
+                <Link href={`/profile/${page.owner.id}`} className="text-xs text-ink hover:text-yellow-500 transition-colors font-medium">
                   {page.owner.name || 'Trader'}
                 </Link>
               </div>
@@ -252,16 +252,16 @@ export default function PageDetailPage({ params }: { params: Promise<{ pageId: s
             {loadingPosts ? (
               <div className="space-y-3 animate-pulse">
                 {[1,2].map(i => (
-                  <div key={i} className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4 space-y-3">
-                    <div className="flex gap-3"><div className="w-10 h-10 rounded-full bg-[#2a2a3a]" /><div className="flex-1 space-y-1.5"><div className="h-3 w-32 bg-[#2a2a3a] rounded" /><div className="h-2 w-24 bg-[#2a2a3a] rounded" /></div></div>
-                    <div className="h-3 w-full bg-[#2a2a3a] rounded" />
+                  <div key={i} className="bg-surface rounded-xl border border-line p-4 space-y-3">
+                    <div className="flex gap-3"><div className="w-10 h-10 rounded-full bg-line" /><div className="flex-1 space-y-1.5"><div className="h-3 w-32 bg-line rounded" /><div className="h-2 w-24 bg-line rounded" /></div></div>
+                    <div className="h-3 w-full bg-line rounded" />
                   </div>
                 ))}
               </div>
             ) : posts.length === 0 ? (
-              <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] py-12 text-center">
-                <Flag className="w-8 h-8 text-[#2a2a3a] mx-auto mb-2" />
-                <p className="text-[#5a5a72] text-sm">{isOwner ? 'No posts yet. Share something with your followers!' : 'No posts yet.'}</p>
+              <div className="bg-surface rounded-xl border border-line py-12 text-center">
+                <Flag className="w-8 h-8 text-line mx-auto mb-2" />
+                <p className="text-ink3 text-sm">{isOwner ? 'No posts yet. Share something with your followers!' : 'No posts yet.'}</p>
               </div>
             ) : (
               <>

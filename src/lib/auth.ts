@@ -46,6 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           image: user.image,
           username: user.username,
+          role: user.role,
           sessionToken,
         }
       },
@@ -57,6 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Fresh sign-in — store the new session token in the JWT
         token.id = user.id
         token.username = (user as { username?: string }).username
+        token.role = (user as { role?: string }).role
         token.sessionToken = (user as { sessionToken?: string }).sessionToken
         token.lastVerified = Date.now()
       } else if (token.id) {
@@ -67,11 +69,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (due) {
           const dbUser = await db.user.findUnique({
             where: { id: token.id as string },
-            select: { sessionToken: true },
+            select: { sessionToken: true, role: true },
           })
           if (!dbUser || dbUser.sessionToken !== token.sessionToken) {
             token.error = 'SessionInvalid'
           } else {
+            token.role = dbUser.role // pick up role changes
             token.lastVerified = Date.now()
           }
         }
@@ -82,6 +85,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.id as string
         session.user.username = token.username as string
+        session.user.role = (token.role as string) ?? 'member'
         if (token.error) {
           session.error = token.error as string
         }

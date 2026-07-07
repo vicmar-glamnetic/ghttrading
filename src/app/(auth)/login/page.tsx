@@ -49,7 +49,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="bg-[#16161f] rounded-2xl border border-[#2a2a3a] p-8 shadow-2xl">
+    <div className="bg-surface rounded-2xl border border-line p-8 shadow-2xl">
       <form onSubmit={handleSubmit} className="space-y-4">
         {sessionReplaced && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-lg p-3 text-sm">
@@ -62,17 +62,17 @@ function LoginForm() {
           </div>
         )}
         <div>
-          <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Email</label>
+          <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Email</label>
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="trader@example.com" required
-            className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+            className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-ink placeholder-ink3 transition-colors"
           />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider">Password</label>
-            <Link href="/forgot-password" className="text-xs text-[#5a5a72] hover:text-yellow-500 transition-colors">
+            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider">Password</label>
+            <Link href="/forgot-password" className="text-xs text-ink3 hover:text-yellow-500 transition-colors">
               Forgot password?
             </Link>
           </div>
@@ -80,10 +80,10 @@ function LoginForm() {
             <input
               type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
               placeholder="••••••••" required
-              className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-4 py-3 pr-10 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 pr-10 text-sm outline-none text-ink placeholder-ink3 transition-colors"
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5a5a72] hover:text-[#9090a8] transition-colors">
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink3 hover:text-ink2 transition-colors">
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
@@ -95,10 +95,10 @@ function LoginForm() {
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-[#2a2a3a]" />
+          <div className="w-full border-t border-line" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-[#16161f] px-3 text-[#5a5a72]">New to GHT?</span>
+          <span className="bg-surface px-3 text-ink3">New to GHT?</span>
         </div>
       </div>
 
@@ -113,7 +113,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-app flex flex-col items-center justify-center px-4 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />
@@ -126,20 +126,20 @@ export default function LoginPage() {
             <img src="/logo.png" alt="GHT Trading" width={96} height={96} className="mx-auto" />
           </div>
           <h1 className="text-3xl font-black text-white">GHT <span className="text-yellow-500">Community</span></h1>
-          <p className="text-[#9090a8] mt-2 text-sm">Premium Trading Insights & Gold Signals</p>
+          <p className="text-ink2 mt-2 text-sm">Premium Trading Insights & Gold Signals</p>
         </div>
 
         <Suspense fallback={
-          <div className="bg-[#16161f] rounded-2xl border border-[#2a2a3a] p-8 space-y-4 animate-pulse">
-            <div className="h-12 bg-[#1e1e2c] rounded-lg" />
-            <div className="h-12 bg-[#1e1e2c] rounded-lg" />
+          <div className="bg-surface rounded-2xl border border-line p-8 space-y-4 animate-pulse">
+            <div className="h-12 bg-elevated rounded-lg" />
+            <div className="h-12 bg-elevated rounded-lg" />
             <div className="h-12 bg-yellow-500/20 rounded-lg" />
           </div>
         }>
           <LoginForm />
         </Suspense>
 
-        <p className="text-center text-xs text-[#5a5a72] mt-6">
+        <p className="text-center text-xs text-ink3 mt-6">
           <Link href="/terms" className="hover:text-yellow-500 transition-colors">Terms</Link>
           {' · '}
           <Link href="/privacy" className="hover:text-yellow-500 transition-colors">Privacy</Link>

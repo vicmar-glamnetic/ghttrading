@@ -74,18 +74,18 @@ export function MediaUpload({ onUpload, existingFiles = [] }: MediaUploadProps) 
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
-            <p className="text-sm text-[#9090a8]">Uploading...</p>
+            <p className="text-sm text-ink2">Uploading...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <div className="flex gap-3">
-              <ImageIcon className="w-6 h-6 text-[#5a5a72]" />
-              <Video className="w-6 h-6 text-[#5a5a72]" />
+              <ImageIcon className="w-6 h-6 text-ink3" />
+              <Video className="w-6 h-6 text-ink3" />
             </div>
-            <p className="text-sm text-[#9090a8]">
+            <p className="text-sm text-ink2">
               <span className="text-yellow-500 font-semibold">Click to upload</span> or drag & drop
             </p>
-            <p className="text-xs text-[#5a5a72]">Images up to 8MB · Videos up to 64MB</p>
+            <p className="text-xs text-ink3">Images up to 8MB · Videos up to 64MB</p>
           </div>
         )}
       </div>
@@ -96,7 +96,7 @@ export function MediaUpload({ onUpload, existingFiles = [] }: MediaUploadProps) 
       {files.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           {files.map((file, i) => (
-            <div key={i} className="relative rounded-lg overflow-hidden bg-[#1e1e2c] aspect-video group">
+            <div key={i} className="relative rounded-lg overflow-hidden bg-elevated aspect-video group">
               {file.type.startsWith('video') ? (
                 <video src={file.url} className="w-full h-full object-cover" />
               ) : (

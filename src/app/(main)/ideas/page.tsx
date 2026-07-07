@@ -66,7 +66,7 @@ function CopyBtn({ text, className = '' }: { text: string; className?: string })
           setTimeout(() => setDone(false), 1200)
         } catch {}
       }}
-      className={`shrink-0 text-[#5a5a72] hover:text-yellow-500 transition-colors ${className}`}
+      className={`shrink-0 text-ink3 hover:text-yellow-500 transition-colors ${className}`}
       title="Copy"
     >
       {done ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
@@ -83,13 +83,13 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
 }) {
   const isBuy = idea.direction === 'buy'
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4 flex flex-col">
+    <div className="bg-surface rounded-xl border border-line p-4 flex flex-col">
       {/* header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[10px] font-black uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5">Trade Idea</span>
           <Avatar src={idea.author.image} name={idea.author.name} size="xs" />
-          <span className="font-bold text-[#f0f0f8] truncate">{idea.symbol}</span>
+          <span className="font-bold text-ink truncate">{idea.symbol}</span>
         </div>
         <span className={`text-xs font-black rounded px-2 py-0.5 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'} ${idea.status === 'sl_hit' ? 'opacity-60' : ''}`}>
           {isBuy ? 'BUY' : 'SELL'}
@@ -106,16 +106,16 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
         </div>
         {idea.status === 'tp_hit' && <span className="text-xs font-semibold text-green-400 bg-green-400/10 rounded px-2 py-0.5">TP Hit</span>}
         {idea.status === 'sl_hit' && <span className="text-xs font-semibold text-red-400 bg-red-400/10 rounded px-2 py-0.5">SL Hit</span>}
-        {idea.status === 'pending' && <span className="text-xs text-[#5a5a72] bg-[#0d0d14] rounded px-2 py-0.5">Pending</span>}
+        {idea.status === 'pending' && <span className="text-xs text-ink3 bg-sunken rounded px-2 py-0.5">Pending</span>}
       </div>
 
       {/* rows */}
-      <div className="mt-3 divide-y divide-[#2a2a3a] border-t border-[#2a2a3a]">
+      <div className="mt-3 divide-y divide-line border-t border-line">
         {/* entry */}
         <div className="flex items-center gap-3 py-2.5">
-          <ArrowRight className="w-4 h-4 text-[#9090a8] shrink-0" />
-          <span className="text-sm font-semibold text-[#f0f0f8] w-14 shrink-0">Entry</span>
-          <span className="text-sm text-[#f0f0f8] flex-1 tabular-nums">{fmtRange(idea.entryLow, idea.entryHigh)}</span>
+          <ArrowRight className="w-4 h-4 text-ink2 shrink-0" />
+          <span className="text-sm font-semibold text-ink w-14 shrink-0">Entry</span>
+          <span className="text-sm text-ink flex-1 tabular-nums">{fmtRange(idea.entryLow, idea.entryHigh)}</span>
           <CopyBtn text={fmtNum(idea.entryLow ?? idea.entryHigh)} />
         </div>
         {/* take profits */}
@@ -123,10 +123,10 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
           <div key={i} className="flex items-center gap-3 py-2.5">
             {tp.hit
               ? <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-              : <Circle className="w-4 h-4 text-[#3a3a4a] shrink-0" />}
-            <span className="text-sm font-semibold text-[#f0f0f8] w-14 shrink-0">TP{i + 1}</span>
+              : <Circle className="w-4 h-4 text-line2 shrink-0" />}
+            <span className="text-sm font-semibold text-ink w-14 shrink-0">TP{i + 1}</span>
             <span className="text-sm text-green-400 flex-1 tabular-nums">
-              {fmtNum(tp.price)}{tp.pips != null ? <span className="text-[#5a5a72]"> / {tp.pips} pips</span> : null}
+              {fmtNum(tp.price)}{tp.pips != null ? <span className="text-ink3"> / {tp.pips} pips</span> : null}
             </span>
             <CopyBtn text={fmtNum(tp.price)} />
           </div>
@@ -135,14 +135,14 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
         {(idea.slLow != null || idea.slHigh != null) && (
           <div className="flex items-center gap-3 py-2.5">
             <XCircle className="w-4 h-4 text-red-400 shrink-0" />
-            <span className="text-sm font-semibold text-[#f0f0f8] w-14 shrink-0">SL</span>
-            <span className="text-sm text-[#f0f0f8] flex-1 tabular-nums">{fmtRange(idea.slLow, idea.slHigh)}</span>
+            <span className="text-sm font-semibold text-ink w-14 shrink-0">SL</span>
+            <span className="text-sm text-ink flex-1 tabular-nums">{fmtRange(idea.slLow, idea.slHigh)}</span>
             <CopyBtn text={fmtNum(idea.slLow ?? idea.slHigh)} />
           </div>
         )}
       </div>
 
-      {idea.notes && <p className="text-xs text-[#9090a8] mt-3 whitespace-pre-wrap">{idea.notes}</p>}
+      {idea.notes && <p className="text-xs text-ink2 mt-3 whitespace-pre-wrap">{idea.notes}</p>}
 
       {/* actions */}
       <div className="mt-3 flex items-center gap-2">
@@ -154,15 +154,15 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
         </button>
         {canManage && (
           <>
-            <button onClick={() => onEdit(idea)} className="p-2 rounded-lg text-[#5a5a72] hover:text-yellow-500 hover:bg-[#1e1e2c] transition-colors"><Pencil className="w-4 h-4" /></button>
-            <button onClick={() => onDelete(idea)} className="p-2 rounded-lg text-[#5a5a72] hover:text-red-400 hover:bg-[#1e1e2c] transition-colors"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={() => onEdit(idea)} className="p-2 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors"><Pencil className="w-4 h-4" /></button>
+            <button onClick={() => onDelete(idea)} className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
           </>
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-[#2a2a3a] flex items-start gap-1.5">
-        <AlertTriangle className="w-3.5 h-3.5 text-[#5a5a72] shrink-0 mt-px" />
-        <p className="text-[10px] text-[#5a5a72] leading-relaxed">
+      <div className="mt-3 pt-3 border-t border-line flex items-start gap-1.5">
+        <AlertTriangle className="w-3.5 h-3.5 text-ink3 shrink-0 mt-px" />
+        <p className="text-[10px] text-ink3 leading-relaxed">
           Trading ideas shared are for educational purposes only, not financial advice. Trade at your own risk.
         </p>
       </div>
@@ -229,14 +229,14 @@ function IdeaEditor({ initial, onClose, onSaved }: {
     }
   }
 
-  const inputCls = 'bg-[#0d0d14] border border-[#2a2a3a] rounded-lg px-2.5 py-1.5 text-sm text-[#f0f0f8] outline-none focus:border-yellow-500/40 placeholder-[#3a3a4a] w-full'
+  const inputCls = 'bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2 w-full'
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
-      <div className="bg-[#16161f] w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-[#2a2a3a] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-[#16161f] flex items-center justify-between p-4 border-b border-[#2a2a3a] z-10">
-          <h2 className="font-bold text-[#f0f0f8]">{initial ? 'Edit Trade Idea' : 'New Trade Idea'}</h2>
-          <button onClick={onClose} className="text-[#5a5a72] hover:text-[#f0f0f8]"><X className="w-5 h-5" /></button>
+      <div className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-line max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-surface flex items-center justify-between p-4 border-b border-line z-10">
+          <h2 className="font-bold text-ink">{initial ? 'Edit Trade Idea' : 'New Trade Idea'}</h2>
+          <button onClick={onClose} className="text-ink3 hover:text-ink"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-4 space-y-4">
@@ -244,14 +244,14 @@ function IdeaEditor({ initial, onClose, onSaved }: {
           <div className="grid grid-cols-2 gap-2">
             <input value={f.symbol} onChange={e => set('symbol', e.target.value.toUpperCase())} placeholder="Symbol (e.g. BTCUSD)" className={inputCls} />
             <div className="flex gap-2">
-              <button onClick={() => set('direction', 'buy')} className={`flex-1 rounded-lg text-sm font-bold transition-colors ${f.direction === 'buy' ? 'bg-green-500 text-black' : 'bg-[#0d0d14] border border-[#2a2a3a] text-[#5a5a72]'}`}>BUY</button>
-              <button onClick={() => set('direction', 'sell')} className={`flex-1 rounded-lg text-sm font-bold transition-colors ${f.direction === 'sell' ? 'bg-red-500 text-white' : 'bg-[#0d0d14] border border-[#2a2a3a] text-[#5a5a72]'}`}>SELL</button>
+              <button onClick={() => set('direction', 'buy')} className={`flex-1 rounded-lg text-sm font-bold transition-colors ${f.direction === 'buy' ? 'bg-green-500 text-black' : 'bg-sunken border border-line text-ink3'}`}>BUY</button>
+              <button onClick={() => set('direction', 'sell')} className={`flex-1 rounded-lg text-sm font-bold transition-colors ${f.direction === 'sell' ? 'bg-red-500 text-white' : 'bg-sunken border border-line text-ink3'}`}>SELL</button>
             </div>
           </div>
 
           {/* entry range */}
           <div>
-            <label className="text-[10px] font-bold text-[#5a5a72] uppercase tracking-wider">Entry (range or single)</label>
+            <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Entry (range or single)</label>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <input value={f.entryLow} onChange={e => set('entryLow', e.target.value)} placeholder="From" type="number" step="any" className={inputCls} />
               <input value={f.entryHigh} onChange={e => set('entryHigh', e.target.value)} placeholder="To (optional)" type="number" step="any" className={inputCls} />
@@ -260,17 +260,17 @@ function IdeaEditor({ initial, onClose, onSaved }: {
 
           {/* take profits */}
           <div>
-            <label className="text-[10px] font-bold text-[#5a5a72] uppercase tracking-wider">Take Profits</label>
+            <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Take Profits</label>
             <div className="space-y-2 mt-1">
               {f.takeProfits.map((tp, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-[#9090a8] w-8 shrink-0">TP{i + 1}</span>
+                  <span className="text-xs font-semibold text-ink2 w-8 shrink-0">TP{i + 1}</span>
                   <input value={tp.price} onChange={e => setTp(i, { price: e.target.value })} placeholder="Price" type="number" step="any" className={inputCls} />
                   <input value={tp.pips} onChange={e => setTp(i, { pips: e.target.value })} placeholder="Pips" type="number" step="any" className={`${inputCls} w-20`} />
-                  <button onClick={() => setTp(i, { hit: !tp.hit })} title="Mark hit" className={`p-1.5 rounded-lg shrink-0 ${tp.hit ? 'text-green-400' : 'text-[#3a3a4a] hover:text-[#5a5a72]'}`}>
+                  <button onClick={() => setTp(i, { hit: !tp.hit })} title="Mark hit" className={`p-1.5 rounded-lg shrink-0 ${tp.hit ? 'text-green-400' : 'text-line2 hover:text-ink3'}`}>
                     {tp.hit ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
                   </button>
-                  <button onClick={() => set('takeProfits', f.takeProfits.filter((_, idx) => idx !== i))} className="p-1.5 rounded-lg text-[#5a5a72] hover:text-red-400 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => set('takeProfits', f.takeProfits.filter((_, idx) => idx !== i))} className="p-1.5 rounded-lg text-ink3 hover:text-red-400 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               ))}
               <button onClick={() => set('takeProfits', [...f.takeProfits, { price: '', pips: '', hit: false }])} className="text-xs text-yellow-500 hover:text-yellow-400 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add TP</button>
@@ -279,7 +279,7 @@ function IdeaEditor({ initial, onClose, onSaved }: {
 
           {/* stop loss range */}
           <div>
-            <label className="text-[10px] font-bold text-[#5a5a72] uppercase tracking-wider">Stop Loss (range or single)</label>
+            <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Stop Loss (range or single)</label>
             <div className="grid grid-cols-2 gap-2 mt-1">
               <input value={f.slLow} onChange={e => set('slLow', e.target.value)} placeholder="From" type="number" step="any" className={inputCls} />
               <input value={f.slHigh} onChange={e => set('slHigh', e.target.value)} placeholder="To (optional)" type="number" step="any" className={inputCls} />
@@ -289,11 +289,11 @@ function IdeaEditor({ initial, onClose, onSaved }: {
           {/* current price + status */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-bold text-[#5a5a72] uppercase tracking-wider">Current price</label>
+              <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Current price</label>
               <input value={f.currentPrice} onChange={e => set('currentPrice', e.target.value)} placeholder="optional" type="number" step="any" className={`${inputCls} mt-1`} />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-[#5a5a72] uppercase tracking-wider">Status</label>
+              <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Status</label>
               <select value={f.status} onChange={e => set('status', e.target.value as TradeIdea['status'])} className={`${inputCls} mt-1 scheme-dark`}>
                 <option value="pending">Pending</option>
                 <option value="tp_hit">TP Hit</option>
@@ -306,12 +306,12 @@ function IdeaEditor({ initial, onClose, onSaved }: {
 
           {/* visibility */}
           <div className="flex items-center gap-2">
-            <button onClick={() => set('isPublic', false)} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors ${!f.isPublic ? 'bg-[#0d0d14] border border-yellow-500/40 text-yellow-500' : 'bg-[#0d0d14] border border-[#2a2a3a] text-[#5a5a72]'}`}><Lock className="w-3.5 h-3.5" /> Private</button>
-            <button onClick={() => set('isPublic', true)} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors ${f.isPublic ? 'bg-[#0d0d14] border border-yellow-500/40 text-yellow-500' : 'bg-[#0d0d14] border border-[#2a2a3a] text-[#5a5a72]'}`}><Globe className="w-3.5 h-3.5" /> Public</button>
+            <button onClick={() => set('isPublic', false)} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors ${!f.isPublic ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}><Lock className="w-3.5 h-3.5" /> Private</button>
+            <button onClick={() => set('isPublic', true)} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors ${f.isPublic ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}><Globe className="w-3.5 h-3.5" /> Public</button>
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-[#16161f] flex gap-2 p-4 border-t border-[#2a2a3a]">
+        <div className="sticky bottom-0 bg-surface flex gap-2 p-4 border-t border-line">
           <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">Cancel</Button>
           <Button variant="gold" size="sm" onClick={save} loading={saving} className="flex-1">{initial ? 'Save' : 'Post Idea'}</Button>
         </div>
@@ -364,7 +364,7 @@ export default function IdeasPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Lightbulb className="w-5 h-5 text-yellow-500" />
-          <h1 className="font-bold text-[#f0f0f8] text-lg">Trade Ideas</h1>
+          <h1 className="font-bold text-ink text-lg">Trade Ideas</h1>
         </div>
         <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
           <Plus className="w-3.5 h-3.5" /> New Idea
@@ -375,7 +375,7 @@ export default function IdeasPage() {
       <div className="flex gap-2">
         {([['community', 'Community'], ['mine', 'My Ideas']] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-[#5a5a72] hover:bg-[#1e1e2c] border border-transparent'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
             {label}
           </button>
         ))}
@@ -383,12 +383,12 @@ export default function IdeasPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-72 bg-[#16161f] rounded-xl border border-[#2a2a3a] animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-72 bg-surface rounded-xl border border-line animate-pulse" />)}
         </div>
       ) : ideas.length === 0 ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
           <Lightbulb className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
-          <p className="text-[#5a5a72]">
+          <p className="text-ink3">
             {tab === 'mine' ? 'You have no trade ideas yet.' : 'No community ideas yet. Be the first to share one!'}
           </p>
           <button onClick={() => setEditor({ open: true, idea: null })} className="mt-3 text-sm text-yellow-500 hover:text-yellow-400">+ New idea</button>

@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import {
   Home, BookOpen, Bell, Settings, Users,
   Zap, BarChart2, Globe, Clock, NotebookPen, UsersRound, Flag,
-  LineChart, Lightbulb, CalendarDays,
+  LineChart, Lightbulb, CalendarDays, Shield,
 } from 'lucide-react'
 
 const navItems = [
@@ -57,22 +57,22 @@ function GoldSessionClock() {
   const isMarketOpen = active.length > 0
 
   return (
-    <div className="mx-3 mt-4 p-3 rounded-xl bg-[#16161f] border border-[#2a2a3a]">
+    <div className="mx-3 mt-4 p-3 rounded-xl bg-surface border border-line">
       <div className="flex items-center gap-2 mb-2">
         <Clock className="w-3.5 h-3.5 text-yellow-500" />
         <span className="text-xs font-bold text-yellow-500 uppercase tracking-wider">Gold Sessions</span>
       </div>
-      <p className="text-[10px] text-[#5a5a72] mb-2">{utcTime}</p>
+      <p className="text-[10px] text-ink3 mb-2">{utcTime}</p>
       <div className="space-y-1.5">
         {sessions.map(s => {
           const on = utcHour >= s.start && utcHour < s.end
           return (
             <div key={s.name} className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className={cn('w-1.5 h-1.5 rounded-full', on ? s.color : 'bg-[#3a3a4a]')} />
-                <span className={cn('text-xs', on ? s.textColor : 'text-[#5a5a72]')}>{s.name}</span>
+                <span className={cn('w-1.5 h-1.5 rounded-full', on ? s.color : 'bg-line2')} />
+                <span className={cn('text-xs', on ? s.textColor : 'text-ink3')}>{s.name}</span>
               </div>
-              <span className={cn('text-[10px]', on ? 'text-[#9090a8]' : 'text-[#3a3a4a]')}>
+              <span className={cn('text-[10px]', on ? 'text-ink2' : 'text-line2')}>
                 {String(s.start).padStart(2,'0')}:00–{String(s.end).padStart(2,'0')}:00
               </span>
             </div>
@@ -80,7 +80,7 @@ function GoldSessionClock() {
         })}
       </div>
       <div className={cn(
-        'mt-2 pt-2 border-t border-[#2a2a3a] flex items-center gap-1.5 text-[10px] font-bold',
+        'mt-2 pt-2 border-t border-line flex items-center gap-1.5 text-[10px] font-bold',
         isMarketOpen ? 'text-green-400' : 'text-red-400'
       )}>
         <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse', isMarketOpen ? 'bg-green-400' : 'bg-red-400')} />
@@ -105,7 +105,7 @@ function GoldTip() {
   return (
     <div className="mx-3 mt-3 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/15">
       <p className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1">💡 Gold Tip</p>
-      <p className="text-xs text-[#9090a8] leading-relaxed">{tip}</p>
+      <p className="text-xs text-ink2 leading-relaxed">{tip}</p>
     </div>
   )
 }
@@ -114,29 +114,33 @@ export function LeftSidebar() {
   const { data: session } = useSession()
   const pathname = usePathname()
 
+  const items = session?.user?.role === 'admin'
+    ? [...navItems, { href: '/admin', label: 'Admin', icon: Shield }]
+    : navItems
+
   return (
     <aside className="hidden lg:flex flex-col gap-1 w-56 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">
       {session?.user && (
         <Link
           href={`/profile/${session.user.id}`}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1e1e2c] transition-colors mb-2 border border-[#2a2a3a] bg-[#16161f]"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-elevated transition-colors mb-2 border border-line bg-surface"
         >
           <Avatar src={session.user.image} name={session.user.name} size="sm" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#f0f0f8] truncate">{session.user.name}</p>
+            <p className="text-sm font-semibold text-ink truncate">{session.user.name}</p>
             <p className="text-xs text-yellow-500 truncate">@{(session.user as { username?: string }).username || 'trader'}</p>
           </div>
         </Link>
       )}
 
       <div className="space-y-0.5">
-        {navItems.map(({ href, label, icon: Icon }) => (
+        {items.map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href}
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium',
               pathname === href
                 ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                : 'text-[#9090a8] hover:bg-[#1e1e2c] hover:text-[#f0f0f8]'
+                : 'text-ink2 hover:bg-elevated hover:text-ink'
             )}>
             <Icon className="w-4 h-4 shrink-0" />
             {label}
@@ -156,7 +160,7 @@ export function LeftSidebar() {
           <Globe className="w-4 h-4 text-yellow-500" />
           <span className="text-xs font-bold text-yellow-500">JOIN DISCORD</span>
         </div>
-        <p className="text-xs text-[#9090a8]">Live gold sessions Mon–Fri</p>
+        <p className="text-xs text-ink2">Live gold sessions Mon–Fri</p>
         <a
           href="https://discord.gg/ghttrading"
           target="_blank"
@@ -167,7 +171,7 @@ export function LeftSidebar() {
         </a>
       </div>
 
-      <p className="text-xs text-[#5a5a72] px-3 mt-4">© 2026 GHT Trading</p>
+      <p className="text-xs text-ink3 px-3 mt-4">© 2026 GHT Trading</p>
     </aside>
   )
 }

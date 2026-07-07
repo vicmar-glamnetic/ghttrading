@@ -11,7 +11,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   if (!session?.user) redirect('/login')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-app">
       <SessionGuard />
       <Navbar />
       <div className="w-full pt-14 px-4 sm:px-6 lg:px-8 2xl:px-12">

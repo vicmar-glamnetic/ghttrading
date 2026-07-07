@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { LineChart, Search } from 'lucide-react'
+import { useTheme } from '@/components/ThemeProvider'
 
 // Quick-access symbols (TradingView symbol notation)
 const PRESETS = [
@@ -12,7 +13,7 @@ const PRESETS = [
   { label: 'Oil', symbol: 'TVC:USOIL' },
 ]
 
-function TradingViewChart({ symbol }: { symbol: string }) {
+function TradingViewChart({ symbol, theme }: { symbol: string; theme: 'light' | 'dark' }) {
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -28,11 +29,11 @@ function TradingViewChart({ symbol }: { symbol: string }) {
       symbol,
       interval: 'D',
       timezone: 'Etc/UTC',
-      theme: 'dark',
+      theme,
       style: '1',
       locale: 'en',
-      backgroundColor: 'rgba(13, 13, 20, 1)',
-      gridColor: 'rgba(42, 42, 58, 0.5)',
+      backgroundColor: theme === 'dark' ? 'rgba(13, 13, 20, 1)' : 'rgba(255, 255, 255, 1)',
+      gridColor: theme === 'dark' ? 'rgba(42, 42, 58, 0.5)' : 'rgba(226, 229, 236, 0.8)',
       allow_symbol_change: true,
       hide_side_toolbar: false,
       withdateranges: true,
@@ -40,13 +41,14 @@ function TradingViewChart({ symbol }: { symbol: string }) {
     })
     el.appendChild(script)
     return () => { el.innerHTML = '' }
-  }, [symbol])
+  }, [symbol, theme])
 
-  // key forces a fresh container per symbol so the widget fully re-initialises
-  return <div key={symbol} ref={container} className="tradingview-widget-container h-full w-full" />
+  // key forces a fresh container per symbol/theme so the widget fully re-initialises
+  return <div key={`${symbol}-${theme}`} ref={container} className="tradingview-widget-container h-full w-full" />
 }
 
 export default function ChartPage() {
+  const { resolved } = useTheme()
   const [symbol, setSymbol] = useState(PRESETS[0].symbol)
   const [query, setQuery] = useState('')
 
@@ -61,15 +63,15 @@ export default function ChartPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <LineChart className="w-5 h-5 text-yellow-500" />
-          <h1 className="font-bold text-[#f0f0f8] text-lg">Trading View</h1>
+          <h1 className="font-bold text-ink text-lg">Trading View</h1>
         </div>
         <form onSubmit={submitSearch} className="relative">
-          <Search className="w-4 h-4 text-[#5a5a72] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-ink3 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search symbol (e.g. TSLA, XAUUSD)…"
-            className="w-full sm:w-72 bg-[#16161f] border border-[#2a2a3a] rounded-lg pl-9 pr-3 py-2 text-sm text-[#f0f0f8] outline-none focus:border-yellow-500/40 placeholder-[#3a3a4a] uppercase"
+            className="w-full sm:w-72 bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2 uppercase"
           />
         </form>
       </div>
@@ -83,7 +85,7 @@ export default function ChartPage() {
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
               symbol === p.symbol
                 ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                : 'text-[#5a5a72] hover:bg-[#1e1e2c] border border-transparent'
+                : 'text-ink3 hover:bg-elevated border border-transparent'
             }`}
           >
             {p.label}
@@ -92,13 +94,13 @@ export default function ChartPage() {
       </div>
 
       {/* chart */}
-      <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden h-[calc(100vh-13rem)] min-h-[420px]">
-        <TradingViewChart symbol={symbol} />
+      <div className="bg-surface rounded-xl border border-line overflow-hidden h-[calc(100vh-13rem)] min-h-[420px]">
+        <TradingViewChart symbol={symbol} theme={resolved} />
       </div>
 
-      <p className="text-[10px] text-[#5a5a72]">
+      <p className="text-[10px] text-ink3">
         Charts by <a href="https://www.tradingview.com" target="_blank" rel="noopener noreferrer" className="text-yellow-500/70 hover:text-yellow-500">TradingView</a>.
-        Tip: type an exchange-qualified symbol like <span className="text-[#9090a8]">NASDAQ:AAPL</span> or <span className="text-[#9090a8]">OANDA:XAUUSD</span> for exact matches.
+        Tip: type an exchange-qualified symbol like <span className="text-ink2">NASDAQ:AAPL</span> or <span className="text-ink2">OANDA:XAUUSD</span> for exact matches.
       </p>
     </div>
   )

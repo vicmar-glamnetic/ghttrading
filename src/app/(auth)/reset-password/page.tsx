@@ -46,12 +46,12 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="bg-[#16161f] rounded-2xl border border-[#2a2a3a] p-8 shadow-2xl">
+    <div className="bg-surface rounded-2xl border border-line p-8 shadow-2xl">
       {success ? (
         <div className="text-center space-y-4">
           <CheckCircle className="w-12 h-12 text-green-400 mx-auto" />
-          <h2 className="text-lg font-bold text-[#f0f0f8]">Password reset!</h2>
-          <p className="text-sm text-[#9090a8]">Your password has been updated. Redirecting to sign in…</p>
+          <h2 className="text-lg font-bold text-ink">Password reset!</h2>
+          <p className="text-sm text-ink2">Your password has been updated. Redirecting to sign in…</p>
           <Link href="/login">
             <Button variant="gold" className="w-full mt-2">Sign In Now</Button>
           </Link>
@@ -59,16 +59,16 @@ function ResetPasswordForm() {
       ) : !token ? (
         <div className="text-center space-y-4">
           <XCircle className="w-12 h-12 text-red-400 mx-auto" />
-          <h2 className="text-lg font-bold text-[#f0f0f8]">Invalid link</h2>
-          <p className="text-sm text-[#9090a8]">This reset link is invalid or has expired.</p>
+          <h2 className="text-lg font-bold text-ink">Invalid link</h2>
+          <p className="text-sm text-ink2">This reset link is invalid or has expired.</p>
           <Link href="/forgot-password">
             <Button variant="gold" className="w-full">Request a new link</Button>
           </Link>
         </div>
       ) : (
         <>
-          <h2 className="text-lg font-bold text-[#f0f0f8] mb-1">Choose a new password</h2>
-          <p className="text-sm text-[#9090a8] mb-6">Must be at least 8 characters.</p>
+          <h2 className="text-lg font-bold text-ink mb-1">Choose a new password</h2>
+          <p className="text-sm text-ink2 mb-6">Must be at least 8 characters.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
@@ -77,7 +77,7 @@ function ResetPasswordForm() {
               </div>
             )}
             <div>
-              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">New Password</label>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">New Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -85,23 +85,23 @@ function ResetPasswordForm() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-4 py-3 pr-10 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+                  className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 pr-10 text-sm outline-none text-ink placeholder-ink3 transition-colors"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5a5a72] hover:text-[#9090a8] transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink3 hover:text-ink2 transition-colors">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1.5">Confirm Password</label>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Confirm Password</label>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+                className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-ink placeholder-ink3 transition-colors"
               />
             </div>
             <Button type="submit" variant="gold" loading={loading} className="w-full py-3">
@@ -116,7 +116,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-app flex flex-col items-center justify-center px-4 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />
       </div>
@@ -131,10 +131,10 @@ export default function ResetPasswordPage() {
         </div>
 
         <Suspense fallback={
-          <div className="bg-[#16161f] rounded-2xl border border-[#2a2a3a] p-8 space-y-4 animate-pulse">
-            <div className="h-4 w-48 bg-[#1e1e2c] rounded" />
-            <div className="h-12 bg-[#1e1e2c] rounded-lg" />
-            <div className="h-12 bg-[#1e1e2c] rounded-lg" />
+          <div className="bg-surface rounded-2xl border border-line p-8 space-y-4 animate-pulse">
+            <div className="h-4 w-48 bg-elevated rounded" />
+            <div className="h-12 bg-elevated rounded-lg" />
+            <div className="h-12 bg-elevated rounded-lg" />
             <div className="h-12 bg-yellow-500/20 rounded-lg" />
           </div>
         }>

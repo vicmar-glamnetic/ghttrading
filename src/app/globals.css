@@ -1,19 +1,68 @@
 @import "tailwindcss";
 
-:root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #111118;
-  --bg-card: #16161f;
-  --bg-hover: #1e1e2c;
-  --border: #2a2a3a;
+/* Register semantic colors as Tailwind utilities (bg-surface, text-ink, border-line, …).
+   They point at runtime CSS vars that flip between light and dark below. */
+@theme {
+  --color-app:      var(--c-app);
+  --color-app2:     var(--c-app2);
+  --color-sunken:   var(--c-sunken);
+  --color-surface:  var(--c-surface);
+  --color-elevated: var(--c-elevated);
+  --color-line:     var(--c-line);
+  --color-line2:    var(--c-line2);
+  --color-ink:      var(--c-ink);
+  --color-ink2:     var(--c-ink2);
+  --color-ink3:     var(--c-ink3);
+}
+
+/* ---------- Dark theme (default) ---------- */
+:root,
+:root[data-theme="dark"] {
+  --c-app:      #0a0a0f;
+  --c-app2:     #111118;
+  --c-sunken:   #0d0d14;
+  --c-surface:  #16161f;
+  --c-elevated: #1e1e2c;
+  --c-line:     #2a2a3a;
+  --c-line2:    #3a3a4a;
+  --c-ink:      #f0f0f8;
+  --c-ink2:     #9090a8;
+  --c-ink3:     #5a5a72;
+
+  color-scheme: dark;
+
+  /* Legacy aliases (used by the utility classes + body below) */
+  --bg-primary:   var(--c-app);
+  --bg-secondary: var(--c-app2);
+  --bg-card:      var(--c-surface);
+  --bg-hover:     var(--c-elevated);
+  --border:       var(--c-line);
+  --text-primary:   var(--c-ink);
+  --text-secondary: var(--c-ink2);
+  --text-muted:     var(--c-ink3);
+
+  /* Brand + status colors (shared across themes) */
   --gold: #f5c518;
   --gold-dark: #d4a017;
   --gold-glow: rgba(245, 197, 24, 0.12);
   --green: #22c55e;
   --red: #ef4444;
-  --text-primary: #f0f0f8;
-  --text-secondary: #9090a8;
-  --text-muted: #5a5a72;
+}
+
+/* ---------- Light theme ---------- */
+:root[data-theme="light"] {
+  --c-app:      #f2f3f6;
+  --c-app2:     #e9ebf0;
+  --c-sunken:   #f6f7f9;
+  --c-surface:  #ffffff;
+  --c-elevated: #edeff4;
+  --c-line:     #e2e5ec;
+  --c-line2:    #cdd2dc;
+  --c-ink:      #16181f;
+  --c-ink2:     #4c5262;
+  --c-ink3:     #6b7180;
+
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }

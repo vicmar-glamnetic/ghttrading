@@ -66,7 +66,7 @@ function AvatarUploadOverlay({ userId, currentImage, currentName, onUpdated }: {
 
   return (
     <div className="relative group cursor-pointer" onClick={() => inputRef.current?.click()}>
-      <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-[#0a0a0f] bg-[#1e1e2c]">
+      <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-app bg-elevated">
         {/* Always use Avatar — it now handles data: URLs and image errors internally */}
         <Avatar src={currentImage} name={currentName} className="w-full h-full" />
       </div>
@@ -157,10 +157,10 @@ function EditBioModal({ profile, onSave, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="bg-[#16161f] border border-[#2a2a3a] rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <div className="bg-surface border border-line rounded-2xl w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-[#f0f0f8]">Edit Profile</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-[#1e1e2c] rounded-lg transition-colors text-[#5a5a72]">
+          <h2 className="text-lg font-bold text-ink">Edit Profile</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-elevated rounded-lg transition-colors text-ink3">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -171,23 +171,23 @@ function EditBioModal({ profile, onSave, onClose }: {
             { label: 'Website', value: website, setter: setWebsite, placeholder: 'https://...' },
           ].map(f => (
             <div key={f.label}>
-              <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1">{f.label}</label>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1">{f.label}</label>
               <input
                 value={f.value}
                 onChange={e => f.setter(e.target.value)}
                 placeholder={f.placeholder}
-                className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors"
+                className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 transition-colors"
               />
             </div>
           ))}
           <div>
-            <label className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider block mb-1">Bio</label>
+            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1">Bio</label>
             <textarea
               value={bio}
               onChange={e => setBio(e.target.value)}
               placeholder="Tell the community about yourself…"
               rows={3}
-              className="w-full bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] resize-none transition-colors"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 resize-none transition-colors"
             />
           </div>
         </div>
@@ -269,12 +269,12 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
-          <div className="h-40 bg-[#1e1e2c]" />
+        <div className="bg-surface rounded-xl border border-line overflow-hidden">
+          <div className="h-40 bg-elevated" />
           <div className="p-4 space-y-3">
-            <div className="w-24 h-24 rounded-full bg-[#2a2a3a] -mt-12" />
-            <div className="h-5 w-40 bg-[#2a2a3a] rounded" />
-            <div className="h-3 w-56 bg-[#2a2a3a] rounded" />
+            <div className="w-24 h-24 rounded-full bg-line -mt-12" />
+            <div className="h-5 w-40 bg-line rounded" />
+            <div className="h-3 w-56 bg-line rounded" />
           </div>
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
   }
 
   if (!profile) return (
-    <div className="text-center py-12 text-[#5a5a72]">User not found</div>
+    <div className="text-center py-12 text-ink3">User not found</div>
   )
 
   const hasFriendRequest = profile.friendRequest
@@ -300,7 +300,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
       )}
 
       {/* Profile card */}
-      <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden">
         {/* Cover image */}
         <div className="relative h-40 bg-linear-to-r from-yellow-900/40 via-yellow-800/20 to-yellow-900/40">
           {profile.coverImage && (
@@ -337,7 +337,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
                 onUpdated={handleAvatarUpdated}
               />
             ) : (
-              <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-[#0a0a0f]">
+              <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-app">
                 <Avatar src={profile.image} name={profile.name} className="w-full h-full" />
               </div>
             )}
@@ -383,11 +383,11 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
           </div>
 
           {/* Name & bio */}
-          <h1 className="text-xl font-bold text-[#f0f0f8]">{profile.name}</h1>
+          <h1 className="text-xl font-bold text-ink">{profile.name}</h1>
           <p className="text-sm text-yellow-500">@{profile.username}</p>
-          {profile.bio && <p className="mt-2 text-sm text-[#9090a8] leading-relaxed">{profile.bio}</p>}
+          {profile.bio && <p className="mt-2 text-sm text-ink2 leading-relaxed">{profile.bio}</p>}
 
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-[#5a5a72]">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-ink3">
             {profile.location && (
               <span className="flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5" />{profile.location}
@@ -405,15 +405,15 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
           </div>
 
           {/* Stats */}
-          <div className="flex gap-6 mt-4 pt-4 border-t border-[#2a2a3a]">
+          <div className="flex gap-6 mt-4 pt-4 border-t border-line">
             {[
               { label: 'Posts',     value: profile._count.posts     },
               { label: 'Followers', value: profile._count.followers },
               { label: 'Following', value: profile._count.following },
             ].map(s => (
               <div key={s.label} className="text-center">
-                <p className="font-bold text-[#f0f0f8]">{s.value}</p>
-                <p className="text-xs text-[#5a5a72]">{s.label}</p>
+                <p className="font-bold text-ink">{s.value}</p>
+                <p className="text-xs text-ink3">{s.label}</p>
               </div>
             ))}
           </div>
@@ -422,8 +422,8 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
 
       {/* Posts */}
       {posts.length === 0 ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-10 text-center">
-          <p className="text-[#5a5a72] text-sm">No posts yet.</p>
+        <div className="bg-surface rounded-xl border border-line p-10 text-center">
+          <p className="text-ink3 text-sm">No posts yet.</p>
         </div>
       ) : (
         posts.map(post => (

@@ -4,8 +4,23 @@ import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Avatar } from '@/components/ui/Avatar'
-import { Bell, Search, Home, Users, TrendingUp, LogOut, Settings, User, ChevronDown, CheckCheck } from 'lucide-react'
+import { Bell, Search, Home, Users, TrendingUp, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
+import { useTheme } from '@/components/ThemeProvider'
+
+function ThemeToggle() {
+  const { resolved, toggle } = useTheme()
+  return (
+    <button
+      onClick={toggle}
+      title={resolved === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label="Toggle theme"
+      className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors"
+    >
+      {resolved === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+    </button>
+  )
+}
 
 interface SearchUser {
   id: string; name: string | null; image: string | null; username: string | null
@@ -113,7 +128,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#2a2a3a] bg-[#0d0d14]/95 backdrop-blur-md">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-line bg-sunken/95 backdrop-blur-md">
       <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-12 h-14 flex items-center gap-3">
 
         {/* Logo */}
@@ -127,26 +142,26 @@ export function Navbar() {
 
         {/* Search */}
         <div ref={searchRef} className="relative flex-1 max-w-sm">
-          <div className="flex items-center gap-2 bg-[#16161f] border border-[#2a2a3a] rounded-lg px-3 py-2 focus-within:border-yellow-500/50 transition-colors">
-            <Search className="w-4 h-4 text-[#5a5a72] shrink-0" />
+          <div className="flex items-center gap-2 bg-surface border border-line rounded-lg px-3 py-2 focus-within:border-yellow-500/50 transition-colors">
+            <Search className="w-4 h-4 text-ink3 shrink-0" />
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search traders…"
-              className="bg-transparent text-sm outline-none w-full text-[#f0f0f8] placeholder-[#5a5a72]"
+              className="bg-transparent text-sm outline-none w-full text-ink placeholder-ink3"
             />
           </div>
           {showSearch && searchResults.length > 0 && (
-            <div className="absolute top-full mt-1 w-full bg-[#16161f] rounded-xl shadow-2xl border border-[#2a2a3a] overflow-hidden z-50">
+            <div className="absolute top-full mt-1 w-full bg-surface rounded-xl shadow-2xl border border-line overflow-hidden z-50">
               {searchResults.map(user => (
                 <button key={user.id}
                   onClick={() => { router.push(`/profile/${user.id}`); setShowSearch(false); setSearchQuery('') }}
-                  className="flex items-center gap-3 p-3 hover:bg-[#1e1e2c] w-full text-left transition-colors"
+                  className="flex items-center gap-3 p-3 hover:bg-elevated w-full text-left transition-colors"
                 >
                   <Avatar src={user.image} name={user.name} size="sm" />
                   <div>
-                    <p className="text-sm font-medium text-[#f0f0f8]">{user.name}</p>
-                    <p className="text-xs text-[#5a5a72]">@{user.username}</p>
+                    <p className="text-sm font-medium text-ink">{user.name}</p>
+                    <p className="text-xs text-ink3">@{user.username}</p>
                   </div>
                 </button>
               ))}
@@ -156,21 +171,24 @@ export function Navbar() {
 
         {/* Right nav icons */}
         <div className="flex items-center gap-1 ml-auto">
-          <Link href="/" className="p-2 hover:bg-[#1e1e2c] rounded-lg text-[#9090a8] hover:text-yellow-500 transition-colors">
+          <Link href="/" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
             <Home className="w-5 h-5" />
           </Link>
-          <Link href="/friends" className="p-2 hover:bg-[#1e1e2c] rounded-lg text-[#9090a8] hover:text-yellow-500 transition-colors">
+          <Link href="/friends" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
             <Users className="w-5 h-5" />
           </Link>
-          <Link href="/signals" className="p-2 hover:bg-[#1e1e2c] rounded-lg text-[#9090a8] hover:text-yellow-500 transition-colors">
+          <Link href="/signals" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
             <TrendingUp className="w-5 h-5" />
           </Link>
+
+          {/* Light / dark toggle */}
+          <ThemeToggle />
 
           {/* Notification bell with dropdown */}
           <div ref={notifsRef} className="relative">
             <button
               onClick={() => { setShowNotifs(o => !o); if (!showNotifs) markAllRead() }}
-              className="relative p-2 hover:bg-[#1e1e2c] rounded-lg text-[#9090a8] hover:text-yellow-500 transition-colors"
+              className="relative p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors"
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
@@ -181,35 +199,35 @@ export function Navbar() {
             </button>
 
             {showNotifs && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-[#16161f] rounded-xl shadow-2xl border border-[#2a2a3a] overflow-hidden z-50">
+              <div className="absolute right-0 top-full mt-2 w-80 bg-surface rounded-xl shadow-2xl border border-line overflow-hidden z-50">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a3a]">
-                  <span className="font-bold text-sm text-[#f0f0f8]">Notifications</span>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+                  <span className="font-bold text-sm text-ink">Notifications</span>
                   <div className="flex items-center gap-2">
                     {unreadCount > 0 && (
                       <button onClick={markAllRead} className="text-[10px] text-yellow-500 hover:text-yellow-400 flex items-center gap-1 transition-colors">
                         <CheckCheck className="w-3 h-3" /> Mark all read
                       </button>
                     )}
-                    <Link href="/notifications" onClick={() => setShowNotifs(false)} className="text-[10px] text-[#5a5a72] hover:text-yellow-500 transition-colors">
+                    <Link href="/notifications" onClick={() => setShowNotifs(false)} className="text-[10px] text-ink3 hover:text-yellow-500 transition-colors">
                       See all
                     </Link>
                   </div>
                 </div>
 
                 {/* List */}
-                <div className="max-h-80 overflow-y-auto divide-y divide-[#2a2a3a]">
+                <div className="max-h-80 overflow-y-auto divide-y divide-line">
                   {notifications.length === 0 ? (
                     <div className="p-6 text-center">
-                      <Bell className="w-8 h-8 text-[#2a2a3a] mx-auto mb-2" />
-                      <p className="text-xs text-[#5a5a72]">No notifications yet</p>
+                      <Bell className="w-8 h-8 text-line mx-auto mb-2" />
+                      <p className="text-xs text-ink3">No notifications yet</p>
                     </div>
                   ) : (
                     notifications.slice(0, 10).map(notif => (
                       <button
                         key={notif.id}
                         onClick={() => handleNotifClick(notif)}
-                        className={`flex items-start gap-3 px-4 py-3 hover:bg-[#1e1e2c] w-full text-left transition-colors ${!notif.read ? 'bg-yellow-500/5' : ''}`}
+                        className={`flex items-start gap-3 px-4 py-3 hover:bg-elevated w-full text-left transition-colors ${!notif.read ? 'bg-yellow-500/5' : ''}`}
                       >
                         <div className="relative shrink-0">
                           <Avatar src={notif.sender?.image} name={notif.sender?.name} size="sm" />
@@ -217,7 +235,7 @@ export function Navbar() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs text-[#e0e0f0] leading-snug">{notif.message}</p>
-                          <p className="text-[10px] text-[#5a5a72] mt-0.5">{timeAgo(notif.createdAt)}</p>
+                          <p className="text-[10px] text-ink3 mt-0.5">{timeAgo(notif.createdAt)}</p>
                         </div>
                         {!notif.read && <div className="w-2 h-2 bg-yellow-500 rounded-full mt-1 shrink-0" />}
                       </button>
@@ -233,27 +251,27 @@ export function Navbar() {
             <div ref={userMenuRef} className="relative ml-1">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-2 py-1 hover:bg-[#1e1e2c] rounded-lg transition-colors"
+                className="flex items-center gap-2 px-2 py-1 hover:bg-elevated rounded-lg transition-colors"
               >
                 <Avatar src={session.user.image} name={session.user.name} size="sm" />
-                <ChevronDown className="w-3 h-3 text-[#5a5a72]" />
+                <ChevronDown className="w-3 h-3 text-ink3" />
               </button>
               {showUserMenu && (
-                <div className="absolute right-0 top-full mt-1 w-52 bg-[#16161f] rounded-xl shadow-2xl border border-[#2a2a3a] overflow-hidden z-50">
-                  <div className="p-3 border-b border-[#2a2a3a]">
-                    <p className="font-semibold text-sm text-[#f0f0f8] truncate">{session.user.name}</p>
-                    <p className="text-xs text-[#5a5a72] truncate">{session.user.email}</p>
+                <div className="absolute right-0 top-full mt-1 w-52 bg-surface rounded-xl shadow-2xl border border-line overflow-hidden z-50">
+                  <div className="p-3 border-b border-line">
+                    <p className="font-semibold text-sm text-ink truncate">{session.user.name}</p>
+                    <p className="text-xs text-ink3 truncate">{session.user.email}</p>
                   </div>
                   <Link href={`/profile/${session.user.id}`} onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-3 p-3 hover:bg-[#1e1e2c] text-sm text-[#9090a8] hover:text-[#f0f0f8] transition-colors">
+                    className="flex items-center gap-3 p-3 hover:bg-elevated text-sm text-ink2 hover:text-ink transition-colors">
                     <User className="w-4 h-4" /> My Profile
                   </Link>
                   <Link href="/settings" onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-3 p-3 hover:bg-[#1e1e2c] text-sm text-[#9090a8] hover:text-[#f0f0f8] transition-colors">
+                    className="flex items-center gap-3 p-3 hover:bg-elevated text-sm text-ink2 hover:text-ink transition-colors">
                     <Settings className="w-4 h-4" /> Settings
                   </Link>
                   <button onClick={() => signOut({ callbackUrl: '/login' })}
-                    className="flex items-center gap-3 p-3 hover:bg-[#1e1e2c] text-sm text-red-400 hover:text-red-300 w-full text-left transition-colors border-t border-[#2a2a3a]">
+                    className="flex items-center gap-3 p-3 hover:bg-elevated text-sm text-red-400 hover:text-red-300 w-full text-left transition-colors border-t border-line">
                     <LogOut className="w-4 h-4" /> Sign Out
                   </button>
                 </div>

@@ -71,7 +71,7 @@ function ComposeBox({ groupId, onPost }: { groupId: string; onPost: (post: PostW
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4 space-y-3">
+    <form onSubmit={handleSubmit} className="bg-surface rounded-xl border border-line p-4 space-y-3">
       <div className="flex gap-3">
         <Avatar src={session?.user?.image} name={session?.user?.name} size="sm" className="shrink-0" />
         <textarea
@@ -79,7 +79,7 @@ function ComposeBox({ groupId, onPost }: { groupId: string; onPost: (post: PostW
           onChange={e => setContent(e.target.value)}
           placeholder="Share something with the group…"
           rows={2}
-          className="flex-1 bg-[#1e1e2c] border border-[#2a2a3a] focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-[#f0f0f8] placeholder-[#5a5a72] transition-colors resize-none"
+          className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
         />
       </div>
       {images.length > 0 && (
@@ -87,7 +87,7 @@ function ComposeBox({ groupId, onPost }: { groupId: string; onPost: (post: PostW
           {images.map((img, i) => (
             <div key={i} className="relative group">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img} alt="" className="w-16 h-16 object-cover rounded-lg border border-[#2a2a3a]" />
+              <img src={img} alt="" className="w-16 h-16 object-cover rounded-lg border border-line" />
               <button type="button" onClick={() => setImages(imgs => imgs.filter((_, j) => j !== i))}
                 className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <X className="w-2.5 h-2.5" />
@@ -97,7 +97,7 @@ function ComposeBox({ groupId, onPost }: { groupId: string; onPost: (post: PostW
         </div>
       )}
       <div className="flex items-center justify-between ml-9">
-        <label className="cursor-pointer text-[#5a5a72] hover:text-yellow-500 transition-colors p-1.5 rounded-lg hover:bg-[#2a2a3a]">
+        <label className="cursor-pointer text-ink3 hover:text-yellow-500 transition-colors p-1.5 rounded-lg hover:bg-line">
           <ImageIcon className="w-4 h-4" />
           <input type="file" accept="image/*,video/*" className="hidden" onChange={handleImage} />
         </label>
@@ -180,12 +180,12 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
   if (notFound) {
     return (
       <div className="space-y-4">
-        <Link href="/groups" className="flex items-center gap-2 text-sm text-[#9090a8] hover:text-yellow-500 transition-colors">
+        <Link href="/groups" className="flex items-center gap-2 text-sm text-ink2 hover:text-yellow-500 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Groups
         </Link>
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-12 text-center">
-          <p className="text-[#f0f0f8] font-semibold mb-1">Group not found</p>
-          <p className="text-[#5a5a72] text-sm">This group may have been deleted.</p>
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
+          <p className="text-ink font-semibold mb-1">Group not found</p>
+          <p className="text-ink3 text-sm">This group may have been deleted.</p>
         </div>
       </div>
     )
@@ -201,25 +201,25 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
 
   return (
     <div className="space-y-4">
-      <Link href="/groups" className="flex items-center gap-2 text-sm text-[#9090a8] hover:text-yellow-500 transition-colors">
+      <Link href="/groups" className="flex items-center gap-2 text-sm text-ink2 hover:text-yellow-500 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Groups
       </Link>
 
       {loadingGroup ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden animate-pulse">
-          <div className="h-28 bg-[#2a2a3a]" />
+        <div className="bg-surface rounded-xl border border-line overflow-hidden animate-pulse">
+          <div className="h-28 bg-line" />
           <div className="p-4 space-y-2">
-            <div className="h-4 w-48 bg-[#2a2a3a] rounded" />
-            <div className="h-3 w-full bg-[#2a2a3a] rounded" />
+            <div className="h-4 w-48 bg-line rounded" />
+            <div className="h-3 w-full bg-line rounded" />
           </div>
         </div>
       ) : group ? (
         <>
           {/* Header */}
-          <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
-            <div className="h-28 bg-linear-to-br from-yellow-500/15 to-[#1e1e2c] relative flex items-end p-4">
+          <div className="bg-surface rounded-xl border border-line overflow-hidden">
+            <div className="h-28 bg-linear-to-br from-yellow-500/15 to-elevated relative flex items-end p-4">
               <div className="flex items-end gap-3">
-                <div className="w-16 h-16 rounded-2xl bg-yellow-500/20 border-2 border-[#16161f] flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-yellow-500/20 border-2 border-surface flex items-center justify-center shadow-lg">
                   {group.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={group.image} alt={group.name} className="w-full h-full object-cover rounded-2xl" />
@@ -228,14 +228,14 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
                   )}
                 </div>
                 <div className="pb-1">
-                  <h1 className="font-bold text-[#f0f0f8] text-lg leading-tight">{group.name}</h1>
+                  <h1 className="font-bold text-ink text-lg leading-tight">{group.name}</h1>
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-xs text-[#9090a8]">
+                    <span className="flex items-center gap-1 text-xs text-ink2">
                       {group.privacy === 'private' ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
                       {group.privacy === 'private' ? 'Private' : 'Public'} group
                     </span>
-                    <span className="text-[#3a3a4a]">·</span>
-                    <span className="text-xs text-[#9090a8]">{group._count.members} members</span>
+                    <span className="text-line2">·</span>
+                    <span className="text-xs text-ink2">{group._count.members} members</span>
                   </div>
                 </div>
               </div>
@@ -243,11 +243,11 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
             <div className="px-4 pb-4 pt-3 flex items-center justify-between gap-3">
               <div className="flex -space-x-2">
                 {group.members.slice(0, 5).map(m => (
-                  <Avatar key={m.userId} src={m.user.image} name={m.user.name} size="xs" className="border-2 border-[#16161f]" />
+                  <Avatar key={m.userId} src={m.user.image} name={m.user.name} size="xs" className="border-2 border-surface" />
                 ))}
                 {group._count.members > 5 && (
-                  <div className="w-6 h-6 rounded-full bg-[#2a2a3a] border-2 border-[#16161f] flex items-center justify-center">
-                    <span className="text-[9px] text-[#9090a8] font-bold">+{group._count.members - 5}</span>
+                  <div className="w-6 h-6 rounded-full bg-line border-2 border-surface flex items-center justify-center">
+                    <span className="text-[9px] text-ink2 font-bold">+{group._count.members - 5}</span>
                   </div>
                 )}
               </div>
@@ -269,13 +269,13 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
           </div>
 
           {/* Tabs */}
-          <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
-            <div className="flex border-b border-[#2a2a3a]">
+          <div className="bg-surface rounded-xl border border-line overflow-hidden">
+            <div className="flex border-b border-line">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? 'border-b-2 border-yellow-500 text-yellow-500' : 'text-[#5a5a72] hover:bg-[#1e1e2c] hover:text-[#9090a8]'}`}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === tab.id ? 'border-b-2 border-yellow-500 text-yellow-500' : 'text-ink3 hover:bg-elevated hover:text-ink2'}`}
                 >
                   {tab.label}
                 </button>
@@ -287,7 +287,7 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
                 {isMember && <ComposeBox groupId={groupId} onPost={handleNewPost} />}
                 {!isMember && (
                   <div className="text-center py-6">
-                    <p className="text-sm text-[#5a5a72]">Join the group to post and see member content</p>
+                    <p className="text-sm text-ink3">Join the group to post and see member content</p>
                     <Button variant="gold" size="sm" onClick={handleJoinLeave} loading={joining} className="mt-3 text-xs">
                       Join Group
                     </Button>
@@ -297,15 +297,15 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
                   loadingPosts ? (
                     <div className="space-y-3 animate-pulse">
                       {[1,2].map(i => (
-                        <div key={i} className="bg-[#1e1e2c] rounded-xl p-4 space-y-3">
-                          <div className="flex gap-3"><div className="w-10 h-10 rounded-full bg-[#2a2a3a]" /><div className="flex-1 space-y-1.5"><div className="h-3 w-32 bg-[#2a2a3a] rounded" /><div className="h-2 w-24 bg-[#2a2a3a] rounded" /></div></div>
-                          <div className="h-3 w-full bg-[#2a2a3a] rounded" />
+                        <div key={i} className="bg-elevated rounded-xl p-4 space-y-3">
+                          <div className="flex gap-3"><div className="w-10 h-10 rounded-full bg-line" /><div className="flex-1 space-y-1.5"><div className="h-3 w-32 bg-line rounded" /><div className="h-2 w-24 bg-line rounded" /></div></div>
+                          <div className="h-3 w-full bg-line rounded" />
                         </div>
                       ))}
                     </div>
                   ) : posts.length === 0 ? (
                     <div className="py-10 text-center">
-                      <p className="text-[#5a5a72] text-sm">No posts yet. Be the first to share!</p>
+                      <p className="text-ink3 text-sm">No posts yet. Be the first to share!</p>
                     </div>
                   ) : (
                     <>
@@ -337,17 +337,17 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
             )}
 
             {activeTab === 'members' && (
-              <div className="divide-y divide-[#2a2a3a]">
+              <div className="divide-y divide-line">
                 {group.members.map(m => (
-                  <div key={m.userId} className="flex items-center gap-3 p-4 hover:bg-[#1e1e2c] transition-colors">
+                  <div key={m.userId} className="flex items-center gap-3 p-4 hover:bg-elevated transition-colors">
                     <Link href={`/profile/${m.userId}`} className="shrink-0">
                       <Avatar src={m.user.image} name={m.user.name} size="md" />
                     </Link>
                     <div className="flex-1 min-w-0">
-                      <Link href={`/profile/${m.userId}`} className="font-semibold text-sm text-[#f0f0f8] hover:text-yellow-500 transition-colors block truncate">
+                      <Link href={`/profile/${m.userId}`} className="font-semibold text-sm text-ink hover:text-yellow-500 transition-colors block truncate">
                         {m.user.name || 'Trader'}
                       </Link>
-                      <p className="text-xs text-[#5a5a72]">@{m.user.username || 'trader'}</p>
+                      <p className="text-xs text-ink3">@{m.user.username || 'trader'}</p>
                     </div>
                     {m.role !== 'member' && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 capitalize">{m.role}</span>
@@ -361,26 +361,26 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
               <div className="p-6 space-y-4">
                 {group.description ? (
                   <div>
-                    <p className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider mb-1.5">About</p>
-                    <p className="text-sm text-[#f0f0f8] leading-relaxed">{group.description}</p>
+                    <p className="text-xs font-semibold text-ink2 uppercase tracking-wider mb-1.5">About</p>
+                    <p className="text-sm text-ink leading-relaxed">{group.description}</p>
                   </div>
                 ) : (
-                  <p className="text-[#5a5a72] text-sm">No description yet.</p>
+                  <p className="text-ink3 text-sm">No description yet.</p>
                 )}
                 <div>
-                  <p className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider mb-1.5">Created by</p>
+                  <p className="text-xs font-semibold text-ink2 uppercase tracking-wider mb-1.5">Created by</p>
                   <Link href={`/profile/${group.owner.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <Avatar src={group.owner.image} name={group.owner.name} size="sm" />
-                    <span className="text-sm text-[#f0f0f8]">{group.owner.name || 'Trader'}</span>
+                    <span className="text-sm text-ink">{group.owner.name || 'Trader'}</span>
                   </Link>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-[#9090a8] uppercase tracking-wider mb-1.5">Created</p>
-                  <p className="text-sm text-[#f0f0f8]">{new Date(group.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  <p className="text-xs font-semibold text-ink2 uppercase tracking-wider mb-1.5">Created</p>
+                  <p className="text-sm text-ink">{new Date(group.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {group.privacy === 'private' ? <Lock className="w-4 h-4 text-[#5a5a72]" /> : <Globe className="w-4 h-4 text-[#5a5a72]" />}
-                  <span className="text-sm text-[#9090a8] capitalize">{group.privacy} group</span>
+                  {group.privacy === 'private' ? <Lock className="w-4 h-4 text-ink3" /> : <Globe className="w-4 h-4 text-ink3" />}
+                  <span className="text-sm text-ink2 capitalize">{group.privacy} group</span>
                 </div>
               </div>
             )}

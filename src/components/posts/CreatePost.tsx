@@ -13,7 +13,7 @@ interface CreatePostProps {
 }
 
 const categories = [
-  { value: 'discussion', label: 'Discussion', icon: MessageSquare, color: 'text-[#9090a8]' },
+  { value: 'discussion', label: 'Discussion', icon: MessageSquare, color: 'text-ink2' },
   { value: 'signal-buy', label: 'BUY Signal', icon: TrendingUp, color: 'text-green-400' },
   { value: 'signal-sell', label: 'SELL Signal', icon: TrendingDown, color: 'text-red-400' },
   { value: 'analysis', label: 'Analysis', icon: BarChart2, color: 'text-yellow-500' },
@@ -65,17 +65,17 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
   }
 
   return (
-    <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] p-4">
+    <div className="bg-surface rounded-xl border border-line p-4">
       {!expanded ? (
         <>
           <div className="flex gap-3 items-center">
             <Avatar src={session?.user?.image} name={session?.user?.name} size="md" />
             <button onClick={() => setExpanded(true)}
-              className="flex-1 bg-[#1e1e2c] hover:bg-[#24243a] border border-[#2a2a3a] hover:border-yellow-500/30 rounded-xl px-4 py-3 text-left text-sm text-[#5a5a72] transition-all">
+              className="flex-1 bg-elevated hover:bg-[#24243a] border border-line hover:border-yellow-500/30 rounded-xl px-4 py-3 text-left text-sm text-ink3 transition-all">
               Share analysis, signals, or insights...
             </button>
           </div>
-          <div className="flex gap-1 mt-3 pt-3 border-t border-[#2a2a3a]">
+          <div className="flex gap-1 mt-3 pt-3 border-t border-line">
             {[
               { icon: TrendingUp, label: 'BUY Signal', color: 'text-green-400 hover:bg-green-400/10', onClick: () => { setCategory('signal-buy'); setExpanded(true) } },
               { icon: TrendingDown, label: 'SELL Signal', color: 'text-red-400 hover:bg-red-400/10', onClick: () => { setCategory('signal-sell'); setExpanded(true) } },
@@ -100,8 +100,8 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
                   <button key={cat.value} type="button" onClick={() => setCategory(cat.value)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       category === cat.value
-                        ? cat.value === 'signal-buy' ? 'badge-buy' : cat.value === 'signal-sell' ? 'badge-sell' : cat.value === 'analysis' ? 'badge-analysis' : cat.value === 'education' ? 'badge-education' : 'bg-[#1e1e2c] border-yellow-500/50 text-yellow-500'
-                        : 'border-[#2a2a3a] text-[#5a5a72] hover:border-[#3a3a4a] hover:text-[#9090a8]'
+                        ? cat.value === 'signal-buy' ? 'badge-buy' : cat.value === 'signal-sell' ? 'badge-sell' : cat.value === 'analysis' ? 'badge-analysis' : cat.value === 'education' ? 'badge-education' : 'bg-elevated border-yellow-500/50 text-yellow-500'
+                        : 'border-line text-ink3 hover:border-line2 hover:text-ink2'
                     }`}>
                     <cat.icon className="w-3 h-3" />
                     {cat.label}
@@ -120,7 +120,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
                   category === 'education' ? 'Share trading knowledge or tips...' :
                   'What\'s happening in the markets?'
                 }
-                className="w-full resize-none bg-transparent outline-none text-[#f0f0f8] placeholder-[#5a5a72] text-sm min-h-25 leading-relaxed"
+                className="w-full resize-none bg-transparent outline-none text-ink placeholder-ink3 text-sm min-h-25 leading-relaxed"
                 rows={4}
               />
             </div>
@@ -130,14 +130,14 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
             <MediaUpload onUpload={setMediaFiles} existingFiles={mediaFiles} />
           )}
 
-          <div className="flex items-center justify-between pt-3 border-t border-[#2a2a3a]">
+          <div className="flex items-center justify-between pt-3 border-t border-line">
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setShowMedia(!showMedia)}
-                className="p-2 hover:bg-[#1e1e2c] rounded-lg text-[#5a5a72] hover:text-yellow-500 transition-colors">
+                className="p-2 hover:bg-elevated rounded-lg text-ink3 hover:text-yellow-500 transition-colors">
                 <ImageIcon className="w-5 h-5" />
               </button>
               <select value={privacy} onChange={e => setPrivacy(e.target.value)}
-                className="bg-[#1e1e2c] border border-[#2a2a3a] rounded-lg px-2 py-1.5 text-xs text-[#9090a8] outline-none focus:border-yellow-500/50">
+                className="bg-elevated border border-line rounded-lg px-2 py-1.5 text-xs text-ink2 outline-none focus:border-yellow-500/50">
                 {privacyOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
