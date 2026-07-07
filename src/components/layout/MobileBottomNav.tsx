@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
-  Home, LineChart, Lightbulb, Newspaper, Menu, X,
+  Home, LineChart, Lightbulb, Newspaper, Menu, X, Lock,
   CandlestickChart, Radio, GraduationCap, ShieldCheck, Users, Bell, Settings,
   Shield, User, LogOut,
 } from 'lucide-react'
@@ -21,23 +21,30 @@ const items = [
 const allNav = [
   { href: '/',              label: 'Feed',          icon: Home            },
   { href: '/chart',         label: 'Trading View',  icon: LineChart       },
-  { href: '/trading',       label: 'Trading',       icon: CandlestickChart },
+  { href: '/trading',       label: 'Trading',       icon: CandlestickChart, premium: true },
   { href: '/ideas',         label: 'Trade Ideas',   icon: Lightbulb       },
-  { href: '/live',          label: 'Live',          icon: Radio           },
-  { href: '/study',         label: 'Study Room',    icon: GraduationCap   },
-  { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck     },
+  { href: '/live',          label: 'Live',          icon: Radio,           premium: true },
+  { href: '/study',         label: 'Study Room',    icon: GraduationCap,   premium: true },
+  { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',       label: 'Traders',       icon: Users           },
   { href: '/notifications', label: 'Notifications', icon: Bell            },
   { href: '/settings',      label: 'Settings',      icon: Settings        },
 ]
 
-export function MobileBottomNav() {
+function isLockedOut(user?: { role?: string | null; subscriptionStatus?: string | null }) {
+  if (!user) return true
+  if (user.role === 'admin' || user.role === 'coach') return false
+  return !['active', 'comp'].includes(user.subscriptionStatus ?? '')
+}
+
+export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: boolean }) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
 
-  const menu = [...allNav]
+  const locked = paywallEnabled && isLockedOut(session?.user)
+  const menu: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [...allNav]
   if (session?.user?.id) menu.push({ href: `/profile/${session.user.id}`, label: 'Profile', icon: User })
   if (session?.user?.role === 'admin') menu.push({ href: '/admin', label: 'Admin', icon: Shield })
 
@@ -58,7 +65,7 @@ export function MobileBottomNav() {
               </button>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {menu.map(({ href, label, icon: Icon }) => {
+              {menu.map(({ href, label, icon: Icon, premium }) => {
                 const active = pathname === href
                 return (
                   <Link
@@ -66,12 +73,13 @@ export function MobileBottomNav() {
                     href={href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      'flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-colors',
+                      'relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-colors',
                       active
                         ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
                         : 'border-line bg-surface text-ink2 active:bg-elevated'
                     )}
                   >
+                    {premium && locked && <Lock className="w-3 h-3 absolute top-2 right-2 text-ink3" />}
                     <Icon className="w-5 h-5" />
                     <span className="text-[11px] font-medium text-center leading-tight">{label}</span>
                   </Link>

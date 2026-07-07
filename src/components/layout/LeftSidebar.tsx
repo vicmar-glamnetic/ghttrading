@@ -6,23 +6,30 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Home, Bell, Settings, Users,
-  Globe, GraduationCap, ShieldCheck, Newspaper, Shield,
+  Globe, GraduationCap, ShieldCheck, Newspaper, Shield, Lock,
   LineChart, Lightbulb, CandlestickChart, Radio,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/',             label: 'Feed',          icon: Home            },
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
-  { href: '/trading',      label: 'Trading',       icon: CandlestickChart },
+  { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
   { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb       },
-  { href: '/live',         label: 'Live',          icon: Radio           },
-  { href: '/study',        label: 'Study Room',    icon: GraduationCap   },
-  { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck     },
+  { href: '/live',         label: 'Live',          icon: Radio,           premium: true },
+  { href: '/study',        label: 'Study Room',    icon: GraduationCap,   premium: true },
+  { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/news',         label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',      label: 'Traders',       icon: Users           },
   { href: '/notifications',label: 'Notifications', icon: Bell            },
   { href: '/settings',     label: 'Settings',      icon: Settings        },
 ]
+
+// A member with no active subscription is "locked out" of premium items.
+function isLockedOut(user?: { role?: string | null; subscriptionStatus?: string | null }) {
+  if (!user) return true
+  if (user.role === 'admin' || user.role === 'coach') return false
+  return !['active', 'comp'].includes(user.subscriptionStatus ?? '')
+}
 
 const goldTips = [
   'Gold tends to spike on US CPI & NFP days.',
@@ -42,10 +49,11 @@ function GoldTip() {
   )
 }
 
-export function LeftSidebar() {
+export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boolean }) {
   const { data: session } = useSession()
   const pathname = usePathname()
 
+  const locked = paywallEnabled && isLockedOut(session?.user)
   const items = session?.user?.role === 'admin'
     ? [...navItems, { href: '/admin', label: 'Admin', icon: Shield }]
     : navItems
@@ -66,7 +74,7 @@ export function LeftSidebar() {
       )}
 
       <div className="space-y-0.5">
-        {items.map(({ href, label, icon: Icon }) => (
+        {items.map(({ href, label, icon: Icon, premium }) => (
           <Link key={href} href={href}
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium',
@@ -76,6 +84,7 @@ export function LeftSidebar() {
             )}>
             <Icon className="w-4 h-4 shrink-0" />
             {label}
+            {premium && locked && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
           </Link>
         ))}
       </div>

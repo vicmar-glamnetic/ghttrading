@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { PAYWALL_ENABLED } from '@/lib/billing'
 import { Navbar } from '@/components/layout/Navbar'
 import { LeftSidebar } from '@/components/layout/LeftSidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
@@ -17,12 +18,12 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       <Navbar />
       <div className="w-full pt-14 px-4 sm:px-6 lg:px-8 2xl:px-12">
         <div className="flex gap-5 py-5">
-          <LeftSidebar />
+          <LeftSidebar paywallEnabled={PAYWALL_ENABLED} />
           <main className="flex-1 min-w-0 max-w-2xl lg:max-w-3xl xl:max-w-5xl 2xl:max-w-7xl mx-auto space-y-4 pb-28 lg:pb-0">{children}</main>
           <RightSidebar />
         </div>
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav paywallEnabled={PAYWALL_ENABLED} />
     </div>
   )
 }
