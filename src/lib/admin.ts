@@ -16,3 +16,11 @@ export async function requireAdmin() {
   if (session.user.role !== 'admin') return null
   return session
 }
+
+/** Session if the user is staff (coach or admin), else null. */
+export async function requireStaff() {
+  const session = await auth()
+  if (!session?.user?.id) return null
+  if (session.user.role !== 'admin' && session.user.role !== 'coach') return null
+  return session
+}

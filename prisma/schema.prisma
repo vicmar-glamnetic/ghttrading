@@ -49,6 +49,7 @@ model User {
   receivedRequests  FriendRequest[] @relation("ReceivedRequests")
   journalEntries    JournalEntry[]
   tradeIdeas        TradeIdea[]
+  educatorVideos    EducatorVideo[]
   ownedGroups       Group[]         @relation("GroupOwner")
   groupMemberships  GroupMember[]
   ownedPages        Page[]          @relation("PageOwner")
@@ -225,6 +226,31 @@ model JournalEntry {
   @@index([authorId, createdAt])
   @@index([authorId, tradedAt])
   @@map("journal_entries")
+}
+
+// Single-row config for the live webinar (managed by coaches/admins).
+model LiveWebinar {
+  id        String   @id @default("default")
+  title     String?
+  embedUrl  String?
+  isLive    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@map("live_webinar")
+}
+
+model EducatorVideo {
+  id        String   @id @default(cuid())
+  title     String
+  embedUrl  String                      // YouTube/Vimeo/etc URL
+  educator  String?                     // display name of the educator
+  createdAt DateTime @default(now())
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("educator_videos")
 }
 
 model TradeIdea {

@@ -4,93 +4,27 @@ import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useEffect, useState } from 'react'
 import {
   Home, BookOpen, Bell, Settings, Users,
-  Zap, BarChart2, Globe, Clock, NotebookPen, UsersRound, Flag,
-  LineChart, Lightbulb, CalendarDays, Shield,
+  Zap, BarChart2, Globe, NotebookPen,
+  LineChart, Lightbulb, CalendarDays, Shield, CandlestickChart, Radio,
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/',             label: 'Feed',          icon: Home        },
-  { href: '/chart',        label: 'Trading View',  icon: LineChart   },
-  { href: '/signals',      label: 'Signals',       icon: Zap         },
-  { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb   },
-  { href: '/analysis',     label: 'Analysis',      icon: BarChart2   },
-  { href: '/education',    label: 'Education',     icon: BookOpen    },
-  { href: '/pages',        label: 'Pages',         icon: Flag        },
-  { href: '/groups',       label: 'Groups',        icon: UsersRound  },
-  { href: '/friends',      label: 'Traders',       icon: Users       },
-  { href: '/journal',      label: 'My Journal',    icon: NotebookPen },
-  { href: '/calendar',     label: 'Calendar',      icon: CalendarDays},
-  { href: '/notifications',label: 'Notifications', icon: Bell        },
-  { href: '/settings',     label: 'Settings',      icon: Settings    },
+  { href: '/',             label: 'Feed',          icon: Home            },
+  { href: '/chart',        label: 'Trading View',  icon: LineChart       },
+  { href: '/terminal',     label: 'Terminal',      icon: CandlestickChart },
+  { href: '/signals',      label: 'Signals',       icon: Zap             },
+  { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb       },
+  { href: '/analysis',     label: 'Analysis',      icon: BarChart2       },
+  { href: '/live',         label: 'Live',          icon: Radio           },
+  { href: '/education',    label: 'Education',     icon: BookOpen        },
+  { href: '/friends',      label: 'Traders',       icon: Users           },
+  { href: '/journal',      label: 'My Journal',    icon: NotebookPen     },
+  { href: '/calendar',     label: 'Calendar',      icon: CalendarDays    },
+  { href: '/notifications',label: 'Notifications', icon: Bell            },
+  { href: '/settings',     label: 'Settings',      icon: Settings        },
 ]
-
-// Gold trading sessions in UTC hours
-const sessions = [
-  { name: 'Tokyo',    start: 0,  end: 9,  color: 'bg-blue-400',   textColor: 'text-blue-400'   },
-  { name: 'London',   start: 8,  end: 17, color: 'bg-yellow-400', textColor: 'text-yellow-400' },
-  { name: 'New York', start: 13, end: 22, color: 'bg-green-400',  textColor: 'text-green-400'  },
-]
-
-function GoldSessionClock() {
-  const [utcHour, setUtcHour] = useState<number | null>(null)
-  const [utcTime, setUtcTime] = useState('')
-
-  useEffect(() => {
-    function tick() {
-      const now = new Date()
-      const h = now.getUTCHours()
-      const m = now.getUTCMinutes().toString().padStart(2, '0')
-      setUtcHour(h)
-      setUtcTime(`${h.toString().padStart(2, '0')}:${m} UTC`)
-    }
-    tick()
-    const id = setInterval(tick, 60_000)
-    return () => clearInterval(id)
-  }, [])
-
-  if (utcHour === null) return null
-
-  const active = sessions.filter(s => utcHour >= s.start && utcHour < s.end)
-  const isMarketOpen = active.length > 0
-
-  return (
-    <div className="mx-3 mt-4 p-3 rounded-xl bg-surface border border-line">
-      <div className="flex items-center gap-2 mb-2">
-        <Clock className="w-3.5 h-3.5 text-yellow-500" />
-        <span className="text-xs font-bold text-yellow-500 uppercase tracking-wider">Gold Sessions</span>
-      </div>
-      <p className="text-[10px] text-ink3 mb-2">{utcTime}</p>
-      <div className="space-y-1.5">
-        {sessions.map(s => {
-          const on = utcHour >= s.start && utcHour < s.end
-          return (
-            <div key={s.name} className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className={cn('w-1.5 h-1.5 rounded-full', on ? s.color : 'bg-line2')} />
-                <span className={cn('text-xs', on ? s.textColor : 'text-ink3')}>{s.name}</span>
-              </div>
-              <span className={cn('text-[10px]', on ? 'text-ink2' : 'text-line2')}>
-                {String(s.start).padStart(2,'0')}:00–{String(s.end).padStart(2,'0')}:00
-              </span>
-            </div>
-          )
-        })}
-      </div>
-      <div className={cn(
-        'mt-2 pt-2 border-t border-line flex items-center gap-1.5 text-[10px] font-bold',
-        isMarketOpen ? 'text-green-400' : 'text-red-400'
-      )}>
-        <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse', isMarketOpen ? 'bg-green-400' : 'bg-red-400')} />
-        {isMarketOpen
-          ? `Active · ${active.map(s => s.name).join(' + ')}`
-          : 'Market Closed (Weekend)'}
-      </div>
-    </div>
-  )
-}
 
 const goldTips = [
   'Gold tends to spike on US CPI & NFP days.',
@@ -147,9 +81,6 @@ export function LeftSidebar() {
           </Link>
         ))}
       </div>
-
-      {/* Gold session clock */}
-      <GoldSessionClock />
 
       {/* Gold tip */}
       <GoldTip />
