@@ -15,6 +15,7 @@ interface AdminUser {
   username: string | null
   image: string | null
   role: 'admin' | 'coach' | 'member'
+  accmMember: boolean
   subscriptionStatus: string
   subscriptionEnd: string | null
   createdAt: string
@@ -48,16 +49,15 @@ export default function AdminPage() {
 
   // PayPal plan setup
   const [ppLoading, setPpLoading] = useState(false)
-  const [ppPlanId, setPpPlanId] = useState('')
+  const [ppPlans, setPpPlans] = useState<{ standardPlanId: string; accmPlanId: string } | null>(null)
   const [ppError, setPpError] = useState('')
-  const [ppCopied, setPpCopied] = useState(false)
 
   async function setupPaypal() {
-    setPpLoading(true); setPpError(''); setPpPlanId('')
+    setPpLoading(true); setPpError(''); setPpPlans(null)
     try {
       const res = await fetch('/api/admin/paypal/setup', { method: 'POST' })
       const data = await res.json()
-      if (res.ok) setPpPlanId(data.planId)
+      if (res.ok) setPpPlans({ standardPlanId: data.standardPlanId, accmPlanId: data.accmPlanId })
       else setPpError(data.error || 'Setup failed')
     } catch {
       setPpError('Setup failed')
@@ -108,6 +108,16 @@ export default function AdminPage() {
     load()
   }
 
+  async function toggleAccm(u: AdminUser) {
+    const accmMember = !u.accmMember
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, accmMember } : x))
+    await fetch(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accmMember }),
+    })
+  }
+
   async function remove(u: AdminUser) {
     if (!confirm(`Delete ${u.name || u.email}? This cannot be undone.`)) return
     setUsers(prev => prev.filter(x => x.id !== u.id))
@@ -151,26 +161,28 @@ export default function AdminPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-ink">PayPal billing</p>
-            <p className="text-xs text-ink3">Create the $5/mo subscription plan (needs PAYPAL_CLIENT_ID &amp; SECRET set first).</p>
+            <p className="text-xs text-ink3">Create both subscription plans — $1.99 (ACCM) &amp; $5 (standard). Needs PAYPAL_CLIENT_ID &amp; SECRET set first.</p>
           </div>
           <Button variant="secondary" size="sm" onClick={setupPaypal} loading={ppLoading} className="text-xs shrink-0">
-            Set up $5/mo plan
+            Set up plans
           </Button>
         </div>
         {ppError && <p className="text-xs text-red-400 mt-2">{ppError}</p>}
-        {ppPlanId && (
-          <div className="mt-3 rounded-lg bg-sunken border border-line p-3">
-            <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">Plan created ✓ — set this as NEXT_PUBLIC_PAYPAL_PLAN_ID</p>
-            <div className="flex items-center gap-2">
-              <code className="text-xs text-yellow-500 font-mono break-all flex-1">{ppPlanId}</code>
-              <button
-                onClick={async () => { await navigator.clipboard.writeText(ppPlanId); setPpCopied(true); setTimeout(() => setPpCopied(false), 1200) }}
-                className="text-xs text-ink3 hover:text-yellow-500 shrink-0"
-              >
-                {ppCopied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-            <p className="text-[10px] text-ink3 mt-2">Add it to your env (locally + Vercel), then redeploy. Run this once only.</p>
+        {ppPlans && (
+          <div className="mt-3 space-y-2">
+            {[
+              { env: 'NEXT_PUBLIC_PAYPAL_PLAN_ID_ACCM', label: '$1.99 ACCM', id: ppPlans.accmPlanId },
+              { env: 'NEXT_PUBLIC_PAYPAL_PLAN_ID', label: '$5 standard', id: ppPlans.standardPlanId },
+            ].map(({ env, label, id }) => (
+              <div key={env} className="rounded-lg bg-sunken border border-line p-3">
+                <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">{label} — set as {env}</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs text-yellow-500 font-mono break-all flex-1">{id}</code>
+                  <button onClick={() => navigator.clipboard.writeText(id)} className="text-xs text-ink3 hover:text-yellow-500 shrink-0">Copy</button>
+                </div>
+              </div>
+            ))}
+            <p className="text-[10px] text-ink3">Add both to your env (locally + Vercel), then redeploy. Run this once only.</p>
           </div>
         )}
       </div>
@@ -205,15 +217,16 @@ export default function AdminPage() {
                 <th className="p-3 font-semibold">User</th>
                 <th className="p-3 font-semibold">Role</th>
                 <th className="p-3 font-semibold hidden sm:table-cell">Billing</th>
+                <th className="p-3 font-semibold hidden sm:table-cell">Tier</th>
                 <th className="p-3 font-semibold hidden md:table-cell">Joined</th>
                 <th className="p-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="p-8 text-center text-ink3">Loading…</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-ink3">Loading…</td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={5} className="p-8 text-center text-ink3">No users found.</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-ink3">No users found.</td></tr>
               ) : users.map(u => (
                 <tr key={u.id} className="border-b border-line last:border-0 hover:bg-elevated/50">
                   <td className="p-3">
@@ -254,6 +267,19 @@ export default function AdminPage() {
                         )
                       )}
                     </div>
+                  </td>
+                  <td className="p-3 hidden sm:table-cell">
+                    <button
+                      onClick={() => toggleAccm(u)}
+                      title="Toggle ACCM ($1.99) vs Standard ($5)"
+                      className={`text-xs font-semibold rounded-full px-2 py-1 border transition-colors ${
+                        u.accmMember
+                          ? 'bg-green-400/10 text-green-400 border-green-400/30'
+                          : 'bg-elevated text-ink2 border-line'
+                      }`}
+                    >
+                      {u.accmMember ? 'ACCM · $1.99' : 'Standard · $5'}
+                    </button>
                   </td>
                   <td className="p-3 hidden md:table-cell text-ink3 text-xs">
                     {format(new Date(u.createdAt), 'MMM d, yyyy')}

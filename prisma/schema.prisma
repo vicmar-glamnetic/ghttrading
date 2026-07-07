@@ -29,6 +29,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   role               String   @default("member") // admin | coach | member
+  accmMember         Boolean  @default(true)      // true = $1.99 ACCM tier, false = $5 standard
   subscriptionStatus String   @default("free")
   stripeCustomerId   String?
   stripeSubId        String?

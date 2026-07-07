@@ -4,7 +4,7 @@ import { requireAdmin, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
-  role: true, subscriptionStatus: true, subscriptionEnd: true, createdAt: true,
+  role: true, accmMember: true, subscriptionStatus: true, subscriptionEnd: true, createdAt: true,
 }
 
 const SUB_STATUSES = ['free', 'active', 'comp', 'canceled', 'past_due']
@@ -39,6 +39,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
       return NextResponse.json({ error: 'Invalid subscription status' }, { status: 400 })
     }
     data.subscriptionStatus = body.subscriptionStatus
+  }
+
+  if (typeof body.accmMember === 'boolean') {
+    data.accmMember = body.accmMember
   }
 
   if (Object.keys(data).length === 0) {

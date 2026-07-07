@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
-import { hasAccess, BILLING, PAYPAL, getPricePhp } from '@/lib/billing'
+import { db } from '@/lib/db'
+import { hasAccess, BILLING, PAYPAL, tierFor, canSubscribe, getPricePhp } from '@/lib/billing'
 import { LogoutButton } from './LogoutButton'
 import { PayPalSubscribe } from './PayPalSubscribe'
 import { Crown, Check } from 'lucide-react'
@@ -22,7 +23,11 @@ export default async function UpgradePage({
   // Already a member (or paywall off) — no need to be here.
   if (!previewing && hasAccess(session.user)) redirect('/')
 
-  const { php } = await getPricePhp()
+  // Pick the price tier: everyone is ACCM ($1.99) unless an admin switched them.
+  const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { accmMember: true } })
+  const tier = tierFor(dbUser?.accmMember)
+  const { php } = await getPricePhp(tier.usd)
+  const subscribable = canSubscribe(tier.planId)
 
   const perks = [
     'Live trading signals & market analysis',
@@ -41,9 +46,12 @@ export default async function UpgradePage({
           <h1 className="text-2xl font-black text-ink">Become a Member</h1>
           <p className="text-ink2 text-sm mt-1">
             Unlock the full GHT Trading community for{' '}
-            <span className="text-yellow-500 font-bold">${BILLING.priceUsd}/month</span>
+            <span className="text-yellow-500 font-bold">${tier.usd}/month</span>
             {' '}(≈ ₱{php.toLocaleString('en-PH')} today).
           </p>
+          {tier.label === 'ACCM' && (
+            <p className="text-[11px] text-green-400 mt-1">🎉 ACCM member price applied</p>
+          )}
         </div>
 
         {/* perks */}
@@ -59,11 +67,11 @@ export default async function UpgradePage({
         </div>
 
         {/* PayPal — instant recurring subscription */}
-        {PAYPAL.enabled ? (
+        {subscribable ? (
           <div className="bg-surface border border-line rounded-2xl p-5">
             <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">Subscribe with PayPal or card</p>
-            <p className="text-xs text-ink3 mb-3">${BILLING.priceUsd}/month (≈ ₱{php.toLocaleString('en-PH')}) · cancel anytime · instant access</p>
-            <PayPalSubscribe clientId={PAYPAL.clientId} planId={PAYPAL.planId} userId={session.user.id} />
+            <p className="text-xs text-ink3 mb-3">${tier.usd}/month (≈ ₱{php.toLocaleString('en-PH')}) · cancel anytime · instant access</p>
+            <PayPalSubscribe clientId={PAYPAL.clientId} planId={tier.planId} userId={session.user.id} />
           </div>
         ) : (
           <div className="bg-surface border border-line rounded-2xl p-5 text-center">

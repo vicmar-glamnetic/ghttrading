@@ -113,7 +113,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-blue-400" />
           <span className="text-sm font-bold text-blue-400">
-            {idea.currentPrice != null ? `$${fmtNum(idea.currentPrice)}` : '--'}
+            {idea.entryLow != null || idea.entryHigh != null ? fmtRange(idea.entryLow, idea.entryHigh) : '--'}
           </span>
         </div>
         {idea.status === 'tp_hit' && <span className="text-xs font-semibold text-green-400 bg-green-400/10 rounded px-2 py-0.5">TP Hit</span>}

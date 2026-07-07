@@ -69,11 +69,8 @@ export async function verifyWebhook(headers: Headers, body: unknown): Promise<bo
   return data.verification_status === 'SUCCESS'
 }
 
-/** One-time: create a product + $5/mo plan. Returns the plan id. */
-export async function createMonthlyPlan(priceUsd: number) {
-  const token = await getAccessToken()
-
-  const productRes = await fetch(`${PAYPAL_API}/v1/catalogs/products`, {
+async function createProduct(token: string) {
+  const res = await fetch(`${PAYPAL_API}/v1/catalogs/products`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -82,15 +79,17 @@ export async function createMonthlyPlan(priceUsd: number) {
       type: 'SERVICE',
     }),
   })
-  if (!productRes.ok) throw new Error(`Create product failed: ${await productRes.text()}`)
-  const product = await productRes.json()
+  if (!res.ok) throw new Error(`Create product failed: ${await res.text()}`)
+  return (await res.json()).id as string
+}
 
-  const planRes = await fetch(`${PAYPAL_API}/v1/billing/plans`, {
+async function createPlan(token: string, productId: string, priceUsd: number, name: string) {
+  const res = await fetch(`${PAYPAL_API}/v1/billing/plans`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      product_id: product.id,
-      name: 'GHT Community — Monthly',
+      product_id: productId,
+      name,
       billing_cycles: [
         {
           frequency: { interval_unit: 'MONTH', interval_count: 1 },
@@ -107,7 +106,15 @@ export async function createMonthlyPlan(priceUsd: number) {
       },
     }),
   })
-  if (!planRes.ok) throw new Error(`Create plan failed: ${await planRes.text()}`)
-  const plan = await planRes.json()
-  return { productId: product.id as string, planId: plan.id as string }
+  if (!res.ok) throw new Error(`Create plan failed: ${await res.text()}`)
+  return (await res.json()).id as string
+}
+
+/** One-time: create the product + both monthly plans (standard + ACCM). */
+export async function createMonthlyPlans(standardUsd: number, accmUsd: number) {
+  const token = await getAccessToken()
+  const productId = await createProduct(token)
+  const standardPlanId = await createPlan(token, productId, standardUsd, `GHT Community — Monthly ($${standardUsd})`)
+  const accmPlanId = await createPlan(token, productId, accmUsd, `GHT Community — ACCM ($${accmUsd})`)
+  return { productId, standardPlanId, accmPlanId }
 }

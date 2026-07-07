@@ -5,9 +5,11 @@
 // everyone keeps full access — existing members are never locked out.
 export const PAYWALL_ENABLED = process.env.PAYWALL_ENABLED === 'true'
 
-// Payment instructions shown on /upgrade. Override via env in production.
+// Two price tiers. Everyone is an ACCM member ($1.99) by default; admins can
+// switch a user to the standard ($5) tier.
 export const BILLING = {
-  priceUsd: Number(process.env.NEXT_PUBLIC_PRICE_USD) || 5,
+  priceUsd: Number(process.env.NEXT_PUBLIC_PRICE_USD) || 5,          // standard / non-ACCM
+  priceUsdAccm: Number(process.env.NEXT_PUBLIC_PRICE_USD_ACCM) || 1.99, // ACCM
   // Fallback USD→PHP rate used only if the live rate can't be fetched.
   fallbackRate: Number(process.env.USD_PHP_FALLBACK_RATE) || 58,
   gcashName: process.env.NEXT_PUBLIC_GCASH_NAME || 'GHT Trading',
@@ -17,11 +19,30 @@ export const BILLING = {
   proofContact: process.env.NEXT_PUBLIC_PAYMENT_PROOF_CONTACT || 'our support chat',
 }
 
+// PayPal subscription config (client-safe values).
+export const PAYPAL = {
+  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+  planId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID || '',            // $5 standard
+  planIdAccm: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID_ACCM || '',   // $1.99 ACCM
+}
+
+/** Resolve the price + PayPal plan for a user based on their ACCM status. */
+export function tierFor(accmMember: boolean | null | undefined) {
+  return accmMember !== false
+    ? { usd: BILLING.priceUsdAccm, planId: PAYPAL.planIdAccm, label: 'ACCM' as const }
+    : { usd: BILLING.priceUsd, planId: PAYPAL.planId, label: 'Standard' as const }
+}
+
+/** Whether PayPal is usable for a given plan id. */
+export function canSubscribe(planId: string) {
+  return Boolean(PAYPAL.clientId && planId)
+}
+
 /**
- * Convert the USD price to pesos at the current rate (cached ~6h).
+ * Convert a USD price to pesos at the current rate (cached ~6h).
  * Falls back to BILLING.fallbackRate if the FX API is unavailable.
  */
-export async function getPricePhp(): Promise<{ php: number; live: boolean }> {
+export async function getPricePhp(usd: number): Promise<{ php: number; live: boolean }> {
   try {
     const res = await fetch('https://open.er-api.com/v6/latest/USD', {
       next: { revalidate: 21600 }, // 6 hours
@@ -29,21 +50,12 @@ export async function getPricePhp(): Promise<{ php: number; live: boolean }> {
     const data = await res.json()
     const rate = data?.rates?.PHP
     if (typeof rate === 'number' && rate > 0) {
-      return { php: Math.round(BILLING.priceUsd * rate), live: true }
+      return { php: Math.round(usd * rate), live: true }
     }
   } catch {
     // fall through to fallback
   }
-  return { php: Math.round(BILLING.priceUsd * BILLING.fallbackRate), live: false }
-}
-
-// PayPal subscription config (client-safe values).
-export const PAYPAL = {
-  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
-  planId: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID || '',
-  get enabled() {
-    return Boolean(this.clientId && this.planId)
-  },
+  return { php: Math.round(usd * BILLING.fallbackRate), live: false }
 }
 
 // Roles and subscription states that always have access.
