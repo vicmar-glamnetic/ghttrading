@@ -1,11 +1,14 @@
-// Trading — embeds the MetaTrader 5 Web Terminal so members can trade
-// directly with their own MT5 account + broker server (version=5 = MetaTrader 5).
+// Trading — embeds the MetaTrader 5 Web Terminal so members can trade with
+// their own MT5 account (version=5 = MetaTrader 5).
 //
-// The web terminal lets the user pick/search their broker server in the
-// "Connect to account" dialog. To pin a specific broker, append e.g.
-// `&servers=YourBroker-Live&trade_server=YourBroker-Live` to MT5_TERMINAL_URL.
+// Pinned to AC Capital Market's MT5 server so the login box defaults to it.
+// To change broker, update MT5_SERVER to the exact server name from MT5
+// (File → Login to Trade Account → Server).
+const MT5_SERVER = 'MT5-ACCapitalMarket(S)-Real'
 const MT5_TERMINAL_URL =
-  'https://trade.mql5.com/trade?startup_mode=connect_account&lang=en&save_password=on&version=5'
+  `https://trade.mql5.com/trade?servers=${encodeURIComponent(MT5_SERVER)}` +
+  `&trade_server=${encodeURIComponent(MT5_SERVER)}` +
+  `&startup_mode=connect_account&lang=en&save_password=on&version=5`
 
 export const metadata = { title: 'Trading · GHT Trading' }
 
