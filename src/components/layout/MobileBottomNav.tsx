@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Lightbulb, CalendarDays, NotebookPen, Menu, X,
   CandlestickChart, Zap, BarChart2, Radio, BookOpen, Users, Bell, Settings,
-  Shield, User, LogOut,
+  Shield, User, LogOut, Newspaper,
 } from 'lucide-react'
 
 const items = [
@@ -26,6 +26,7 @@ const allNav = [
   { href: '/ideas',         label: 'Trade Ideas',   icon: Lightbulb       },
   { href: '/analysis',      label: 'Analysis',      icon: BarChart2       },
   { href: '/live',          label: 'Live',          icon: Radio           },
+  { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/education',     label: 'Education',     icon: BookOpen        },
   { href: '/friends',       label: 'Traders',       icon: Users           },
   { href: '/journal',       label: 'My Journal',    icon: NotebookPen     },
