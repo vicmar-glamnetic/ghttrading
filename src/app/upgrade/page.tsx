@@ -59,45 +59,17 @@ export default async function UpgradePage({
         </div>
 
         {/* PayPal — instant recurring subscription */}
-        {PAYPAL.enabled && (
-          <div className="bg-surface border border-line rounded-2xl p-5 mb-4">
+        {PAYPAL.enabled ? (
+          <div className="bg-surface border border-line rounded-2xl p-5">
             <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">Subscribe with PayPal or card</p>
-            <p className="text-xs text-ink3 mb-3">${BILLING.priceUsd}/month · cancel anytime · instant access</p>
+            <p className="text-xs text-ink3 mb-3">${BILLING.priceUsd}/month (≈ ₱{php.toLocaleString('en-PH')}) · cancel anytime · instant access</p>
             <PayPalSubscribe clientId={PAYPAL.clientId} planId={PAYPAL.planId} userId={session.user.id} />
           </div>
+        ) : (
+          <div className="bg-surface border border-line rounded-2xl p-5 text-center">
+            <p className="text-sm text-ink2">Payments are being set up. Please check back shortly or contact {BILLING.proofContact}.</p>
+          </div>
         )}
-
-        {/* GCash / Maya — manual fallback */}
-        <div className="bg-surface border border-line rounded-2xl p-5">
-          <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-3">
-            {PAYPAL.enabled ? 'Prefer GCash / Maya?' : 'How to pay'}
-          </p>
-          <ol className="space-y-3 text-sm text-ink">
-            <li className="flex gap-2.5">
-              <span className="shrink-0 w-5 h-5 rounded-full bg-elevated text-ink2 text-xs font-bold flex items-center justify-center">1</span>
-              <div>
-                Send <span className="font-bold text-yellow-500">≈ ₱{php.toLocaleString('en-PH')}</span> (${BILLING.priceUsd}) via GCash to:
-                <div className="mt-1.5 rounded-lg bg-sunken border border-line px-3 py-2">
-                  <p className="font-mono text-ink font-semibold">{BILLING.gcashNumber}</p>
-                  <p className="text-xs text-ink3">{BILLING.gcashName}</p>
-                </div>
-                {BILLING.mayaNumber && (
-                  <p className="text-xs text-ink3 mt-1.5">Maya: <span className="font-mono text-ink2">{BILLING.mayaNumber}</span></p>
-                )}
-              </div>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="shrink-0 w-5 h-5 rounded-full bg-elevated text-ink2 text-xs font-bold flex items-center justify-center">2</span>
-              <div>
-                Send your payment screenshot and the email <span className="font-semibold text-ink">{session.user.email}</span> to {BILLING.proofContact}.
-              </div>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="shrink-0 w-5 h-5 rounded-full bg-elevated text-ink2 text-xs font-bold flex items-center justify-center">3</span>
-              <div>We activate your account — usually within a few hours. Refresh this page once confirmed.</div>
-            </li>
-          </ol>
-        </div>
 
         <div className="flex items-center justify-between mt-5 px-1">
           <LogoutButton />
