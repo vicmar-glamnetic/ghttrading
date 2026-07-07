@@ -5,25 +5,13 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
 import { MediaUpload } from '@/components/posts/MediaUpload'
-import { BookOpen, Image as ImageIcon, Play, Plus, Trash2, X, Newspaper, ExternalLink } from 'lucide-react'
+import { BookOpen, Image as ImageIcon, Play, Plus, Trash2, X } from 'lucide-react'
 import type { PostWithDetails } from '@/types'
 
 interface UploadedFile { url: string; name: string; type: string }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
 interface Video { id: string; title: string; embedUrl: string; educator: string | null; author: Author }
-interface NewsItem { title: string; link: string; pubDate: string; image: string | null }
-type Tab = 'videos' | 'posts' | 'news'
-
-function newsTimeAgo(pubDate: string): string {
-  const d = new Date(pubDate.replace(' ', 'T'))
-  if (isNaN(d.getTime())) return ''
-  const mins = Math.round((Date.now() - d.getTime()) / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.round(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.round(hrs / 24)}d ago`
-}
+type Tab = 'videos' | 'posts'
 
 // Normalise common video URLs to their embeddable form.
 function toEmbed(url: string): string {
@@ -122,8 +110,6 @@ export default function EducationPage() {
   const [videos, setVideos] = useState<Video[]>([])
   const [loadingVideos, setLoadingVideos] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
-  const [news, setNews] = useState<NewsItem[]>([])
-  const [loadingNews, setLoadingNews] = useState(true)
 
   useEffect(() => {
     fetch('/api/posts').then(r => r.json()).then(d => {
@@ -142,14 +128,6 @@ export default function EducationPage() {
     }
   }, [])
   useEffect(() => { loadVideos() }, [loadVideos])
-
-  useEffect(() => {
-    fetch('/api/news')
-      .then(r => r.json())
-      .then(d => setNews(Array.isArray(d) ? d : []))
-      .catch(() => setNews([]))
-      .finally(() => setLoadingNews(false))
-  }, [])
 
   async function deleteVideo(v: Video) {
     if (!confirm(`Delete "${v.title}"?`)) return
@@ -171,7 +149,7 @@ export default function EducationPage() {
 
       {/* tabs */}
       <div className="flex gap-2">
-        {([['videos', 'Videos'], ['posts', 'Posts'], ['news', 'Forex News']] as [Tab, string][]).map(([t, label]) => (
+        {([['videos', 'Videos'], ['posts', 'Posts']] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
             {label}
@@ -232,38 +210,6 @@ export default function EducationPage() {
             ))
           )}
         </div>
-      )}
-
-      {/* ---- Forex News ---- */}
-      {tab === 'news' && (
-        loadingNews ? (
-          <div className="space-y-3">{[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-surface rounded-xl border border-line animate-pulse" />)}</div>
-        ) : news.length === 0 ? (
-          <div className="bg-surface rounded-xl border border-line p-12 text-center">
-            <Newspaper className="w-12 h-12 text-yellow-500/30 mx-auto mb-3" />
-            <p className="text-ink3">Couldn&apos;t load news right now — check back shortly.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {news.map((n, i) => (
-              <a key={i} href={n.link} target="_blank" rel="noopener noreferrer"
-                className="flex gap-3 bg-surface rounded-xl border border-line p-3 hover:border-yellow-500/30 transition-colors group">
-                {n.image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={n.image} alt="" className="w-24 h-24 sm:w-32 sm:h-24 object-cover rounded-lg shrink-0 bg-elevated" loading="lazy" />
-                )}
-                <div className="min-w-0 flex flex-col">
-                  <p className="text-sm font-semibold text-ink leading-snug line-clamp-3 group-hover:text-yellow-500 transition-colors">{n.title}</p>
-                  <div className="mt-auto pt-2 flex items-center gap-2 text-xs text-ink3">
-                    <span>Investing.com</span>
-                    {newsTimeAgo(n.pubDate) && <><span>·</span><span>{newsTimeAgo(n.pubDate)}</span></>}
-                    <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        )
       )}
 
       {showAdd && <AddVideo onClose={() => setShowAdd(false)} onAdded={v => { setVideos(prev => [v, ...prev]); setShowAdd(false) }} />}

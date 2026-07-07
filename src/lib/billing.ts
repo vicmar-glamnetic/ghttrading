@@ -58,11 +58,19 @@ export async function getPricePhp(usd: number): Promise<{ php: number; live: boo
   return { php: Math.round(usd * BILLING.fallbackRate), live: false }
 }
 
+// Premium (paid) sections. Everything else is free. When the paywall is on,
+// members without an active subscription are redirected to /upgrade for these.
+export const PREMIUM_PATHS = ['/trading', '/live', '/anti-hacking', '/study', '/education', '/journal', '/calendar']
+
+export function isPremiumPath(pathname: string) {
+  return PREMIUM_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+}
+
 // Roles and subscription states that always have access.
 const FREE_ROLES = ['admin', 'coach']
 const ACTIVE_STATUSES = ['active', 'comp']
 
-/** Whether a user can access the members' area. */
+/** Whether a user can access premium sections. */
 export function hasAccess(user: { role?: string | null; subscriptionStatus?: string | null }) {
   if (!PAYWALL_ENABLED) return true
   if (user.role && FREE_ROLES.includes(user.role)) return true

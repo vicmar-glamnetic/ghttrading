@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from 'next-auth'
 import type { JWT } from 'next-auth/jwt'
+import { hasAccess, isPremiumPath } from './billing'
 
 // A large avatar (e.g. a base64 data: URI) baked into the JWT bloats the session
 // cookie until it's chunked into Set-Cookie headers that exceed the edge header
@@ -26,6 +27,14 @@ export const authConfig: NextAuthConfig = {
     jwt({ token }) {
       return stripLargePicture(token)
     },
+    // Expose role + subscription status to the authorized() check below.
+    session({ session, token }) {
+      if (token && session.user) {
+        session.user.role = (token.role as string) ?? 'member'
+        session.user.subscriptionStatus = (token.subscriptionStatus as string) ?? 'free'
+      }
+      return session
+    },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isAuthPage =
@@ -38,6 +47,11 @@ export const authConfig: NextAuthConfig = {
       if (isApiRoute) return true
       if (isAuthPage) return isLoggedIn ? Response.redirect(new URL('/', nextUrl)) : true
       if (!isLoggedIn) return Response.redirect(new URL('/login', nextUrl))
+
+      // Per-feature paywall: premium sections require an active subscription.
+      if (isPremiumPath(nextUrl.pathname) && auth?.user && !hasAccess(auth.user)) {
+        return Response.redirect(new URL('/upgrade', nextUrl))
+      }
       return true
     },
   },

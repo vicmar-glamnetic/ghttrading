@@ -5,9 +5,9 @@ import { Avatar } from '@/components/ui/Avatar'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
-  Home, BookOpen, Bell, Settings, Users,
-  Globe, NotebookPen,
-  LineChart, Lightbulb, CalendarDays, Shield, CandlestickChart, Radio,
+  Home, Bell, Settings, Users,
+  Globe, GraduationCap, ShieldCheck, Newspaper, Shield,
+  LineChart, Lightbulb, CandlestickChart, Radio,
 } from 'lucide-react'
 
 const navItems = [
@@ -16,10 +16,10 @@ const navItems = [
   { href: '/trading',      label: 'Trading',       icon: CandlestickChart },
   { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb       },
   { href: '/live',         label: 'Live',          icon: Radio           },
-  { href: '/education',    label: 'Education',     icon: BookOpen        },
+  { href: '/study',        label: 'Study Room',    icon: GraduationCap   },
+  { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck     },
+  { href: '/news',         label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',      label: 'Traders',       icon: Users           },
-  { href: '/journal',      label: 'My Journal',    icon: NotebookPen     },
-  { href: '/calendar',     label: 'Calendar',      icon: CalendarDays    },
   { href: '/notifications',label: 'Notifications', icon: Bell            },
   { href: '/settings',     label: 'Settings',      icon: Settings        },
 ]

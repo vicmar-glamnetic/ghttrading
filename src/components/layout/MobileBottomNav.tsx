@@ -5,16 +5,16 @@ import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
-  Home, LineChart, Lightbulb, CalendarDays, NotebookPen, Menu, X,
-  CandlestickChart, Radio, BookOpen, Users, Bell, Settings,
+  Home, LineChart, Lightbulb, Newspaper, Menu, X,
+  CandlestickChart, Radio, GraduationCap, ShieldCheck, Users, Bell, Settings,
   Shield, User, LogOut,
 } from 'lucide-react'
 
 const items = [
-  { href: '/',         label: 'Feed',    icon: Home         },
-  { href: '/chart',    label: 'Chart',   icon: LineChart    },
-  { href: '/ideas',    label: 'Ideas',   icon: Lightbulb    },
-  { href: '/journal',  label: 'Journal', icon: NotebookPen  },
+  { href: '/',      label: 'Feed',  icon: Home       },
+  { href: '/chart', label: 'Chart', icon: LineChart  },
+  { href: '/ideas', label: 'Ideas', icon: Lightbulb  },
+  { href: '/news',  label: 'News',  icon: Newspaper  },
 ]
 
 // Full navigation shown in the "More" sheet.
@@ -24,10 +24,10 @@ const allNav = [
   { href: '/trading',       label: 'Trading',       icon: CandlestickChart },
   { href: '/ideas',         label: 'Trade Ideas',   icon: Lightbulb       },
   { href: '/live',          label: 'Live',          icon: Radio           },
-  { href: '/education',     label: 'Education',     icon: BookOpen        },
+  { href: '/study',         label: 'Study Room',    icon: GraduationCap   },
+  { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck     },
+  { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',       label: 'Traders',       icon: Users           },
-  { href: '/journal',       label: 'My Journal',    icon: NotebookPen     },
-  { href: '/calendar',      label: 'Calendar',      icon: CalendarDays    },
   { href: '/notifications', label: 'Notifications', icon: Bell            },
   { href: '/settings',      label: 'Settings',      icon: Settings        },
 ]
