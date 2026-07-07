@@ -324,6 +324,7 @@ function IdeaEditor({ initial, onClose, onSaved }: {
 export default function IdeasPage() {
   const { data: session } = useSession()
   const uid = session?.user?.id
+  const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
   const [ideas, setIdeas] = useState<TradeIdea[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('community')
@@ -366,20 +367,24 @@ export default function IdeasPage() {
           <Lightbulb className="w-5 h-5 text-yellow-500" />
           <h1 className="font-bold text-ink text-lg">Trade Ideas</h1>
         </div>
-        <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
-          <Plus className="w-3.5 h-3.5" /> New Idea
-        </Button>
+        {isStaff && (
+          <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
+            <Plus className="w-3.5 h-3.5" /> New Idea
+          </Button>
+        )}
       </div>
 
-      {/* tabs */}
-      <div className="flex gap-2">
-        {([['community', 'Community'], ['mine', 'My Ideas']] as [Tab, string][]).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* tabs — only coaches/admins have a personal list */}
+      {isStaff && (
+        <div className="flex gap-2">
+          {([['community', 'Community'], ['mine', 'My Ideas']] as [Tab, string][]).map(([t, label]) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -389,9 +394,13 @@ export default function IdeasPage() {
         <div className="bg-surface rounded-xl border border-line p-12 text-center">
           <Lightbulb className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
           <p className="text-ink3">
-            {tab === 'mine' ? 'You have no trade ideas yet.' : 'No community ideas yet. Be the first to share one!'}
+            {tab === 'mine'
+              ? 'You have no trade ideas yet.'
+              : isStaff ? 'No community ideas yet. Be the first to share one!' : 'No trade ideas yet — check back soon.'}
           </p>
-          <button onClick={() => setEditor({ open: true, idea: null })} className="mt-3 text-sm text-yellow-500 hover:text-yellow-400">+ New idea</button>
+          {isStaff && (
+            <button onClick={() => setEditor({ open: true, idea: null })} className="mt-3 text-sm text-yellow-500 hover:text-yellow-400">+ New idea</button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">

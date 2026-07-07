@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
+import { requireStaff } from '@/lib/admin'
 import { db } from '@/lib/db'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
@@ -51,8 +52,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Only coaches/admins may create trade ideas.
+    const session = await requireStaff()
+    if (!session) return NextResponse.json({ error: 'Only coaches can create trade ideas' }, { status: 403 })
 
     const body = await req.json()
     const symbol = (body.symbol ?? '').toString().trim().toUpperCase()
