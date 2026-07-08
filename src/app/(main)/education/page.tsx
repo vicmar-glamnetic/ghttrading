@@ -5,7 +5,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
 import { MediaUpload } from '@/components/posts/MediaUpload'
-import { BookOpen, Image as ImageIcon, Play, Plus, Trash2, X } from 'lucide-react'
+import { BookOpen, Image as ImageIcon, Play, Plus, Trash2, X, Pencil } from 'lucide-react'
 import type { PostWithDetails } from '@/types'
 
 interface UploadedFile { url: string; name: string; type: string }
@@ -118,7 +118,7 @@ export default function EducationPage() {
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [videos, setVideos] = useState<Video[]>([])
   const [loadingVideos, setLoadingVideos] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
+  const [editor, setEditor] = useState<{ open: boolean; video: Video | null }>({ open: false, video: null })
   const [catFilter, setCatFilter] = useState<string>('all')
 
   useEffect(() => {
@@ -151,7 +151,7 @@ export default function EducationPage() {
         <BookOpen className="w-5 h-5 text-yellow-500" />
         <h1 className="font-bold text-ink text-lg">Education</h1>
         {tab === 'videos' && isStaff && (
-          <Button variant="gold" size="sm" onClick={() => setShowAdd(true)} className="ml-auto gap-1.5 text-xs">
+          <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, video: null })} className="ml-auto gap-1.5 text-xs">
             <Plus className="w-3.5 h-3.5" /> Add video
           </Button>
         )}
@@ -211,9 +211,14 @@ export default function EducationPage() {
                       <p className="text-xs text-ink3 truncate">{v.educator || v.author.name}</p>
                     </div>
                     {isStaff && (
-                      <button onClick={() => deleteVideo(v)} className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors shrink-0">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex shrink-0">
+                        <button onClick={() => setEditor({ open: true, video: v })} className="p-1.5 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors" title="Edit">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteVideo(v)} className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -243,17 +248,26 @@ export default function EducationPage() {
         </div>
       )}
 
-      {showAdd && <AddVideo onClose={() => setShowAdd(false)} onAdded={v => { setVideos(prev => [v, ...prev]); setShowAdd(false) }} />}
+      {editor.open && (
+        <VideoEditor
+          initial={editor.video}
+          onClose={() => setEditor({ open: false, video: null })}
+          onSaved={(v, isNew) => {
+            setVideos(prev => isNew ? [v, ...prev] : prev.map(x => x.id === v.id ? v : x))
+            setEditor({ open: false, video: null })
+          }}
+        />
+      )}
     </div>
   )
 }
 
-/* ---- staff: add educator video ---- */
-function AddVideo({ onClose, onAdded }: { onClose: () => void; onAdded: (v: Video) => void }) {
-  const [title, setTitle] = useState('')
-  const [embedUrl, setEmbedUrl] = useState('')
-  const [educator, setEducator] = useState('')
-  const [category, setCategory] = useState<string>(CATEGORIES[0])
+/* ---- staff: add / edit educator video ---- */
+function VideoEditor({ initial, onClose, onSaved }: { initial: Video | null; onClose: () => void; onSaved: (v: Video, isNew: boolean) => void }) {
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [embedUrl, setEmbedUrl] = useState(initial?.embedUrl ?? '')
+  const [educator, setEducator] = useState(initial?.educator ?? '')
+  const [category, setCategory] = useState<string>(initial?.category ?? CATEGORIES[0])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -261,13 +275,13 @@ function AddVideo({ onClose, onAdded }: { onClose: () => void; onAdded: (v: Vide
     if (!title.trim() || !embedUrl.trim()) { setError('Title and video URL are required.'); return }
     setSaving(true)
     try {
-      const res = await fetch('/api/education/videos', {
-        method: 'POST',
+      const res = await fetch(initial ? `/api/education/videos/${initial.id}` : '/api/education/videos', {
+        method: initial ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, embedUrl, educator, category }),
       })
-      if (res.ok) onAdded(await res.json())
-      else setError((await res.json().catch(() => ({}))).error || 'Failed to add video')
+      if (res.ok) onSaved(await res.json(), !initial)
+      else setError((await res.json().catch(() => ({}))).error || 'Failed to save video')
     } finally {
       setSaving(false)
     }
@@ -279,7 +293,7 @@ function AddVideo({ onClose, onAdded }: { onClose: () => void; onAdded: (v: Vide
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
       <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-line" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-line">
-          <h2 className="font-bold text-ink">Add video</h2>
+          <h2 className="font-bold text-ink">{initial ? 'Edit video' : 'Add video'}</h2>
           <button onClick={onClose} className="text-ink3 hover:text-ink"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-3">
@@ -296,7 +310,7 @@ function AddVideo({ onClose, onAdded }: { onClose: () => void; onAdded: (v: Vide
         </div>
         <div className="flex gap-2 p-4 border-t border-line">
           <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button variant="gold" size="sm" onClick={save} loading={saving} className="flex-1">Add video</Button>
+          <Button variant="gold" size="sm" onClick={save} loading={saving} className="flex-1">{initial ? 'Save changes' : 'Add video'}</Button>
         </div>
       </div>
     </div>
