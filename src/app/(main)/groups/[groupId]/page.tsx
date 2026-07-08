@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Users, Globe, Lock, ArrowLeft, ImageIcon, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
+import { useMyProfile } from '@/lib/useMyProfile'
 import { PostCard } from '@/components/posts/PostCard'
 import type { PostWithDetails } from '@/types'
 
@@ -35,6 +36,7 @@ type Tab = 'posts' | 'members' | 'about'
 
 function ComposeBox({ groupId, onPost }: { groupId: string; onPost: (post: PostWithDetails) => void }) {
   const { data: session } = useSession()
+  const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const [content, setContent] = useState('')
   const [posting, setPosting] = useState(false)
   const [images, setImages] = useState<string[]>([])
@@ -73,7 +75,7 @@ function ComposeBox({ groupId, onPost }: { groupId: string; onPost: (post: PostW
   return (
     <form onSubmit={handleSubmit} className="bg-surface rounded-xl border border-line p-4 space-y-3">
       <div className="flex gap-3">
-        <Avatar src={session?.user?.image} name={session?.user?.name} size="sm" className="shrink-0" />
+        <Avatar src={me.image} name={me.name || session?.user?.name} size="sm" className="shrink-0" />
         <textarea
           value={content}
           onChange={e => setContent(e.target.value)}

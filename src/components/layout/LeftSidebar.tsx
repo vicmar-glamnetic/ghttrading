@@ -5,6 +5,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+import { useMyProfile } from '@/lib/useMyProfile'
 import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
@@ -55,6 +56,7 @@ function isLockedOut(user?: {
 export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boolean }) {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
   const [pending, setPending] = useState(0)
@@ -116,7 +118,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
           href={`/profile/${session.user.id}`}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-elevated transition-colors mb-2 border border-line bg-surface"
         >
-          <Avatar src={session.user.image} name={session.user.name} size="sm" />
+          <Avatar src={me.image} name={me.name || session.user.name} size="sm" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink truncate">{session.user.name}</p>
             <p className="text-xs text-yellow-500 truncate">@{(session.user as { username?: string }).username || 'trader'}</p>

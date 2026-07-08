@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
+import { useMyProfile } from '@/lib/useMyProfile'
 import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
 import { MediaUpload } from '@/components/posts/MediaUpload'
@@ -35,6 +36,7 @@ function toEmbed(url: string): string {
 
 function CreateEducationPost({ onCreated }: { onCreated: (post: PostWithDetails) => void }) {
   const { data: session } = useSession()
+  const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const [expanded, setExpanded] = useState(false)
   const [content, setContent] = useState('')
   const [mediaFiles, setMediaFiles] = useState<UploadedFile[]>([])
@@ -68,7 +70,7 @@ function CreateEducationPost({ onCreated }: { onCreated: (post: PostWithDetails)
     <div className="bg-surface rounded-xl border border-line p-4">
       {!expanded ? (
         <div className="flex gap-3 items-center">
-          <Avatar src={session?.user?.image} name={session?.user?.name} size="md" />
+          <Avatar src={me.image} name={me.name || session?.user?.name} size="md" />
           <button
             onClick={() => setExpanded(true)}
             className="flex-1 bg-elevated hover:bg-[#24243a] border border-line hover:border-purple-500/30 rounded-xl px-4 py-3 text-left text-sm text-ink3 transition-all"
@@ -80,7 +82,7 @@ function CreateEducationPost({ onCreated }: { onCreated: (post: PostWithDetails)
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg p-3 text-sm">{error}</div>}
           <div className="flex gap-3">
-            <Avatar src={session?.user?.image} name={session?.user?.name} size="md" />
+            <Avatar src={me.image} name={me.name || session?.user?.name} size="md" />
             <div className="flex-1 space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold badge-education">
                 <BookOpen className="w-3 h-3" /> Education

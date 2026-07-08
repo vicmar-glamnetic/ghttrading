@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
+import { useMyProfile } from '@/lib/useMyProfile'
 import { Button } from '@/components/ui/Button'
 import { MediaUpload } from './MediaUpload'
 import { TrendingUp, TrendingDown, BarChart2, BookOpen, MessageSquare, Image as ImageIcon } from 'lucide-react'
@@ -27,6 +28,7 @@ const privacyOptions = [
 
 export function CreatePost({ onPostCreated }: CreatePostProps) {
   const { data: session } = useSession()
+  const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const [expanded, setExpanded] = useState(false)
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('discussion')
@@ -69,7 +71,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
       {!expanded ? (
         <>
           <div className="flex gap-3 items-center">
-            <Avatar src={session?.user?.image} name={session?.user?.name} size="md" />
+            <Avatar src={me.image} name={me.name || session?.user?.name} size="md" />
             <button onClick={() => setExpanded(true)}
               className="flex-1 bg-elevated hover:bg-[#24243a] border border-line hover:border-yellow-500/30 rounded-xl px-4 py-3 text-left text-sm text-ink3 transition-all">
               Share analysis, signals, or insights...
@@ -92,7 +94,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex gap-3">
-            <Avatar src={session?.user?.image} name={session?.user?.name} size="md" />
+            <Avatar src={me.image} name={me.name || session?.user?.name} size="md" />
             <div className="flex-1 space-y-2">
               {/* Category selector */}
               <div className="flex gap-2 flex-wrap">

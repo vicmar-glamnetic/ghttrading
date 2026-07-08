@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Bell, Search, Home, Users, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { useTheme } from '@/components/ThemeProvider'
+import { useMyProfile } from '@/lib/useMyProfile'
 
 function ThemeToggle() {
   const { resolved, toggle } = useTheme()
@@ -37,6 +38,7 @@ const notifIcons: Record<string, string> = {
 
 export function Navbar() {
   const { data: session } = useSession()
+  const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const router = useRouter()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -250,7 +252,7 @@ export function Navbar() {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 px-2 py-1 hover:bg-elevated rounded-lg transition-colors"
               >
-                <Avatar src={session.user.image} name={session.user.name} size="sm" />
+                <Avatar src={me.image} name={me.name || session.user.name} size="sm" />
                 <ChevronDown className="w-3 h-3 text-ink3" />
               </button>
               {showUserMenu && (

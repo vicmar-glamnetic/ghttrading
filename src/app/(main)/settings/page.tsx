@@ -1,6 +1,7 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { updateMyProfile } from '@/lib/useMyProfile'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { Settings, Shield, User, Camera } from 'lucide-react'
@@ -27,6 +28,16 @@ export default function SettingsPage() {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Seed from the live profile — the session strips large avatars, so pull the
+  // real image/name from /api/me.
+  useEffect(() => {
+    fetch('/api/me').then(r => r.json()).then(d => {
+      if (d?.image !== undefined) setAvatarUrl(d.image)
+      if (d?.name) setName(d.name)
+      if (d?.username) setUsername(d.username)
+    }).catch(() => {})
+  }, [])
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'privacy', label: 'Privacy', icon: Shield },
@@ -45,6 +56,7 @@ export default function SettingsPage() {
       })
       if (res.ok) {
         setAvatarUrl(dataUrl)
+        updateMyProfile({ image: dataUrl })
         updateSession()
       }
     } finally {
@@ -67,6 +79,7 @@ export default function SettingsPage() {
         setError(d.error || 'Could not save changes. Please try again.')
         return
       }
+      updateMyProfile({ name })
       await updateSession()
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
