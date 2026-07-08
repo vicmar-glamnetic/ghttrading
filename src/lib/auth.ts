@@ -61,7 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         // Fresh sign-in — store the new session token in the JWT
         token.id = user.id
@@ -76,16 +76,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       } else if (token.id) {
         // Only hit the DB once every 5 minutes — SessionGuard calls update()
         // on the same interval, so invalidation still propagates quickly.
+        // An explicit update() (e.g. after editing your profile) forces a refresh.
         const FIVE_MIN = 5 * 60 * 1000
-        const due = !token.lastVerified || Date.now() - (token.lastVerified as number) > FIVE_MIN
+        const due = trigger === 'update' || !token.lastVerified || Date.now() - (token.lastVerified as number) > FIVE_MIN
         if (due) {
           const dbUser = await db.user.findUnique({
             where: { id: token.id as string },
-            select: { sessionToken: true, role: true, subscriptionStatus: true, accmMember: true, trialEndsAt: true, approved: true },
+            select: { sessionToken: true, username: true, role: true, subscriptionStatus: true, accmMember: true, trialEndsAt: true, approved: true },
           })
           if (!dbUser || dbUser.sessionToken !== token.sessionToken) {
             token.error = 'SessionInvalid'
           } else {
+            token.username = dbUser.username // pick up username changes
             token.role = dbUser.role // pick up role changes
             token.subscriptionStatus = dbUser.subscriptionStatus // pick up billing changes
             token.accmMember = dbUser.accmMember

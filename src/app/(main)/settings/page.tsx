@@ -18,9 +18,11 @@ export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession()
   const [activeTab, setActiveTab] = useState('profile')
   const [name, setName] = useState(session?.user?.name || '')
+  const [username, setUsername] = useState((session?.user as { username?: string })?.username || '')
   const [bio, setBio] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(session?.user?.image || null)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -53,12 +55,18 @@ export default function SettingsPage() {
 
   async function handleSaveProfile() {
     setSaving(true)
+    setError('')
     try {
-      await fetch(`/api/users/${session?.user?.id}/profile`, {
+      const res = await fetch(`/api/users/${session?.user?.id}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, bio }),
+        body: JSON.stringify({ name, username, bio }),
       })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError(d.error || 'Could not save changes. Please try again.')
+        return
+      }
       await updateSession()
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -121,6 +129,22 @@ export default function SettingsPage() {
               />
             </div>
 
+            {/* Username */}
+            <div>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Username</label>
+              <div className="flex items-center bg-elevated border border-line focus-within:border-yellow-500/50 rounded-lg px-3 transition-colors">
+                <span className="text-sm text-ink3">@</span>
+                <input
+                  value={username}
+                  onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  maxLength={20}
+                  placeholder="username"
+                  className="flex-1 bg-transparent py-2.5 pl-1 text-sm outline-none text-ink"
+                />
+              </div>
+              <p className="text-xs text-ink3 mt-1">3–20 characters: lowercase letters, numbers, or underscores.</p>
+            </div>
+
             {/* Email (read-only) */}
             <div>
               <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Email</label>
@@ -143,7 +167,9 @@ export default function SettingsPage() {
               />
             </div>
 
-            <Button variant="gold" onClick={handleSaveProfile} loading={saving} disabled={!name.trim()}>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+
+            <Button variant="gold" onClick={handleSaveProfile} loading={saving} disabled={!name.trim() || username.length < 3}>
               {saved ? '✓ Saved!' : 'Save Changes'}
             </Button>
           </div>

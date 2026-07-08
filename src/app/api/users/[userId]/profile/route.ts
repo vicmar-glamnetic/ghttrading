@@ -52,9 +52,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
     const body = await req.json()
     const { name, bio, location, website, image, coverImage } = body
 
+    // Optional username change — validated + uniqueness-checked.
+    let username: string | undefined
+    if (body.username !== undefined) {
+      username = String(body.username).trim().toLowerCase()
+      if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+        return NextResponse.json(
+          { error: 'Username must be 3–20 characters: lowercase letters, numbers, or underscores.' },
+          { status: 400 },
+        )
+      }
+      const taken = await db.user.findFirst({ where: { username, NOT: { id: userId } }, select: { id: true } })
+      if (taken) return NextResponse.json({ error: 'That username is already taken.' }, { status: 409 })
+    }
+
     const user = await db.user.update({
       where: { id: userId },
-      data: { name, bio, location, website, image, coverImage },
+      data: { name, bio, location, website, image, coverImage, ...(username !== undefined ? { username } : {}) },
       select: { id: true, name: true, bio: true, location: true, website: true, image: true, coverImage: true, username: true },
     })
 
