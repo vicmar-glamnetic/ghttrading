@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Avatar } from '@/components/ui/Avatar'
-import { Bell, Search, Home, Users, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon } from 'lucide-react'
+import { Bell, Home, Users, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { useTheme } from '@/components/ThemeProvider'
 import { useMyProfile } from '@/lib/useMyProfile'
@@ -23,10 +23,6 @@ function ThemeToggle() {
   )
 }
 
-interface SearchUser {
-  id: string; name: string | null; image: string | null; username: string | null
-}
-
 interface Notification {
   id: string; type: string; message: string; read: boolean; link: string | null; createdAt: string
   sender: { id: string; name: string | null; image: string | null } | null
@@ -41,10 +37,6 @@ export function Navbar() {
   const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const router = useRouter()
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<SearchUser[]>([])
-  const [showSearch, setShowSearch] = useState(false)
-
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifs, setShowNotifs] = useState(false)
@@ -52,7 +44,6 @@ export function Navbar() {
 
   const [showUserMenu, setShowUserMenu] = useState(false)
 
-  const searchRef = useRef<HTMLDivElement>(null)
   const notifsRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -90,30 +81,9 @@ export function Navbar() {
     }
   }
 
-  // ── Search ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.length >= 2) {
-        try {
-          const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`)
-          const data = await res.json()
-          setSearchResults(Array.isArray(data) ? data : [])
-          setShowSearch(true)
-        } catch {
-          setSearchResults([])
-        }
-      } else {
-        setSearchResults([])
-        setShowSearch(false)
-      }
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [searchQuery])
-
   // ── Close dropdowns on outside click ────────────────────────────────────
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearch(false)
       if (notifsRef.current && !notifsRef.current.contains(e.target as Node)) setShowNotifs(false)
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setShowUserMenu(false)
     }
@@ -142,41 +112,13 @@ export function Navbar() {
           </div>
         </Link>
 
-        {/* Search */}
-        <div ref={searchRef} className="relative flex-1 max-w-sm">
-          <div className="flex items-center gap-2 bg-surface border border-line rounded-lg px-3 py-2 focus-within:border-yellow-500/50 transition-colors">
-            <Search className="w-4 h-4 text-ink3 shrink-0" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search traders…"
-              className="bg-transparent text-sm outline-none w-full text-ink placeholder-ink3"
-            />
-          </div>
-          {showSearch && searchResults.length > 0 && (
-            <div className="absolute top-full mt-1 w-full bg-surface rounded-xl shadow-2xl border border-line overflow-hidden z-50">
-              {searchResults.map(user => (
-                <button key={user.id}
-                  onClick={() => { router.push(`/profile/${user.id}`); setShowSearch(false); setSearchQuery('') }}
-                  className="flex items-center gap-3 p-3 hover:bg-elevated w-full text-left transition-colors"
-                >
-                  <Avatar src={user.image} name={user.name} size="sm" />
-                  <div>
-                    <p className="text-sm font-medium text-ink">{user.name}</p>
-                    <p className="text-xs text-ink3">@{user.username}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Right nav icons */}
         <div className="flex items-center gap-1 ml-auto">
-          <Link href="/feed" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
+          {/* Feed + Traders — hidden on mobile (available in the bottom nav) */}
+          <Link href="/feed" className="hidden sm:block p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
             <Home className="w-5 h-5" />
           </Link>
-          <Link href="/friends" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
+          <Link href="/friends" className="hidden sm:block p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
             <Users className="w-5 h-5" />
           </Link>
 
