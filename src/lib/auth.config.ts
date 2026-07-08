@@ -47,8 +47,13 @@ export const authConfig: NextAuthConfig = {
         nextUrl.pathname.startsWith('/forgot-password') ||
         nextUrl.pathname.startsWith('/reset-password')
       const isApiRoute = nextUrl.pathname.startsWith('/api')
+      const isPublicPage =
+        nextUrl.pathname.startsWith('/terms') ||
+        nextUrl.pathname.startsWith('/privacy') ||
+        nextUrl.pathname.startsWith('/help')
 
       if (isApiRoute) return true
+      if (isPublicPage) return true
       if (isAuthPage) return isLoggedIn ? Response.redirect(new URL('/', nextUrl)) : true
       if (!isLoggedIn) return Response.redirect(new URL('/login', nextUrl))
 

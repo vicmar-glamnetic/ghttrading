@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import {
   Home, Bell, Settings, Users,
-  Globe, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, CandlestickChart, Radio, MessageCircle, Smartphone, UserCheck,
+  BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck,
 } from 'lucide-react'
 
 // Core, daily-use features — kept at the top.
@@ -50,24 +50,6 @@ function isLockedOut(user?: {
   if (['active', 'comp'].includes(user.subscriptionStatus ?? '')) return false
   if (user.trialEndsAt && new Date(user.trialEndsAt).getTime() > Date.now()) return false
   return true
-}
-
-const goldTips = [
-  'Gold tends to spike on US CPI & NFP days.',
-  'London open (08:00 UTC) often sets the daily direction.',
-  'Watch the DXY — gold moves inverse to the dollar.',
-  'Key gold support: round numbers (2300, 2350, 2400).',
-  'High volatility: US & London session overlap 13–17 UTC.',
-]
-
-function GoldTip() {
-  const tip = goldTips[new Date().getDay() % goldTips.length]
-  return (
-    <div className="mx-3 mt-3 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/15">
-      <p className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-1">💡 Gold Tip</p>
-      <p className="text-xs text-ink2 leading-relaxed">{tip}</p>
-    </div>
-  )
 }
 
 export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boolean }) {
@@ -154,31 +136,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         {utility.map(item => <NavLink key={item.href} {...item} />)}
       </div>
 
-      {/* Gold tip */}
-      <GoldTip />
-
-      {/* Discord CTA */}
-      <div className="mt-3 mx-3 p-3 rounded-xl bg-linear-to-br from-yellow-500/10 to-yellow-600/5 border border-yellow-500/20">
-        <div className="flex items-center gap-2 mb-1">
-          <Globe className="w-4 h-4 text-yellow-500" />
-          <span className="text-xs font-bold text-yellow-500">JOIN DISCORD</span>
-        </div>
-        <p className="text-xs text-ink2">Live gold sessions Mon–Fri</p>
-        <a
-          href="https://discord.gg/ghttrading"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 block text-center text-xs bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 rounded-lg transition-colors"
-        >
-          Join Now
-        </a>
-      </div>
-
-      <Link href="/install" className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
-        <Smartphone className="w-4 h-4" /> Install as app
-      </Link>
-
-      <p className="text-xs text-ink3 px-3 mt-3">© 2026 GHT Trading</p>
+      <p className="text-xs text-ink3 px-3 mt-4">© 2026 GHT Trading</p>
     </aside>
   )
 }

@@ -1,15 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Activity, Star, CalendarDays, Lightbulb } from 'lucide-react'
-
-const goldFacts = [
-  'Gold has been a store of value for over 5,000 years.',
-  '1 troy ounce = 31.1 grams of pure gold.',
-  'Central banks hold ~35,000 tonnes of gold worldwide.',
-  'Gold is priced in USD — watch the DXY for clues.',
-  'Inflation fears & geopolitical risk push gold higher.',
-]
+import { Activity, Lightbulb, Globe, Smartphone } from 'lucide-react'
 
 // Inject a TradingView external-embedding widget into a container.
 // Market widgets are always dark to match the trading-terminal aesthetic.
@@ -44,22 +36,6 @@ function LiveGoldWidget() {
         </span>
       </div>
       <div ref={ref} className="p-1 bg-[#0d0d14]" />
-    </div>
-  )
-}
-
-function EconomicCalendar() {
-  const ref = useTvWidget(
-    'https://s3.tradingview.com/external-embedding/embed-widget-events.js',
-    { width: '100%', height: 420, locale: 'en', importanceFilter: '0,1', countryFilter: 'us,eu,gb,jp,cn,ca,au' },
-  )
-  return (
-    <div className="bg-surface rounded-xl border border-line overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
-        <CalendarDays className="w-4 h-4 text-yellow-500" />
-        <span className="text-sm font-bold text-ink">Economic Calendar</span>
-      </div>
-      <div ref={ref} className="bg-[#0d0d14]" />
     </div>
   )
 }
@@ -100,26 +76,33 @@ function LatestIdea() {
   )
 }
 
-function GoldFactWidget() {
-  const fact = goldFacts[new Date().getDay() % goldFacts.length]
-  return (
-    <div className="bg-surface rounded-xl border border-yellow-500/20 p-3">
-      <div className="flex items-center gap-2 mb-1.5">
-        <Star className="w-3.5 h-3.5 text-yellow-500" fill="currentColor" />
-        <span className="text-xs font-bold text-yellow-500">Gold Fact</span>
-      </div>
-      <p className="text-xs text-ink2 leading-relaxed">{fact}</p>
-    </div>
-  )
-}
-
 export function RightSidebar() {
   return (
     <aside className="hidden xl:flex flex-col gap-3 w-60 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">
       <LiveGoldWidget />
       <LatestIdea />
-      <EconomicCalendar />
-      <GoldFactWidget />
+
+      {/* Join Discord */}
+      <div className="p-3 rounded-xl bg-linear-to-br from-yellow-500/10 to-yellow-600/5 border border-yellow-500/20">
+        <div className="flex items-center gap-2 mb-1">
+          <Globe className="w-4 h-4 text-yellow-500" />
+          <span className="text-xs font-bold text-yellow-500">JOIN DISCORD</span>
+        </div>
+        <p className="text-xs text-ink2">Live gold sessions Mon–Fri</p>
+        <a
+          href="https://discord.gg/ghttrading"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 block text-center text-xs bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 rounded-lg transition-colors"
+        >
+          Join Now
+        </a>
+      </div>
+
+      {/* Install as app */}
+      <Link href="/install" className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
+        <Smartphone className="w-4 h-4" /> Install as app
+      </Link>
 
       <div className="text-xs text-ink3 px-1 space-y-1">
         <div className="flex flex-wrap gap-x-2">
