@@ -13,16 +13,19 @@ const goldFacts = [
 ]
 
 // Inject a TradingView external-embedding widget into a container.
+// colorTheme is read from <html data-theme> at inject time (authoritative),
+// and `dep` (the resolved theme) triggers a re-inject when it toggles.
 function useTvWidget(src: string, config: Record<string, unknown>, dep: unknown) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = ref.current
     if (!el) return
     el.innerHTML = ''
+    const colorTheme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
     const s = document.createElement('script')
     s.src = src
     s.async = true
-    s.innerHTML = JSON.stringify(config)
+    s.innerHTML = JSON.stringify({ ...config, colorTheme })
     el.appendChild(s)
     return () => { el.innerHTML = '' }
     // eslint-disable-next-line react-hooks/exhaustive-deps
