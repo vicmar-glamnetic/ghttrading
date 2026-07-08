@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Only coaches can add videos' }, { status: 403 })
 
-  const { title, embedUrl, educator } = await req.json()
+  const { title, embedUrl, educator, category } = await req.json()
   if (!title?.trim() || !embedUrl?.trim()) {
     return NextResponse.json({ error: 'Title and video URL are required' }, { status: 400 })
   }
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       title: title.trim(),
       embedUrl: embedUrl.trim(),
       educator: educator?.toString().trim() || session.user.name || null,
+      category: category?.toString().trim() || null,
       authorId: session.user.id!,
     },
     include: { author: AUTHOR },

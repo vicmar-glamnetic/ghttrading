@@ -10,8 +10,17 @@ import type { PostWithDetails } from '@/types'
 
 interface UploadedFile { url: string; name: string; type: string }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
-interface Video { id: string; title: string; embedUrl: string; educator: string | null; author: Author }
+interface Video { id: string; title: string; embedUrl: string; educator: string | null; category: string | null; author: Author }
 type Tab = 'videos' | 'posts'
+
+const CATEGORIES = [
+  'Getting Started',
+  'Technical Analysis',
+  'Strategy',
+  'Risk Management',
+  'Psychology',
+  'Platform & Setup',
+] as const
 
 // Normalise common video URLs to their embeddable form.
 function toEmbed(url: string): string {
@@ -110,6 +119,7 @@ export default function EducationPage() {
   const [videos, setVideos] = useState<Video[]>([])
   const [loadingVideos, setLoadingVideos] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
+  const [catFilter, setCatFilter] = useState<string>('all')
 
   useEffect(() => {
     fetch('/api/posts').then(r => r.json()).then(d => {
@@ -169,26 +179,47 @@ export default function EducationPage() {
             <p className="text-ink3">{isStaff ? 'No videos yet — add your first tutorial.' : 'No videos yet — check back soon.'}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {videos.map(v => (
-              <div key={v.id} className="rounded-2xl border border-line bg-surface overflow-hidden">
-                <div className="aspect-video bg-black">
-                  <iframe src={toEmbed(v.embedUrl)} title={v.title} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
-                </div>
-                <div className="p-3 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink truncate">{v.title}</p>
-                    <p className="text-xs text-ink3 truncate">{v.educator || v.author.name}</p>
-                  </div>
-                  {isStaff && (
-                    <button onClick={() => deleteVideo(v)} className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors shrink-0">
-                      <Trash2 className="w-4 h-4" />
+          <>
+            {/* category filter */}
+            {(() => {
+              const cats = CATEGORIES.filter(c => videos.some(v => v.category === c))
+              if (cats.length === 0) return null
+              return (
+                <div className="flex gap-2 flex-wrap">
+                  {['all', ...cats].map(c => (
+                    <button key={c} onClick={() => setCatFilter(c)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${catFilter === c ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+                      {c === 'all' ? 'All' : c}
                     </button>
-                  )}
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
+              )
+            })()}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {videos.filter(v => catFilter === 'all' || v.category === catFilter).map(v => (
+                <div key={v.id} className="rounded-2xl border border-line bg-surface overflow-hidden">
+                  <div className="aspect-video bg-black">
+                    <iframe src={toEmbed(v.embedUrl)} title={v.title} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
+                  </div>
+                  <div className="p-3 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      {v.category && (
+                        <span className="inline-block text-[10px] font-semibold text-yellow-500 bg-yellow-500/10 rounded px-1.5 py-0.5 mb-1">{v.category}</span>
+                      )}
+                      <p className="text-sm font-semibold text-ink truncate">{v.title}</p>
+                      <p className="text-xs text-ink3 truncate">{v.educator || v.author.name}</p>
+                    </div>
+                    {isStaff && (
+                      <button onClick={() => deleteVideo(v)} className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors shrink-0">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )
       )}
 
@@ -222,6 +253,7 @@ function AddVideo({ onClose, onAdded }: { onClose: () => void; onAdded: (v: Vide
   const [title, setTitle] = useState('')
   const [embedUrl, setEmbedUrl] = useState('')
   const [educator, setEducator] = useState('')
+  const [category, setCategory] = useState<string>(CATEGORIES[0])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -232,7 +264,7 @@ function AddVideo({ onClose, onAdded }: { onClose: () => void; onAdded: (v: Vide
       const res = await fetch('/api/education/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, embedUrl, educator }),
+        body: JSON.stringify({ title, embedUrl, educator, category }),
       })
       if (res.ok) onAdded(await res.json())
       else setError((await res.json().catch(() => ({}))).error || 'Failed to add video')
@@ -254,6 +286,12 @@ function AddVideo({ onClose, onAdded }: { onClose: () => void; onAdded: (v: Vide
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Video title" className={inputCls} />
           <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Video URL (YouTube, Vimeo, etc.)" className={inputCls} />
           <input value={educator} onChange={e => setEducator(e.target.value)} placeholder="Educator name (optional)" className={inputCls} />
+          <div>
+            <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Category</label>
+            <select value={category} onChange={e => setCategory(e.target.value)} className={`${inputCls} mt-1 scheme-dark`}>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
         <div className="flex gap-2 p-4 border-t border-line">

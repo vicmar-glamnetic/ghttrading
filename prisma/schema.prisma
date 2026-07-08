@@ -258,6 +258,7 @@ model EducatorVideo {
   title     String
   embedUrl  String                      // YouTube/Vimeo/etc URL
   educator  String?                     // display name of the educator
+  category  String?                     // e.g. Getting Started, Technical Analysis
   createdAt DateTime @default(now())
 
   authorId  String

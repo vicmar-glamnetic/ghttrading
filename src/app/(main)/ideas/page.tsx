@@ -209,6 +209,10 @@ function parseSignal(text: string) {
     // Stop loss
     if (/\bsl\b|stop\s*loss/.test(low)) { sls.push(...nums); continue }
 
+    // A number immediately followed by an emoji is an explicit take-profit.
+    const emojiTps = [...line.matchAll(/(\d+(?:\.\d+)?)\s*\p{Extended_Pictographic}/gu)].map(m => Number(m[1]))
+    if (emojiTps.length) { tps.push(...emojiTps); continue }
+
     // Entry / direction line(s)
     if (/buy|sell|entry|now|more/.test(low)) {
       if (/sell/.test(low)) direction = 'sell'
