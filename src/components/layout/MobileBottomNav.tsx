@@ -5,25 +5,25 @@ import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
-  Home, LineChart, Lightbulb, Newspaper, Menu, X, Lock, MessageCircle,
+  Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
   CandlestickChart, Radio, GraduationCap, ShieldCheck, Users, Bell, Settings,
   Shield, User, LogOut,
 } from 'lucide-react'
 
 const items = [
-  { href: '/',      label: 'Feed',  icon: Home         },
-  { href: '/chart', label: 'Chart', icon: LineChart    },
-  { href: '/chat',  label: 'Chat',  icon: MessageCircle },
-  { href: '/ideas', label: 'Ideas', icon: Lightbulb    },
+  { href: '/ideas', label: 'Signals', icon: Zap          },
+  { href: '/',      label: 'Feed',    icon: Home         },
+  { href: '/chat',  label: 'Chat',    icon: MessageCircle },
+  { href: '/chart', label: 'Chart',   icon: LineChart    },
 ]
 
 // Full navigation shown in the "More" sheet.
 const allNav = [
+  { href: '/ideas',         label: 'Signals',       icon: Zap             },
   { href: '/',              label: 'Feed',          icon: Home            },
   { href: '/chat',          label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',         label: 'Trading View',  icon: LineChart       },
   { href: '/trading',       label: 'Trading',       icon: CandlestickChart, premium: true },
-  { href: '/ideas',         label: 'Trade Ideas',   icon: Lightbulb       },
   { href: '/live',          label: 'Live',          icon: Radio,           premium: true },
   { href: '/study',         label: 'Study Room',    icon: GraduationCap,   premium: true },
   { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },

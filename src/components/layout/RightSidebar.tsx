@@ -83,7 +83,7 @@ function LatestIdea() {
     <Link href="/ideas" className="block bg-surface rounded-xl border border-line overflow-hidden hover:border-yellow-500/30 transition-colors">
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
         <Lightbulb className="w-4 h-4 text-yellow-500" />
-        <span className="text-sm font-bold text-ink">Latest Trade Idea</span>
+        <span className="text-sm font-bold text-ink">Latest Signal</span>
       </div>
       <div className="p-3">
         <div className="flex items-center justify-between">

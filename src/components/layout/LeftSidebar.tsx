@@ -8,15 +8,15 @@ import { useEffect, useState } from 'react'
 import {
   Home, Bell, Settings, Users,
   Globe, GraduationCap, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Lightbulb, CandlestickChart, Radio, MessageCircle,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle,
 } from 'lucide-react'
 
 const navItems = [
+  { href: '/ideas',        label: 'Signals',       icon: Zap             },
   { href: '/',             label: 'Feed',          icon: Home            },
   { href: '/chat',         label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
   { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
-  { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb       },
   { href: '/live',         label: 'Live',          icon: Radio,           premium: true },
   { href: '/study',        label: 'Study Room',    icon: GraduationCap,   premium: true },
   { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },

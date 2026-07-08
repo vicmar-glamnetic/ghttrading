@@ -54,7 +54,7 @@ function timeAgo(iso: string) {
 // Build a clean order ticket to paste into MT5.
 function mt5Ticket(idea: TradeIdea) {
   const lines = [
-    `GHT Trade Idea`,
+    `GHT Signal`,
     `Symbol: ${idea.symbol}`,
     `Type: ${idea.direction.toUpperCase()}`,
     `Entry: ${fmtRange(idea.entryLow, idea.entryHigh)}`,
@@ -101,7 +101,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="font-semibold text-ink text-sm truncate">{idea.author.name || 'Coach'}</span>
-            <span className="text-[9px] font-black uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5 shrink-0">Trade Idea</span>
+            <span className="text-[9px] font-black uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5 shrink-0">Signal</span>
           </div>
           <p className="text-xs text-ink3">
             <span className="font-semibold text-ink2">{idea.symbol}</span> · {timeAgo(idea.createdAt)}
@@ -329,7 +329,7 @@ function IdeaEditor({ initial, onClose, onSaved }: {
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
       <div className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-line max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-surface flex items-center justify-between p-4 border-b border-line z-10">
-          <h2 className="font-bold text-ink">{initial ? 'Edit Trade Idea' : 'New Trade Idea'}</h2>
+          <h2 className="font-bold text-ink">{initial ? 'Edit Signal' : 'New Signal'}</h2>
           <button onClick={onClose} className="text-ink3 hover:text-ink"><X className="w-5 h-5" /></button>
         </div>
 
@@ -459,7 +459,7 @@ export default function IdeasPage() {
   useEffect(() => { load(tab) }, [tab, load])
 
   async function handleDelete(idea: TradeIdea) {
-    if (!confirm('Delete this trade idea?')) return
+    if (!confirm('Delete this signal?')) return
     setIdeas(prev => prev.filter(i => i.id !== idea.id))
     await fetch(`/api/ideas/${idea.id}`, { method: 'DELETE' })
   }
@@ -478,11 +478,11 @@ export default function IdeasPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Lightbulb className="w-5 h-5 text-yellow-500" />
-          <h1 className="font-bold text-ink text-lg">Trade Ideas</h1>
+          <h1 className="font-bold text-ink text-lg">Signals</h1>
         </div>
         {isStaff && (
           <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
-            <Plus className="w-3.5 h-3.5" /> New Idea
+            <Plus className="w-3.5 h-3.5" /> New Signal
           </Button>
         )}
       </div>
@@ -490,7 +490,7 @@ export default function IdeasPage() {
       {/* tabs — only coaches/admins have a personal list */}
       {isStaff && (
         <div className="flex gap-2">
-          {([['community', 'Community'], ['mine', 'My Ideas']] as [Tab, string][]).map(([t, label]) => (
+          {([['community', 'Community'], ['mine', 'My Signals']] as [Tab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
               {label}
@@ -508,11 +508,11 @@ export default function IdeasPage() {
           <Lightbulb className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
           <p className="text-ink3">
             {tab === 'mine'
-              ? 'You have no trade ideas yet.'
-              : isStaff ? 'No community ideas yet. Be the first to share one!' : 'No trade ideas yet — check back soon.'}
+              ? 'You have no signals yet.'
+              : isStaff ? 'No signals yet. Post the first one!' : 'No signals yet — check back soon.'}
           </p>
           {isStaff && (
-            <button onClick={() => setEditor({ open: true, idea: null })} className="mt-3 text-sm text-yellow-500 hover:text-yellow-400">+ New idea</button>
+            <button onClick={() => setEditor({ open: true, idea: null })} className="mt-3 text-sm text-yellow-500 hover:text-yellow-400">+ New signal</button>
           )}
         </div>
       ) : (
