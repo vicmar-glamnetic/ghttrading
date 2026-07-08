@@ -20,8 +20,6 @@ function TradingViewChart({ symbol, theme }: { symbol: string; theme: 'light' | 
     const el = container.current
     if (!el) return
     el.innerHTML = ''
-    // Authoritative theme: read the attribute the boot script/toggle set on <html>.
-    const domTheme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
     const script = document.createElement('script')
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'
     script.type = 'text/javascript'
@@ -31,11 +29,11 @@ function TradingViewChart({ symbol, theme }: { symbol: string; theme: 'light' | 
       symbol,
       interval: 'D',
       timezone: 'Etc/UTC',
-      theme: domTheme,
+      theme: 'dark',
       style: '1',
       locale: 'en',
-      backgroundColor: domTheme === 'dark' ? 'rgba(13, 13, 20, 1)' : 'rgba(255, 255, 255, 1)',
-      gridColor: domTheme === 'dark' ? 'rgba(42, 42, 58, 0.5)' : 'rgba(226, 229, 236, 0.8)',
+      backgroundColor: 'rgba(13, 13, 20, 1)',
+      gridColor: 'rgba(42, 42, 58, 0.5)',
       allow_symbol_change: true,
       hide_side_toolbar: false,
       withdateranges: true,

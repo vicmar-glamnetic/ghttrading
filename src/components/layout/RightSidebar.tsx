@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Activity, Star, CalendarDays, Lightbulb } from 'lucide-react'
-import { useTheme } from '@/components/ThemeProvider'
 
 const goldFacts = [
   'Gold has been a store of value for over 5,000 years.',
@@ -13,32 +12,27 @@ const goldFacts = [
 ]
 
 // Inject a TradingView external-embedding widget into a container.
-// colorTheme is read from <html data-theme> at inject time (authoritative),
-// and `dep` (the resolved theme) triggers a re-inject when it toggles.
-function useTvWidget(src: string, config: Record<string, unknown>, dep: unknown) {
+// Market widgets are always dark to match the trading-terminal aesthetic.
+function useTvWidget(src: string, config: Record<string, unknown>) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = ref.current
     if (!el) return
     el.innerHTML = ''
-    const colorTheme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
     const s = document.createElement('script')
     s.src = src
     s.async = true
-    s.innerHTML = JSON.stringify({ ...config, colorTheme })
+    s.innerHTML = JSON.stringify({ ...config, colorTheme: 'dark', isTransparent: false })
     el.appendChild(s)
     return () => { el.innerHTML = '' }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dep])
+  }, [src])
   return ref
 }
 
 function LiveGoldWidget() {
-  const { resolved } = useTheme()
   const ref = useTvWidget(
     'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js',
-    { symbol: 'OANDA:XAUUSD', width: '100%', height: 180, locale: 'en', dateRange: '1D', colorTheme: resolved, isTransparent: true, autosize: false },
-    resolved,
+    { symbol: 'OANDA:XAUUSD', width: '100%', height: 180, locale: 'en', dateRange: '1D', autosize: false },
   )
   return (
     <div className="bg-surface rounded-xl border border-line overflow-hidden">
@@ -49,17 +43,15 @@ function LiveGoldWidget() {
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
         </span>
       </div>
-      <div key={resolved} ref={ref} className="px-2 py-1" />
+      <div ref={ref} className="p-1 bg-[#0d0d14]" />
     </div>
   )
 }
 
 function EconomicCalendar() {
-  const { resolved } = useTheme()
   const ref = useTvWidget(
     'https://s3.tradingview.com/external-embedding/embed-widget-events.js',
-    { colorTheme: resolved, isTransparent: true, width: '100%', height: 420, locale: 'en', importanceFilter: '0,1', countryFilter: 'us,eu,gb,jp,cn,ca,au' },
-    resolved,
+    { width: '100%', height: 420, locale: 'en', importanceFilter: '0,1', countryFilter: 'us,eu,gb,jp,cn,ca,au' },
   )
   return (
     <div className="bg-surface rounded-xl border border-line overflow-hidden">
@@ -67,7 +59,7 @@ function EconomicCalendar() {
         <CalendarDays className="w-4 h-4 text-yellow-500" />
         <span className="text-sm font-bold text-ink">Economic Calendar</span>
       </div>
-      <div key={resolved} ref={ref} />
+      <div ref={ref} className="bg-[#0d0d14]" />
     </div>
   )
 }
