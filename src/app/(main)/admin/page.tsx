@@ -57,6 +57,27 @@ export default function AdminPage() {
   const [ppPlans, setPpPlans] = useState<{ standardPlanId: string; accmPlanId: string } | null>(null)
   const [ppError, setPpError] = useState('')
 
+  // One-time base64 → Blob migration
+  const [migBusy, setMigBusy] = useState(false)
+  const [migStatus, setMigStatus] = useState('')
+
+  async function migrateBlob() {
+    setMigBusy(true); setMigStatus('Starting…')
+    try {
+      let total = 0
+      for (let i = 0; i < 500; i++) { // safety cap; each call migrates a small batch
+        const res = await fetch('/api/admin/migrate-blob', { method: 'POST' })
+        const d = await res.json()
+        if (!res.ok) { setMigStatus(`Error: ${d.error || 'failed'} (is the Blob store connected?)`); break }
+        total += d.migrated
+        setMigStatus(`Migrated ${total} so far · ${d.remaining} remaining…`)
+        if (d.done || d.remaining === 0) { setMigStatus(`✓ Done — migrated ${total} item(s). All images now on Blob.`); break }
+      }
+    } finally {
+      setMigBusy(false)
+    }
+  }
+
   async function setupPaypal() {
     setPpLoading(true); setPpError(''); setPpPlans(null)
     try {
@@ -199,6 +220,20 @@ export default function AdminPage() {
             <p className="text-[10px] text-ink3">Add both to your env (locally + Vercel), then redeploy. Run this once only.</p>
           </div>
         )}
+      </div>
+
+      {/* Media migration → Blob */}
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-ink">Migrate media to Blob</p>
+            <p className="text-xs text-ink3">Move existing base64 images out of the database into Vercel Blob to cut data transfer. Connect a Blob store first. Safe to run repeatedly.</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={migrateBlob} loading={migBusy} className="text-xs shrink-0">
+            Run migration
+          </Button>
+        </div>
+        {migStatus && <p className="text-xs text-ink2 mt-2">{migStatus}</p>}
       </div>
 
       {/* search + filter */}
