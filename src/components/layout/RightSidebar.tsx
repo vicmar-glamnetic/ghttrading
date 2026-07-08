@@ -1,24 +1,13 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
-import { TrendingUp, TrendingDown, Activity, Star, Users } from 'lucide-react'
+import { Activity, Star, Users } from 'lucide-react'
+import { useTheme } from '@/components/ThemeProvider'
 
 interface SuggestedUser {
   id: string; name: string | null; image: string | null; username: string | null
-}
-
-// Static XAUUSD snapshot — replace with a live feed when ready
-const gold = {
-  price: '2,345.80',
-  change: '+12.40',
-  changePct: '+0.53%',
-  high: '2,358.20',
-  low: '2,331.50',
-  bid: '2,345.60',
-  ask: '2,346.00',
-  up: true,
 }
 
 const goldFacts = [
@@ -29,45 +18,42 @@ const goldFacts = [
   'Inflation fears & geopolitical risk push gold higher.',
 ]
 
-function GoldPriceWidget() {
+// Live XAUUSD price + mini chart via TradingView (real feed, theme-aware).
+function LiveGoldWidget() {
+  const { resolved } = useTheme()
+  const container = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = container.current
+    if (!el) return
+    el.innerHTML = ''
+    const script = document.createElement('script')
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js'
+    script.async = true
+    script.innerHTML = JSON.stringify({
+      symbol: 'OANDA:XAUUSD',
+      width: '100%',
+      height: 180,
+      locale: 'en',
+      dateRange: '1D',
+      colorTheme: resolved,
+      isTransparent: true,
+      autosize: false,
+    })
+    el.appendChild(script)
+    return () => { el.innerHTML = '' }
+  }, [resolved])
+
   return (
     <div className="bg-surface rounded-xl border border-line overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
         <Activity className="w-4 h-4 text-yellow-500" />
         <span className="text-sm font-bold text-ink">XAUUSD · Gold</span>
-        <span className="ml-auto text-[10px] text-ink3 bg-app border border-line rounded px-1.5 py-0.5">
-          Indicative
+        <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-green-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
         </span>
       </div>
-
-      {/* Main price */}
-      <div className="px-3 pt-3 pb-2">
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-black text-ink">{gold.price}</span>
-          <span className={`text-sm font-bold flex items-center gap-0.5 ${gold.up ? 'text-green-400' : 'text-red-400'}`}>
-            {gold.up ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-            {gold.changePct}
-          </span>
-        </div>
-        <p className={`text-xs mt-0.5 ${gold.up ? 'text-green-400' : 'text-red-400'}`}>
-          {gold.change} today
-        </p>
-      </div>
-
-      {/* Bid / Ask / High / Low */}
-      <div className="grid grid-cols-2 gap-px bg-line border-t border-line">
-        {[
-          { label: 'Bid',  value: gold.bid,  color: 'text-red-400'   },
-          { label: 'Ask',  value: gold.ask,  color: 'text-green-400' },
-          { label: 'High', value: gold.high, color: 'text-green-400' },
-          { label: 'Low',  value: gold.low,  color: 'text-red-400'   },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-surface px-3 py-2">
-            <p className="text-[10px] text-ink3 uppercase tracking-wider">{label}</p>
-            <p className={`text-xs font-bold ${color}`}>{value}</p>
-          </div>
-        ))}
-      </div>
+      <div key={resolved} ref={container} className="px-2 py-1" />
     </div>
   )
 }
@@ -143,7 +129,7 @@ function TradersToFollow() {
 export function RightSidebar() {
   return (
     <aside className="hidden xl:flex flex-col gap-3 w-60 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">
-      <GoldPriceWidget />
+      <LiveGoldWidget />
       <GoldFactWidget />
       <TradersToFollow />
 
