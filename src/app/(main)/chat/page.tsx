@@ -19,8 +19,8 @@ function ago(iso: string) {
   return `${Math.round(h / 24)}d`
 }
 
-/* ================= Community room ================= */
-function RoomChat({ meId }: { meId: string }) {
+/* ================= Chat room (community or coach room) ================= */
+function RoomChat({ meId, room }: { meId: string; room: string }) {
   const [messages, setMessages] = useState<RoomMsg[]>([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -40,17 +40,18 @@ function RoomChat({ meId }: { meId: string }) {
 
   useEffect(() => {
     let alive = true
-    fetch('/api/chat/room').then(r => r.json()).then((d: RoomMsg[]) => {
+    const q = `room=${encodeURIComponent(room)}`
+    fetch(`/api/chat/room?${q}`).then(r => r.json()).then((d: RoomMsg[]) => {
       if (!alive || !Array.isArray(d)) return
       setMessages(d)
       if (d.length) lastAt.current = d[d.length - 1].createdAt
     })
     const id = setInterval(() => {
       if (!lastAt.current) return
-      fetch(`/api/chat/room?since=${encodeURIComponent(lastAt.current)}`).then(r => r.json()).then(d => { if (Array.isArray(d)) merge(d) })
+      fetch(`/api/chat/room?${q}&since=${encodeURIComponent(lastAt.current)}`).then(r => r.json()).then(d => { if (Array.isArray(d)) merge(d) })
     }, 3000)
     return () => { alive = false; clearInterval(id) }
-  }, [merge])
+  }, [merge, room])
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -59,7 +60,7 @@ function RoomChat({ meId }: { meId: string }) {
     const t = text.trim(); if (!t || sending) return
     setSending(true)
     try {
-      const res = await fetch('/api/chat/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: t }) })
+      const res = await fetch('/api/chat/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: t, room }) })
       if (res.ok) { setText(''); merge([await res.json()]) }
     } finally { setSending(false) }
   }
@@ -316,6 +317,17 @@ export default function ChatPage() {
   const { data: session } = useSession()
   const meId = session?.user?.id || ''
   const [tab, setTab] = useState<Tab>('room')
+  const [coaches, setCoaches] = useState<Lite[]>([])
+  const [room, setRoom] = useState('community')
+
+  useEffect(() => {
+    fetch('/api/chat/coaches').then(r => r.json()).then(d => { if (Array.isArray(d)) setCoaches(d) }).catch(() => {})
+  }, [])
+
+  const rooms = [
+    { id: 'community', name: 'Community' },
+    ...coaches.map(c => ({ id: `coach:${c.id}`, name: `${c.name?.split(' ')[0] || 'Coach'}'s Room` })),
+  ]
 
   return (
     <div className="space-y-3">
@@ -327,7 +339,7 @@ export default function ChatPage() {
       <div className="flex gap-2">
         <button onClick={() => setTab('room')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'room' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
-          <Users className="w-4 h-4" /> Community
+          <Users className="w-4 h-4" /> Rooms
         </button>
         <button onClick={() => setTab('dm')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'dm' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
@@ -336,7 +348,22 @@ export default function ChatPage() {
       </div>
 
       <div className="bg-surface rounded-xl border border-line overflow-hidden h-[calc(100vh-14rem)] min-h-[420px]">
-        {meId && (tab === 'room' ? <RoomChat meId={meId} /> : <DMs meId={meId} />)}
+        {meId && (tab === 'room' ? (
+          <div className="flex flex-col h-full">
+            {/* room selector */}
+            <div className="flex gap-2 overflow-x-auto p-2 border-b border-line shrink-0 scrollbar-none">
+              {rooms.map(r => (
+                <button key={r.id} onClick={() => setRoom(r.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${room === r.id ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+                  {r.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 min-h-0">
+              <RoomChat key={room} meId={meId} room={room} />
+            </div>
+          </div>
+        ) : <DMs meId={meId} />)}
       </div>
     </div>
   )

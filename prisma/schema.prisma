@@ -236,15 +236,16 @@ model JournalEntry {
   @@map("journal_entries")
 }
 
-// Community chat room (single global room).
+// Chat room messages. room = "community" or "coach:<coachId>".
 model ChatMessage {
   id        String   @id @default(cuid())
+  room      String   @default("community")
   content   String
   authorId  String
   author    User     @relation("ChatMessages", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@index([createdAt])
+  @@index([room, createdAt])
   @@map("chat_messages")
 }
 

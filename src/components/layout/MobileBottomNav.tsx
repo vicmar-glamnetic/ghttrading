@@ -6,7 +6,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
-  CandlestickChart, Radio, GraduationCap, ShieldCheck, Users, Bell, Settings,
+  CandlestickChart, Radio, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Users, Bell, Settings,
   Shield, User, LogOut, Smartphone, UserCheck,
 } from 'lucide-react'
 
@@ -25,7 +25,9 @@ const allNav = [
   { href: '/chart',         label: 'Trading View',  icon: LineChart       },
   { href: '/trading',       label: 'Trading',       icon: CandlestickChart, premium: true },
   { href: '/live',          label: 'Live',          icon: Radio,           premium: true },
-  { href: '/study',         label: 'Study Room',    icon: GraduationCap,   premium: true },
+  { href: '/education',     label: 'Education',     icon: BookOpen,        premium: true },
+  { href: '/journal',       label: 'Journal',       icon: NotebookPen,     premium: true },
+  { href: '/calendar',      label: 'Calendar',      icon: CalendarDays,    premium: true },
   { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',       label: 'Traders',       icon: Users           },

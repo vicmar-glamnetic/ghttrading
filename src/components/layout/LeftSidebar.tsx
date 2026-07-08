@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import {
   Home, Bell, Settings, Users,
-  Globe, GraduationCap, ShieldCheck, Newspaper, Shield, Lock,
+  Globe, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
   LineChart, Zap, CandlestickChart, Radio, MessageCircle, Smartphone, UserCheck,
 } from 'lucide-react'
 
@@ -18,7 +18,9 @@ const navItems = [
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
   { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
   { href: '/live',         label: 'Live',          icon: Radio,           premium: true },
-  { href: '/study',        label: 'Study Room',    icon: GraduationCap,   premium: true },
+  { href: '/education',    label: 'Education',     icon: BookOpen,        premium: true },
+  { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
+  { href: '/calendar',     label: 'Calendar',      icon: CalendarDays,    premium: true },
   { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/news',         label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',      label: 'Traders',       icon: Users           },
