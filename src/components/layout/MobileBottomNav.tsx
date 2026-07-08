@@ -32,10 +32,16 @@ const allNav = [
   { href: '/settings',      label: 'Settings',      icon: Settings        },
 ]
 
-function isLockedOut(user?: { role?: string | null; subscriptionStatus?: string | null }) {
+function isLockedOut(user?: {
+  role?: string | null; subscriptionStatus?: string | null
+  accmMember?: boolean | null; trialEndsAt?: string | null
+}) {
   if (!user) return true
   if (user.role === 'admin' || user.role === 'coach') return false
-  return !['active', 'comp'].includes(user.subscriptionStatus ?? '')
+  if (user.accmMember) return false
+  if (['active', 'comp'].includes(user.subscriptionStatus ?? '')) return false
+  if (user.trialEndsAt && new Date(user.trialEndsAt).getTime() > Date.now()) return false
+  return true
 }
 
 export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: boolean }) {

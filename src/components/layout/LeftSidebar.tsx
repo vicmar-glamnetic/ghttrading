@@ -24,11 +24,19 @@ const navItems = [
   { href: '/settings',     label: 'Settings',      icon: Settings        },
 ]
 
-// A member with no active subscription is "locked out" of premium items.
-function isLockedOut(user?: { role?: string | null; subscriptionStatus?: string | null }) {
+// Mirrors hasAccess(): ACCM members are free, staff are free, active/comp are
+// free, and other-broker members are free during their trial. Only a non-ACCM
+// member whose trial ended without a subscription is locked out of premium.
+function isLockedOut(user?: {
+  role?: string | null; subscriptionStatus?: string | null
+  accmMember?: boolean | null; trialEndsAt?: string | null
+}) {
   if (!user) return true
   if (user.role === 'admin' || user.role === 'coach') return false
-  return !['active', 'comp'].includes(user.subscriptionStatus ?? '')
+  if (user.accmMember) return false
+  if (['active', 'comp'].includes(user.subscriptionStatus ?? '')) return false
+  if (user.trialEndsAt && new Date(user.trialEndsAt).getTime() > Date.now()) return false
+  return true
 }
 
 const goldTips = [
