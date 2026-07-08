@@ -6,7 +6,8 @@ import { sendVerificationEmail } from '@/lib/email'
 // Confirm the emailed code and mark the account verified.
 export async function POST(req: Request) {
   try {
-    const { email, code } = await req.json()
+    const { email: rawEmail, code } = await req.json()
+    const email = String(rawEmail || '').trim().toLowerCase()
     if (!email || !code) return NextResponse.json({ error: 'Email and code are required' }, { status: 400 })
 
     const record = await db.emailVerificationCode.findUnique({ where: { email } })
@@ -30,7 +31,8 @@ export async function POST(req: Request) {
 // Resend a fresh code.
 export async function PUT(req: Request) {
   try {
-    const { email } = await req.json()
+    const { email: rawEmail } = await req.json()
+    const email = String(rawEmail || '').trim().toLowerCase()
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
     const user = await db.user.findUnique({ where: { email }, select: { emailVerified: true } })

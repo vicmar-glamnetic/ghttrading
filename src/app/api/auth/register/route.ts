@@ -7,7 +7,9 @@ import { sendVerificationEmail } from '@/lib/email'
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, turnstileToken, accmMember } = await req.json()
+    const { name, email: rawEmail, password, turnstileToken, accmMember } = await req.json()
+    // Normalise email so case/spacing variants can't create duplicate accounts.
+    const email = String(rawEmail || '').trim().toLowerCase()
     // Only non-ACCM when explicitly chosen; anything else stays ACCM (free).
     const isAccm = accmMember !== false
 
@@ -23,7 +25,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Bot verification failed. Please try again.' }, { status: 400 })
     }
 
-    const existingUser = await db.user.findUnique({ where: { email } })
+    // Case-insensitive check so legacy mixed-case rows are caught too.
+    const existingUser = await db.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, select: { id: true } })
     if (existingUser) {
       return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
     }

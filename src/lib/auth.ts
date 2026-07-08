@@ -20,8 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email as string },
+        // Case-insensitive so login works regardless of how the email was typed.
+        const email = String(credentials.email).trim().toLowerCase()
+        const user = await db.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
         })
 
         if (!user || !user.password) return null

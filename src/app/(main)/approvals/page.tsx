@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
-import { UserCheck, Check } from 'lucide-react'
+import { UserCheck, Check, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface Pending {
@@ -29,6 +29,21 @@ export default function ApprovalsPage() {
     try {
       const res = await fetch('/api/staff/approvals', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: u.id }),
+      })
+      if (res.ok) setPending(prev => prev.filter(x => x.id !== u.id))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function reject(u: Pending) {
+    if (!confirm(`Reject ${u.email || u.name || 'this sign-up'}? This permanently deletes the account.`)) return
+    setBusy(u.id)
+    try {
+      const res = await fetch('/api/staff/approvals', {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: u.id }),
       })
@@ -67,13 +82,23 @@ export default function ApprovalsPage() {
                 <p className="text-xs text-ink3 truncate">{u.email}</p>
                 <p className="text-[10px] text-ink3 mt-0.5">Registered {format(new Date(u.createdAt), 'MMM d, yyyy')}</p>
               </div>
-              <button
-                onClick={() => approve(u)}
-                disabled={busy === u.id}
-                className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold bg-green-500 hover:bg-green-400 disabled:opacity-60 text-black rounded-lg px-3 py-2 transition-colors"
-              >
-                <Check className="w-3.5 h-3.5" /> {busy === u.id ? 'Approving…' : 'Approve'}
-              </button>
+              <div className="shrink-0 flex items-center gap-2">
+                <button
+                  onClick={() => reject(u)}
+                  disabled={busy === u.id}
+                  title="Reject & delete this sign-up"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold border border-line text-ink2 hover:text-red-400 hover:border-red-400/40 disabled:opacity-60 rounded-lg px-3 py-2 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" /> Reject
+                </button>
+                <button
+                  onClick={() => approve(u)}
+                  disabled={busy === u.id}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold bg-green-500 hover:bg-green-400 disabled:opacity-60 text-black rounded-lg px-3 py-2 transition-colors"
+                >
+                  <Check className="w-3.5 h-3.5" /> {busy === u.id ? 'Approving…' : 'Approve'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
