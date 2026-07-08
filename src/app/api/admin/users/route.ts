@@ -5,7 +5,7 @@ import { requireAdmin, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
-  role: true, accmMember: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
+  role: true, approved: true, accmMember: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
 }
 
 export async function GET(req: Request) {
@@ -78,6 +78,7 @@ export async function POST(req: Request) {
       password: hashedPassword,
       username,
       role: chosenRole,
+      approved: true, // admin-created accounts are pre-approved
       emailVerified: new Date(), // admin-created accounts are trusted/verified
       // Free-access roles are marked comped so billing never paywalls them.
       subscriptionStatus: FREE_ROLES.includes(chosenRole) ? 'comp' : 'free',

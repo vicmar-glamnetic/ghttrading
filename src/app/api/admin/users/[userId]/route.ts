@@ -4,7 +4,7 @@ import { requireAdmin, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
-  role: true, accmMember: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
+  role: true, approved: true, accmMember: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
 }
 
 const SUB_STATUSES = ['free', 'active', 'comp', 'canceled', 'past_due', 'pending']
@@ -43,6 +43,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
 
   if (typeof body.accmMember === 'boolean') {
     data.accmMember = body.accmMember
+  }
+
+  if (typeof body.approved === 'boolean') {
+    data.approved = body.approved
   }
 
   if (Object.keys(data).length === 0) {

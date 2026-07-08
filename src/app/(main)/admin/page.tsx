@@ -16,6 +16,7 @@ interface AdminUser {
   username: string | null
   image: string | null
   role: 'admin' | 'coach' | 'member'
+  approved: boolean
   accmMember: boolean
   subscriptionStatus: string
   paymentRef: string | null
@@ -110,6 +111,15 @@ export default function AdminPage() {
     })
     if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Update failed'); }
     load()
+  }
+
+  async function approveUser(u: AdminUser) {
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, approved: true } : x))
+    await fetch(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved: true }),
+    })
   }
 
   async function toggleAccm(u: AdminUser) {
@@ -220,8 +230,8 @@ export default function AdminPage() {
               <tr className="border-b border-line text-left text-[10px] uppercase tracking-wider text-ink3">
                 <th className="p-3 font-semibold">User</th>
                 <th className="p-3 font-semibold">Role</th>
-                <th className="p-3 font-semibold hidden sm:table-cell">Billing</th>
-                <th className="p-3 font-semibold hidden sm:table-cell">Tier</th>
+                <th className="p-3 font-semibold">Billing</th>
+                <th className="p-3 font-semibold">Tier</th>
                 <th className="p-3 font-semibold hidden md:table-cell">Joined</th>
                 <th className="p-3 font-semibold text-right">Actions</th>
               </tr>
@@ -239,6 +249,11 @@ export default function AdminPage() {
                       <div className="min-w-0">
                         <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'} {u.id === meId && <span className="text-[10px] text-yellow-500">(you)</span>}</p>
                         <p className="text-xs text-ink3 truncate">{u.email}</p>
+                        {!u.approved && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-400/10 rounded-full px-1.5 py-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Pending approval
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -252,7 +267,7 @@ export default function AdminPage() {
                       {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </td>
-                  <td className="p-3 hidden sm:table-cell">
+                  <td className="p-3">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-semibold rounded-full px-2 py-1 capitalize inline-flex items-center gap-1 ${subBadge(u.subscriptionStatus)}`}>
                         {u.subscriptionStatus === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
@@ -284,10 +299,10 @@ export default function AdminPage() {
                       </a>
                     )}
                   </td>
-                  <td className="p-3 hidden sm:table-cell">
+                  <td className="p-3">
                     <button
                       onClick={() => toggleAccm(u)}
-                      title="Toggle ACCM ($1.99) vs Standard ($5)"
+                      title="Toggle ACCM (free) vs Standard ($5)"
                       className={`text-xs font-semibold rounded-full px-2 py-1 border transition-colors ${
                         u.accmMember
                           ? 'bg-green-400/10 text-green-400 border-green-400/30'
@@ -303,15 +318,25 @@ export default function AdminPage() {
                   <td className="p-3 hidden md:table-cell text-ink3 text-xs">
                     {format(new Date(u.createdAt), 'MMM d, yyyy')}
                   </td>
-                  <td className="p-3 text-right">
-                    <button
-                      onClick={() => remove(u)}
-                      disabled={u.id === meId}
-                      className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors disabled:opacity-30 disabled:hover:text-ink3"
-                      title={u.id === meId ? "You can't delete yourself" : 'Delete user'}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <td className="p-3">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {!u.approved && (
+                        <button
+                          onClick={() => approveUser(u)}
+                          className="text-[11px] font-bold bg-green-500 hover:bg-green-400 text-black rounded-lg px-2.5 py-1 transition-colors whitespace-nowrap"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      <button
+                        onClick={() => remove(u)}
+                        disabled={u.id === meId}
+                        className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors disabled:opacity-30 disabled:hover:text-ink3"
+                        title={u.id === meId ? "You can't delete yourself" : 'Delete user'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

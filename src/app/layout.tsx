@@ -23,13 +23,7 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'GHT Trading',
   },
-  icons: {
-    icon: [
-      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    apple: '/apple-touch-icon.png',
-  },
+  // Favicon/app icons come from src/app/icon.png and src/app/apple-icon.png.
 }
 
 // Runs before paint to set the theme from the saved choice (or the OS
