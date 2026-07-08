@@ -1,11 +1,18 @@
-import { Newspaper, ExternalLink } from 'lucide-react'
+import { Newspaper } from 'lucide-react'
+import { NewsFeed, type NewsItem } from './NewsFeed'
 
 export const metadata = { title: 'Forex News · GHT Trading' }
 export const revalidate = 900 // refresh at most every 15 min
 
-const FEED = 'https://www.investing.com/rss/news_1.rss'
-
-interface NewsItem { title: string; link: string; pubDate: string; image: string | null }
+// Multiple sources so headlines aren't tied to a single site. Each is fetched
+// independently — if one is down or blocks us, the others still show.
+const SOURCES = [
+  { name: 'Investing.com', url: 'https://www.investing.com/rss/news_1.rss' },
+  { name: 'Investing.com', url: 'https://www.investing.com/rss/news_11.rss' }, // commodities (gold)
+  { name: 'FXStreet',      url: 'https://www.fxstreet.com/rss/news' },
+  { name: 'ForexLive',     url: 'https://investinglive.com/feed/' },
+  { name: 'MarketWatch',   url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories' },
+]
 
 function decode(s: string) {
   return s
@@ -16,9 +23,29 @@ function decode(s: string) {
     .trim()
 }
 
-async function getNews(): Promise<NewsItem[]> {
+function parseDate(s: string): number {
+  if (!s) return 0
+  let t = Date.parse(s)
+  if (isNaN(t)) t = Date.parse(s.replace(' ', 'T'))
+  return isNaN(t) ? 0 : t
+}
+
+function extractImage(block: string): string | null {
+  const encl = /<enclosure[^>]*url="([^"]+)"/.exec(block)
+  if (encl) return encl[1]
+  const media = /<media:(?:content|thumbnail)[^>]*url="([^"]+)"/.exec(block)
+  if (media) return media[1]
+  const desc = /<description[^>]*>([\s\S]*?)<\/description>/.exec(block)
+  if (desc) {
+    const img = /<img[^>]*src="([^"]+)"/.exec(decode(desc[1]))
+    if (img) return img[1]
+  }
+  return null
+}
+
+async function fetchFeed(source: { name: string; url: string }): Promise<NewsItem[]> {
   try {
-    const res = await fetch(FEED, { headers: { 'User-Agent': 'Mozilla/5.0' }, next: { revalidate: 900 } })
+    const res = await fetch(source.url, { headers: { 'User-Agent': 'Mozilla/5.0' }, next: { revalidate: 900 } })
     if (!res.ok) return []
     const xml = await res.text()
     const items: NewsItem[] = []
@@ -28,12 +55,14 @@ async function getNews(): Promise<NewsItem[]> {
       return r ? decode(r[1]) : ''
     }
     let m: RegExpExecArray | null
-    while ((m = itemRe.exec(xml)) && items.length < 24) {
+    while ((m = itemRe.exec(xml)) && items.length < 20) {
       const block = m[1]
-      const encl = /<enclosure[^>]*url="([^"]+)"/.exec(block)
       const title = pick(block, 'title')
       const link = pick(block, 'link')
-      if (title && link) items.push({ title, link, pubDate: pick(block, 'pubDate'), image: encl?.[1] ?? null })
+      const pubDate = pick(block, 'pubDate')
+      if (title && link) {
+        items.push({ title, link, source: source.name, ts: parseDate(pubDate), image: extractImage(block) })
+      }
     }
     return items
   } catch {
@@ -41,15 +70,20 @@ async function getNews(): Promise<NewsItem[]> {
   }
 }
 
-function timeAgo(pubDate: string): string {
-  const d = new Date(pubDate.replace(' ', 'T'))
-  if (isNaN(d.getTime())) return ''
-  const mins = Math.round((Date.now() - d.getTime()) / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.round(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.round(hrs / 24)}d ago`
+async function getNews(): Promise<NewsItem[]> {
+  const results = await Promise.all(SOURCES.map(fetchFeed))
+  const all = results.flat()
+
+  // Dedupe by normalized title (same story often syndicated across sites).
+  const seen = new Set<string>()
+  const unique = all.filter(n => {
+    const key = n.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 80)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  return unique.sort((a, b) => b.ts - a.ts).slice(0, 60)
 }
 
 export default async function NewsPage() {
@@ -69,28 +103,12 @@ export default async function NewsPage() {
           <p className="text-ink3">Couldn&apos;t load news right now. Please check back shortly.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {news.map((n, i) => (
-            <a key={i} href={n.link} target="_blank" rel="noopener noreferrer"
-              className="flex gap-3 bg-surface rounded-xl border border-line p-3 hover:border-yellow-500/30 transition-colors group">
-              {n.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={n.image} alt="" className="w-24 h-24 sm:w-32 sm:h-24 object-cover rounded-lg shrink-0 bg-elevated" loading="lazy" />
-              )}
-              <div className="min-w-0 flex flex-col">
-                <p className="text-sm font-semibold text-ink leading-snug line-clamp-3 group-hover:text-yellow-500 transition-colors">{n.title}</p>
-                <div className="mt-auto pt-2 flex items-center gap-2 text-xs text-ink3">
-                  <span>Investing.com</span>
-                  {timeAgo(n.pubDate) && <><span>·</span><span>{timeAgo(n.pubDate)}</span></>}
-                  <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
+        <NewsFeed items={news} />
       )}
 
-      <p className="text-[10px] text-ink3 text-center">News headlines via Investing.com. Updated periodically.</p>
+      <p className="text-[10px] text-ink3 text-center">
+        Headlines aggregated from Investing.com, FXStreet, ForexLive &amp; MarketWatch. Updated periodically.
+      </p>
     </div>
   )
 }
