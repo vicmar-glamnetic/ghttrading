@@ -120,6 +120,7 @@ export default function EducationPage() {
   const [loadingVideos, setLoadingVideos] = useState(true)
   const [editor, setEditor] = useState<{ open: boolean; video: Video | null }>({ open: false, video: null })
   const [catFilter, setCatFilter] = useState<string>('all')
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     fetch('/api/posts').then(r => r.json()).then(d => {
@@ -144,6 +145,13 @@ export default function EducationPage() {
     setVideos(prev => prev.filter(x => x.id !== v.id))
     await fetch(`/api/education/videos/${v.id}`, { method: 'DELETE' })
   }
+
+  const PER_PAGE = 6
+  const filteredVideos = catFilter === 'all' ? videos : videos.filter(v => v.category === catFilter)
+  const totalPages = Math.max(1, Math.ceil(filteredVideos.length / PER_PAGE))
+  const curPage = Math.min(page, totalPages)
+  const pagedVideos = filteredVideos.slice((curPage - 1) * PER_PAGE, curPage * PER_PAGE)
+  function selectCat(c: string) { setCatFilter(c); setPage(1) }
 
   return (
     <div className="space-y-4">
@@ -180,50 +188,73 @@ export default function EducationPage() {
           </div>
         ) : (
           <>
-            {/* category filter */}
-            {(() => {
-              const cats = CATEGORIES.filter(c => videos.some(v => v.category === c))
-              if (cats.length === 0) return null
-              return (
-                <div className="flex gap-2 flex-wrap">
-                  {['all', ...cats].map(c => (
-                    <button key={c} onClick={() => setCatFilter(c)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${catFilter === c ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
-                      {c === 'all' ? 'All' : c}
-                    </button>
-                  ))}
-                </div>
-              )
-            })()}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {videos.filter(v => catFilter === 'all' || v.category === catFilter).map(v => (
-                <div key={v.id} className="rounded-2xl border border-line bg-surface overflow-hidden">
-                  <div className="aspect-video bg-black">
-                    <iframe src={toEmbed(v.embedUrl)} title={v.title} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
-                  </div>
-                  <div className="p-3 flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      {v.category && (
-                        <span className="inline-block text-[10px] font-semibold text-yellow-500 bg-yellow-500/10 rounded px-1.5 py-0.5 mb-1">{v.category}</span>
-                      )}
-                      <p className="text-sm font-semibold text-ink truncate">{v.title}</p>
-                      <p className="text-xs text-ink3 truncate">{v.educator || v.author.name}</p>
-                    </div>
-                    {isStaff && (
-                      <div className="flex shrink-0">
-                        <button onClick={() => setEditor({ open: true, video: v })} className="p-1.5 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors" title="Edit">
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => deleteVideo(v)} className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors" title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {/* category filter — always show all categories */}
+            <div className="flex gap-2 flex-wrap">
+              {['all', ...CATEGORIES].map(c => (
+                <button key={c} onClick={() => selectCat(c)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${catFilter === c ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+                  {c === 'all' ? 'All' : c}
+                </button>
               ))}
             </div>
+
+            {filteredVideos.length === 0 ? (
+              <div className="bg-surface rounded-xl border border-line p-10 text-center">
+                <Play className="w-10 h-10 text-yellow-500/30 mx-auto mb-2" />
+                <p className="text-ink3 text-sm">No videos in {catFilter === 'all' ? 'this list' : `"${catFilter}"`} yet.</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {pagedVideos.map(v => (
+                    <div key={v.id} className="rounded-2xl border border-line bg-surface overflow-hidden">
+                      <div className="aspect-video bg-black">
+                        <iframe src={toEmbed(v.embedUrl)} title={v.title} className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
+                      </div>
+                      <div className="p-3 flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          {v.category && (
+                            <span className="inline-block text-[10px] font-semibold text-yellow-500 bg-yellow-500/10 rounded px-1.5 py-0.5 mb-1">{v.category}</span>
+                          )}
+                          <p className="text-sm font-semibold text-ink truncate">{v.title}</p>
+                          <p className="text-xs text-ink3 truncate">{v.educator || v.author.name}</p>
+                        </div>
+                        {isStaff && (
+                          <div className="flex shrink-0">
+                            <button onClick={() => setEditor({ open: true, video: v })} className="p-1.5 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors" title="Edit">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => deleteVideo(v)} className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors" title="Delete">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* pagination — 6 per page */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-1.5 pt-2">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={curPage === 1}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-ink2 hover:bg-elevated disabled:opacity-40 disabled:hover:bg-transparent transition-colors">
+                      Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+                      <button key={n} onClick={() => setPage(n)}
+                        className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors ${n === curPage ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated'}`}>
+                        {n}
+                      </button>
+                    ))}
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={curPage === totalPages}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-ink2 hover:bg-elevated disabled:opacity-40 disabled:hover:bg-transparent transition-colors">
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </>
         )
       )}
