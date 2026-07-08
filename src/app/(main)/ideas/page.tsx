@@ -185,6 +185,56 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
   )
 }
 
+/* ---------- shorthand signal parser ----------
+   Parses a pasted signal like:
+     Buy now 4110-4105 buy more 4098 4001
+     4115
+     4120
+     4125
+     Sl 4088
+   into { direction, entry range, take-profits, stop-loss, extra "buy more" levels }. */
+function parseSignal(text: string) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  const numRe = /\d+(?:\.\d+)?/g
+  let direction: 'buy' | 'sell' | null = null
+  const entries: number[] = []
+  const more: number[] = []
+  const tps: number[] = []
+  const sls: number[] = []
+
+  for (const line of lines) {
+    const low = line.toLowerCase()
+    const nums = (line.match(numRe) || []).map(Number)
+
+    // Stop loss
+    if (/\bsl\b|stop\s*loss/.test(low)) { sls.push(...nums); continue }
+
+    // Entry / direction line(s)
+    if (/buy|sell|entry|now|more/.test(low)) {
+      if (/sell/.test(low)) direction = 'sell'
+      else if (/buy/.test(low)) direction = direction ?? 'buy'
+      const moreIdx = low.indexOf('more')
+      if (moreIdx >= 0) {
+        ;(line.slice(0, moreIdx).match(numRe) || []).forEach(n => entries.push(Number(n)))
+        ;(line.slice(moreIdx).match(numRe) || []).forEach(n => more.push(Number(n)))
+      } else {
+        entries.push(...nums)
+      }
+      continue
+    }
+
+    // Otherwise a bare price line → take profit (also handles "TP1 4115")
+    if (nums.length) tps.push(...nums)
+  }
+
+  const entryLow = entries.length ? Math.min(...entries) : null
+  const entryHigh = entries.length ? Math.max(...entries) : null
+  const slLow = sls.length ? Math.min(...sls) : null
+  const slHigh = sls.length ? Math.max(...sls) : null
+
+  return { direction, entryLow, entryHigh, slLow, slHigh, takeProfits: tps, moreEntries: more }
+}
+
 /* ---------- editor modal ---------- */
 const EMPTY = {
   symbol: 'XAUUSD', direction: 'buy' as 'buy' | 'sell', entryLow: '', entryHigh: '',
@@ -217,6 +267,27 @@ function IdeaEditor({ initial, onClose, onSaved }: {
     }
   })
   const [saving, setSaving] = useState(false)
+  const [paste, setPaste] = useState('')
+
+  // Parse a pasted shorthand signal and fill the form.
+  function applyPaste() {
+    if (!paste.trim()) return
+    const p = parseSignal(paste)
+    setF(s => ({
+      ...s,
+      direction: p.direction ?? s.direction,
+      entryLow: p.entryLow != null ? String(p.entryLow) : s.entryLow,
+      entryHigh: p.entryHigh != null && p.entryHigh !== p.entryLow ? String(p.entryHigh) : '',
+      slLow: p.slLow != null ? String(p.slLow) : s.slLow,
+      slHigh: p.slHigh != null && p.slHigh !== p.slLow ? String(p.slHigh) : '',
+      takeProfits: p.takeProfits.length
+        ? p.takeProfits.map(n => ({ price: String(n), pips: '', hit: false }))
+        : s.takeProfits,
+      notes: p.moreEntries.length
+        ? `${s.notes ? s.notes + '\n' : ''}Add more: ${p.moreEntries.join(', ')}`
+        : s.notes,
+    }))
+  }
 
   function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) { setF(s => ({ ...s, [k]: v })) }
   function setTp(i: number, patch: Partial<{ price: string; pips: string; hit: boolean }>) {
@@ -255,6 +326,25 @@ function IdeaEditor({ initial, onClose, onSaved }: {
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Quick paste — type/paste a signal and auto-fill */}
+          <div className="rounded-lg border border-yellow-500/25 bg-yellow-500/5 p-3">
+            <label className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider">⚡ Quick paste signal</label>
+            <textarea
+              value={paste}
+              onChange={e => setPaste(e.target.value)}
+              rows={4}
+              placeholder={"Buy now 4110-4105 buy more 4098 4001\n4115\n4120\n4125\nSl 4088"}
+              className={`${inputCls} mt-1.5 resize-none font-mono text-xs`}
+            />
+            <button
+              onClick={applyPaste}
+              className="mt-2 text-xs font-bold bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg px-3 py-1.5 transition-colors"
+            >
+              Parse &amp; fill ↓
+            </button>
+            <span className="ml-2 text-[10px] text-ink3">Fills the fields below — review, then post.</span>
+          </div>
+
           {/* symbol + direction */}
           <div className="grid grid-cols-2 gap-2">
             <input value={f.symbol} onChange={e => set('symbol', e.target.value.toUpperCase())} placeholder="Symbol (e.g. BTCUSD)" className={inputCls} />
