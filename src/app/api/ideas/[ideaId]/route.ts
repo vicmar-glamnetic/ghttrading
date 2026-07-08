@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireStaff } from '@/lib/admin'
 import { db } from '@/lib/db'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
@@ -21,13 +21,13 @@ const numOrNull = (v: unknown) => (v === '' || v == null || !Number.isFinite(Num
 
 export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Any coach/admin can edit any trade idea.
+    const session = await requireStaff()
+    if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { ideaId } = await params
-    const existing = await db.tradeIdea.findUnique({ where: { id: ideaId }, select: { authorId: true } })
+    const existing = await db.tradeIdea.findUnique({ where: { id: ideaId }, select: { id: true } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if (existing.authorId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await req.json()
     const symbol = (body.symbol ?? '').toString().trim().toUpperCase()
@@ -60,13 +60,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ ideaId: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Any coach/admin can delete any trade idea.
+    const session = await requireStaff()
+    if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { ideaId } = await params
-    const existing = await db.tradeIdea.findUnique({ where: { id: ideaId }, select: { authorId: true } })
+    const existing = await db.tradeIdea.findUnique({ where: { id: ideaId }, select: { id: true } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if (existing.authorId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     await db.tradeIdea.delete({ where: { id: ideaId } })
     return NextResponse.json({ success: true })

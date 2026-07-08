@@ -95,15 +95,19 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
   const isBuy = idea.direction === 'buy'
   return (
     <div className="bg-surface rounded-xl border border-line p-4 flex flex-col">
-      {/* header */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[10px] font-black uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5">Trade Idea</span>
-          <Avatar src={idea.author.image} name={idea.author.name} size="xs" />
-          <span className="font-bold text-ink truncate">{idea.symbol}</span>
-          <span className="text-[10px] text-ink3 shrink-0">· {timeAgo(idea.createdAt)}</span>
+      {/* post header */}
+      <div className="flex items-center gap-3">
+        <Avatar src={idea.author.image} name={idea.author.name} size="md" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-ink text-sm truncate">{idea.author.name || 'Coach'}</span>
+            <span className="text-[9px] font-black uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5 shrink-0">Trade Idea</span>
+          </div>
+          <p className="text-xs text-ink3">
+            <span className="font-semibold text-ink2">{idea.symbol}</span> · {timeAgo(idea.createdAt)}
+          </p>
         </div>
-        <span className={`text-xs font-black rounded px-2 py-0.5 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'} ${idea.status === 'sl_hit' ? 'opacity-60' : ''}`}>
+        <span className={`text-xs font-black rounded px-2.5 py-1 shrink-0 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'} ${idea.status === 'sl_hit' ? 'opacity-60' : ''}`}>
           {isBuy ? 'BUY' : 'SELL'}
         </span>
       </div>
@@ -496,11 +500,11 @@ export default function IdeasPage() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="space-y-4 max-w-xl mx-auto">
           {[1, 2, 3].map(i => <div key={i} className="h-72 bg-surface rounded-xl border border-line animate-pulse" />)}
         </div>
       ) : ideas.length === 0 ? (
-        <div className="bg-surface rounded-xl border border-line p-12 text-center">
+        <div className="bg-surface rounded-xl border border-line p-12 text-center max-w-xl mx-auto">
           <Lightbulb className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
           <p className="text-ink3">
             {tab === 'mine'
@@ -512,12 +516,12 @@ export default function IdeasPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+        <div className="space-y-4 max-w-xl mx-auto">
           {ideas.map(idea => (
             <IdeaCard
               key={idea.id}
               idea={idea}
-              canManage={idea.authorId === uid}
+              canManage={isStaff}
               onEdit={i => setEditor({ open: true, idea: i })}
               onDelete={handleDelete}
             />
