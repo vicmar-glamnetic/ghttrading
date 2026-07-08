@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import {
   Home, Bell, Settings, Users,
   Globe, GraduationCap, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, CandlestickChart, Radio, MessageCircle, Smartphone,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle, Smartphone, UserCheck,
 } from 'lucide-react'
 
 const navItems = [
@@ -72,9 +72,10 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   }, [])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
-  const items = session?.user?.role === 'admin'
-    ? [...navItems, { href: '/admin', label: 'Admin', icon: Shield }]
-    : navItems
+  const role = session?.user?.role
+  const items = [...navItems]
+  if (role === 'admin' || role === 'coach') items.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
+  if (role === 'admin') items.push({ href: '/admin', label: 'Admin', icon: Shield })
 
   return (
     <aside className="hidden lg:flex flex-col gap-1 w-56 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">

@@ -1,0 +1,85 @@
+'use client'
+import { useState, useEffect, useCallback } from 'react'
+import { Avatar } from '@/components/ui/Avatar'
+import { UserCheck, Check } from 'lucide-react'
+import { format } from 'date-fns'
+
+interface Pending {
+  id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string
+}
+
+export default function ApprovalsPage() {
+  const [pending, setPending] = useState<Pending[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/staff/approvals')
+      const data = await res.json()
+      setPending(Array.isArray(data) ? data : [])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  async function approve(u: Pending) {
+    setBusy(u.id)
+    try {
+      const res = await fetch('/api/staff/approvals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: u.id }),
+      })
+      if (res.ok) setPending(prev => prev.filter(x => x.id !== u.id))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      <div className="flex items-center gap-2">
+        <UserCheck className="w-5 h-5 text-yellow-500" />
+        <h1 className="font-bold text-ink text-lg">Approvals</h1>
+        {!loading && (
+          <span className="ml-auto text-xs text-ink3 bg-surface border border-line rounded-full px-3 py-1">
+            {pending.length} pending
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-16 bg-surface rounded-xl border border-line animate-pulse" />)}</div>
+      ) : pending.length === 0 ? (
+        <div className="bg-surface rounded-xl border border-line p-12 text-center">
+          <UserCheck className="w-12 h-12 text-yellow-500/30 mx-auto mb-3" />
+          <p className="text-ink3">No pending sign-ups — you&apos;re all caught up. 🎉</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {pending.map(u => (
+            <div key={u.id} className="flex items-center gap-3 bg-surface rounded-xl border border-line p-3">
+              <Avatar src={u.image} name={u.name} size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'}</p>
+                <p className="text-xs text-ink3 truncate">{u.email}</p>
+                <p className="text-[10px] text-ink3 mt-0.5">Registered {format(new Date(u.createdAt), 'MMM d, yyyy')}</p>
+              </div>
+              <button
+                onClick={() => approve(u)}
+                disabled={busy === u.id}
+                className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold bg-green-500 hover:bg-green-400 disabled:opacity-60 text-black rounded-lg px-3 py-2 transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" /> {busy === u.id ? 'Approving…' : 'Approve'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[10px] text-ink3 text-center">Approving a member gives them access to the community.</p>
+    </div>
+  )
+}

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
   CandlestickChart, Radio, GraduationCap, ShieldCheck, Users, Bell, Settings,
-  Shield, User, LogOut, Smartphone,
+  Shield, User, LogOut, Smartphone, UserCheck,
 } from 'lucide-react'
 
 const items = [
@@ -60,9 +60,11 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   }, [])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
+  const role = session?.user?.role
   const menu: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [...allNav]
   if (session?.user?.id) menu.push({ href: `/profile/${session.user.id}`, label: 'Profile', icon: User })
-  if (session?.user?.role === 'admin') menu.push({ href: '/admin', label: 'Admin', icon: Shield })
+  if (role === 'admin' || role === 'coach') menu.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
+  if (role === 'admin') menu.push({ href: '/admin', label: 'Admin', icon: Shield })
 
   return (
     <>
