@@ -171,7 +171,7 @@ export function Navbar() {
 
         {/* Right nav icons */}
         <div className="flex items-center gap-1 ml-auto">
-          <Link href="/" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
+          <Link href="/feed" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
             <Home className="w-5 h-5" />
           </Link>
           <Link href="/friends" className="p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">

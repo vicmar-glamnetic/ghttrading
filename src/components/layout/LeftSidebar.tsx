@@ -13,7 +13,7 @@ import {
 
 const navItems = [
   { href: '/ideas',        label: 'Signals',       icon: Zap             },
-  { href: '/',             label: 'Feed',          icon: Home            },
+  { href: '/feed',         label: 'Feed',          icon: Home            },
   { href: '/chat',         label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
   { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
