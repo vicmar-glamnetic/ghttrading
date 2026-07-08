@@ -1,25 +1,26 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
-  Home, LineChart, Lightbulb, Newspaper, Menu, X, Lock,
+  Home, LineChart, Lightbulb, Newspaper, Menu, X, Lock, MessageCircle,
   CandlestickChart, Radio, GraduationCap, ShieldCheck, Users, Bell, Settings,
   Shield, User, LogOut,
 } from 'lucide-react'
 
 const items = [
-  { href: '/',      label: 'Feed',  icon: Home       },
-  { href: '/chart', label: 'Chart', icon: LineChart  },
-  { href: '/ideas', label: 'Ideas', icon: Lightbulb  },
-  { href: '/news',  label: 'News',  icon: Newspaper  },
+  { href: '/',      label: 'Feed',  icon: Home         },
+  { href: '/chart', label: 'Chart', icon: LineChart    },
+  { href: '/chat',  label: 'Chat',  icon: MessageCircle },
+  { href: '/ideas', label: 'Ideas', icon: Lightbulb    },
 ]
 
 // Full navigation shown in the "More" sheet.
 const allNav = [
   { href: '/',              label: 'Feed',          icon: Home            },
+  { href: '/chat',          label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',         label: 'Trading View',  icon: LineChart       },
   { href: '/trading',       label: 'Trading',       icon: CandlestickChart, premium: true },
   { href: '/ideas',         label: 'Trade Ideas',   icon: Lightbulb       },
@@ -48,6 +49,14 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const pathname = usePathname()
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
+  const [unread, setUnread] = useState(0)
+
+  useEffect(() => {
+    const poll = () => fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count || 0)).catch(() => {})
+    poll()
+    const id = setInterval(poll, 15000)
+    return () => clearInterval(id)
+  }, [])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
   const menu: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [...allNav]
@@ -115,10 +124,13 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
                 key={href}
                 href={href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl transition-colors',
+                  'relative flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl transition-colors',
                   active ? 'text-yellow-500' : 'text-ink3 active:text-ink2'
                 )}
               >
+                {href === '/chat' && unread > 0 && (
+                  <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{unread}</span>
+                )}
                 <Icon className="w-6 h-6 shrink-0" />
                 <span className="text-[10px] font-semibold tracking-wide">{label}</span>
               </Link>

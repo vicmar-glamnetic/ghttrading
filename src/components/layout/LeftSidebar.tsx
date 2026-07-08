@@ -4,14 +4,16 @@ import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react'
 import {
   Home, Bell, Settings, Users,
   Globe, GraduationCap, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Lightbulb, CandlestickChart, Radio,
+  LineChart, Lightbulb, CandlestickChart, Radio, MessageCircle,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/',             label: 'Feed',          icon: Home            },
+  { href: '/chat',         label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
   { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
   { href: '/ideas',        label: 'Trade Ideas',   icon: Lightbulb       },
@@ -60,6 +62,14 @@ function GoldTip() {
 export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boolean }) {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const [unread, setUnread] = useState(0)
+
+  useEffect(() => {
+    const poll = () => fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count || 0)).catch(() => {})
+    poll()
+    const id = setInterval(poll, 15000)
+    return () => clearInterval(id)
+  }, [])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
   const items = session?.user?.role === 'admin'
@@ -92,6 +102,9 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
             )}>
             <Icon className="w-4 h-4 shrink-0" />
             {label}
+            {href === '/chat' && unread > 0 && (
+              <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{unread}</span>
+            )}
             {premium && locked && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
           </Link>
         ))}

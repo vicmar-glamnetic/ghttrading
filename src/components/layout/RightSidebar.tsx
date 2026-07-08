@@ -1,14 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Avatar } from '@/components/ui/Avatar'
-import { Button } from '@/components/ui/Button'
-import { Activity, Star, Users } from 'lucide-react'
+import { Activity, Star, CalendarDays, Lightbulb } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
-
-interface SuggestedUser {
-  id: string; name: string | null; image: string | null; username: string | null
-}
 
 const goldFacts = [
   'Gold has been a store of value for over 5,000 years.',
@@ -18,32 +12,31 @@ const goldFacts = [
   'Inflation fears & geopolitical risk push gold higher.',
 ]
 
-// Live XAUUSD price + mini chart via TradingView (real feed, theme-aware).
-function LiveGoldWidget() {
-  const { resolved } = useTheme()
-  const container = useRef<HTMLDivElement>(null)
-
+// Inject a TradingView external-embedding widget into a container.
+function useTvWidget(src: string, config: Record<string, unknown>, dep: unknown) {
+  const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const el = container.current
+    const el = ref.current
     if (!el) return
     el.innerHTML = ''
-    const script = document.createElement('script')
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js'
-    script.async = true
-    script.innerHTML = JSON.stringify({
-      symbol: 'OANDA:XAUUSD',
-      width: '100%',
-      height: 180,
-      locale: 'en',
-      dateRange: '1D',
-      colorTheme: resolved,
-      isTransparent: true,
-      autosize: false,
-    })
-    el.appendChild(script)
+    const s = document.createElement('script')
+    s.src = src
+    s.async = true
+    s.innerHTML = JSON.stringify(config)
+    el.appendChild(s)
     return () => { el.innerHTML = '' }
-  }, [resolved])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dep])
+  return ref
+}
 
+function LiveGoldWidget() {
+  const { resolved } = useTheme()
+  const ref = useTvWidget(
+    'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js',
+    { symbol: 'OANDA:XAUUSD', width: '100%', height: 180, locale: 'en', dateRange: '1D', colorTheme: resolved, isTransparent: true, autosize: false },
+    resolved,
+  )
   return (
     <div className="bg-surface rounded-xl border border-line overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
@@ -53,8 +46,62 @@ function LiveGoldWidget() {
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
         </span>
       </div>
-      <div key={resolved} ref={container} className="px-2 py-1" />
+      <div key={resolved} ref={ref} className="px-2 py-1" />
     </div>
+  )
+}
+
+function EconomicCalendar() {
+  const { resolved } = useTheme()
+  const ref = useTvWidget(
+    'https://s3.tradingview.com/external-embedding/embed-widget-events.js',
+    { colorTheme: resolved, isTransparent: true, width: '100%', height: 420, locale: 'en', importanceFilter: '0,1', countryFilter: 'us,eu,gb,jp,cn,ca,au' },
+    resolved,
+  )
+  return (
+    <div className="bg-surface rounded-xl border border-line overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
+        <CalendarDays className="w-4 h-4 text-yellow-500" />
+        <span className="text-sm font-bold text-ink">Economic Calendar</span>
+      </div>
+      <div key={resolved} ref={ref} />
+    </div>
+  )
+}
+
+interface LatestIdeaT {
+  symbol: string; direction: 'buy' | 'sell'; status: string
+  entryLow: number | null; entryHigh: number | null
+}
+function LatestIdea() {
+  const [idea, setIdea] = useState<LatestIdeaT | null>(null)
+  useEffect(() => {
+    fetch('/api/ideas?scope=community').then(r => r.json()).then(d => {
+      if (Array.isArray(d) && d.length) setIdea(d[0])
+    }).catch(() => {})
+  }, [])
+  if (!idea) return null
+  const isBuy = idea.direction === 'buy'
+  const entry = idea.entryLow != null && idea.entryHigh != null && idea.entryLow !== idea.entryHigh
+    ? `${idea.entryLow} – ${idea.entryHigh}` : `${idea.entryLow ?? idea.entryHigh ?? ''}`
+  return (
+    <Link href="/ideas" className="block bg-surface rounded-xl border border-line overflow-hidden hover:border-yellow-500/30 transition-colors">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
+        <Lightbulb className="w-4 h-4 text-yellow-500" />
+        <span className="text-sm font-bold text-ink">Latest Trade Idea</span>
+      </div>
+      <div className="p-3">
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-ink">{idea.symbol}</span>
+          <span className={`text-xs font-black rounded px-2 py-0.5 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'}`}>{isBuy ? 'BUY' : 'SELL'}</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
+          <span className="text-xs font-bold text-blue-400">{idea.status === 'pending' ? 'LIVE' : 'Closed'}</span>
+          {entry && <span className="text-xs text-ink2 ml-1">Entry {entry}</span>}
+        </div>
+      </div>
+    </Link>
   )
 }
 
@@ -71,67 +118,13 @@ function GoldFactWidget() {
   )
 }
 
-function TradersToFollow() {
-  const [suggestions, setSuggestions] = useState<SuggestedUser[]>([])
-  const [followed, setFollowed] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    fetch('/api/users/search?q=a')
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d)) setSuggestions(d.slice(0, 4)) })
-      .catch(() => {})
-  }, [])
-
-  async function handleFollow(userId: string) {
-    await fetch(`/api/users/${userId}/follow`, { method: 'POST' })
-    setFollowed(prev => {
-      const next = new Set(prev)
-      next.has(userId) ? next.delete(userId) : next.add(userId)
-      return next
-    })
-  }
-
-  if (!suggestions.length) return null
-
-  return (
-    <div className="bg-surface rounded-xl border border-line overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
-        <Users className="w-4 h-4 text-yellow-500" />
-        <span className="text-sm font-bold text-ink">Traders to Follow</span>
-      </div>
-      <div className="divide-y divide-line">
-        {suggestions.map(user => (
-          <div key={user.id} className="flex items-center gap-2 p-3 hover:bg-elevated transition-colors">
-            <Link href={`/profile/${user.id}`} className="shrink-0">
-              <Avatar src={user.image} name={user.name} size="sm" />
-            </Link>
-            <div className="flex-1 min-w-0">
-              <Link href={`/profile/${user.id}`} className="text-xs font-semibold text-ink hover:text-yellow-500 truncate block transition-colors">
-                {user.name || 'Trader'}
-              </Link>
-              <p className="text-[10px] text-ink3 truncate">@{user.username || 'trader'}</p>
-            </div>
-            <Button
-              variant={followed.has(user.id) ? 'secondary' : 'outline'}
-              size="sm"
-              onClick={() => handleFollow(user.id)}
-              className="text-xs py-0.5 px-2 shrink-0"
-            >
-              {followed.has(user.id) ? 'Following' : 'Follow'}
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export function RightSidebar() {
   return (
     <aside className="hidden xl:flex flex-col gap-3 w-60 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">
       <LiveGoldWidget />
+      <LatestIdea />
+      <EconomicCalendar />
       <GoldFactWidget />
-      <TradersToFollow />
 
       <div className="text-xs text-ink3 px-1 space-y-1">
         <div className="flex flex-wrap gap-x-2">

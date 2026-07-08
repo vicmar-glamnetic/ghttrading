@@ -54,6 +54,10 @@ model User {
   journalEntries    JournalEntry[]
   tradeIdeas        TradeIdea[]
   educatorVideos    EducatorVideo[]
+  chatMessages      ChatMessage[]   @relation("ChatMessages")
+  convosAsUser1     Conversation[]  @relation("ConvUser1")
+  convosAsUser2     Conversation[]  @relation("ConvUser2")
+  sentDMs           DirectMessage[] @relation("SentDMs")
   ownedGroups       Group[]         @relation("GroupOwner")
   groupMemberships  GroupMember[]
   ownedPages        Page[]          @relation("PageOwner")
@@ -230,6 +234,50 @@ model JournalEntry {
   @@index([authorId, createdAt])
   @@index([authorId, tradedAt])
   @@map("journal_entries")
+}
+
+// Community chat room (single global room).
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  author    User     @relation("ChatMessages", fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+// 1-on-1 direct message conversation (user1Id < user2Id canonical order).
+model Conversation {
+  id            String   @id @default(cuid())
+  user1Id       String
+  user2Id       String
+  user1         User     @relation("ConvUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2         User     @relation("ConvUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  user1ReadAt   DateTime?
+  user2ReadAt   DateTime?
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  messages      DirectMessage[]
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id, lastMessageAt])
+  @@index([user2Id, lastMessageAt])
+  @@map("conversations")
+}
+
+model DirectMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User     @relation("SentDMs", fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("direct_messages")
 }
 
 // Email verification codes for new sign-ups (anti-bot / real-email check).
