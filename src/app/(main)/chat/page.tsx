@@ -107,11 +107,16 @@ function DMs({ meId }: { meId: string }) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [showNew, setShowNew] = useState(false)
+  const [coaches, setCoaches] = useState<Lite[]>([])
   const lastAt = useRef<string | null>(null)
   const bottom = useRef<HTMLDivElement>(null)
 
   const loadConvos = useCallback(() => {
     fetch('/api/chat/conversations').then(r => r.json()).then(d => { if (Array.isArray(d)) setConvos(d) })
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/chat/coaches').then(r => r.json()).then(d => { if (Array.isArray(d)) setCoaches(d) }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -184,6 +189,27 @@ function DMs({ meId }: { meId: string }) {
             <Plus className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Chat with a coach */}
+        {coaches.length > 0 && (
+          <div className="p-3 border-b border-line">
+            <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-2">Chat with a coach</p>
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+              {coaches.map(c => (
+                <button key={c.id} onClick={() => openWith(c.id)} className="flex flex-col items-center gap-1 shrink-0 w-14 group">
+                  <span className="relative">
+                    <Avatar src={c.image} name={c.name} size="md" />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-yellow-500 border-2 border-surface grid place-items-center">
+                      <span className="text-[7px] font-black text-black">C</span>
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-ink2 truncate w-full text-center group-hover:text-ink">{c.name?.split(' ')[0] || 'Coach'}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto">
           {convos.length === 0 ? (
             <p className="text-center text-xs text-ink3 p-6">No conversations yet.</p>
