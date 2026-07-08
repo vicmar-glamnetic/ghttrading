@@ -11,6 +11,8 @@ declare module 'next-auth' {
       username?: string | null
       role?: string | null
       subscriptionStatus?: string | null
+      accmMember?: boolean | null
+      trialEndsAt?: string | null
     }
   }
 
@@ -18,6 +20,8 @@ declare module 'next-auth' {
     username?: string | null
     role?: string | null
     subscriptionStatus?: string | null
+    accmMember?: boolean | null
+    trialEndsAt?: Date | string | null
     sessionToken?: string | null
   }
 }
@@ -28,6 +32,8 @@ declare module 'next-auth/jwt' {
     username?: string | null
     role?: string | null
     subscriptionStatus?: string | null
+    accmMember?: boolean | null
+    trialEndsAt?: string | null
     sessionToken?: string | null
     error?: string
   }

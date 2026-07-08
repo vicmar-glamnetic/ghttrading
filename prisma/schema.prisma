@@ -35,6 +35,7 @@ model User {
   stripeSubId        String?
   paypalSubscriptionId String?
   paymentRef         String?   // crypto tx hash / manual payment reference (pending review)
+  trialEndsAt        DateTime? // free-trial window for non-ACCM (other broker) members
   subscriptionEnd    DateTime?
   sessionToken       String?  @unique  // single-session enforcement
 

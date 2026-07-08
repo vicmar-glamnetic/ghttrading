@@ -7,6 +7,7 @@ import {
   Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { trialDaysLeft } from '@/lib/billing'
 
 interface AdminUser {
   id: string
@@ -18,6 +19,7 @@ interface AdminUser {
   accmMember: boolean
   subscriptionStatus: string
   paymentRef: string | null
+  trialEndsAt: string | null
   subscriptionEnd: string | null
   createdAt: string
 }
@@ -292,8 +294,11 @@ export default function AdminPage() {
                           : 'bg-elevated text-ink2 border-line'
                       }`}
                     >
-                      {u.accmMember ? 'ACCM · $1.99' : 'Standard · $5'}
+                      {u.accmMember ? 'ACCM · Free' : 'Standard · $5'}
                     </button>
+                    {!u.accmMember && trialDaysLeft(u.trialEndsAt) > 0 && (
+                      <span className="mt-1 block text-[10px] text-amber-400">trial: {trialDaysLeft(u.trialEndsAt)}d left</span>
+                    )}
                   </td>
                   <td className="p-3 hidden md:table-cell text-ink3 text-xs">
                     {format(new Date(u.createdAt), 'MMM d, yyyy')}

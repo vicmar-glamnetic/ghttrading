@@ -50,9 +50,8 @@ export default async function UpgradePage({
             <span className="text-yellow-500 font-bold">${tier.usd}/month</span>
             {' '}(≈ ₱{php.toLocaleString('en-PH')} today).
           </p>
-          {tier.label === 'ACCM' && (
-            <p className="text-[11px] text-green-400 mt-1">🎉 ACCM member price applied</p>
-          )}
+          <p className="text-[11px] text-ink3 mt-1">Your free trial has ended — subscribe to keep full access.</p>
+          <p className="text-[11px] text-green-400 mt-1">Trading with AC Capital Market? It&apos;s free — contact us to switch.</p>
         </div>
 
         {/* perks */}

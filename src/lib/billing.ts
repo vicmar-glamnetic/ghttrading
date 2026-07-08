@@ -36,11 +36,22 @@ export const PAYPAL = {
   planIdAccm: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID_ACCM || '',   // $1.99 ACCM
 }
 
-/** Resolve the price + PayPal plan for a user based on their ACCM status. */
+/**
+ * Pricing tier. ACCM members are free; other-broker members pay the standard
+ * $5/mo (after their trial).
+ */
 export function tierFor(accmMember: boolean | null | undefined) {
   return accmMember !== false
-    ? { usd: BILLING.priceUsdAccm, planId: PAYPAL.planIdAccm, label: 'ACCM' as const }
-    : { usd: BILLING.priceUsd, planId: PAYPAL.planId, label: 'Standard' as const }
+    ? { usd: 0, planId: '', label: 'ACCM' as const, free: true }
+    : { usd: BILLING.priceUsd, planId: PAYPAL.planId, label: 'Standard' as const, free: false }
+}
+
+const DAY = 24 * 60 * 60 * 1000
+/** Days left in a trial (0 if none/expired). */
+export function trialDaysLeft(trialEndsAt: string | Date | null | undefined) {
+  if (!trialEndsAt) return 0
+  const ms = new Date(trialEndsAt).getTime() - Date.now()
+  return ms > 0 ? Math.ceil(ms / DAY) : 0
 }
 
 /** Whether PayPal is usable for a given plan id. */
@@ -80,9 +91,21 @@ export function isPremiumPath(pathname: string) {
 const FREE_ROLES = ['admin', 'coach']
 const ACTIVE_STATUSES = ['active', 'comp']
 
-/** Whether a user can access premium sections. */
-export function hasAccess(user: { role?: string | null; subscriptionStatus?: string | null }) {
+/**
+ * Whether a user can access premium sections.
+ * ACCM members: free. Other brokers: free during their trial, then need $5.
+ */
+export function hasAccess(user: {
+  role?: string | null
+  subscriptionStatus?: string | null
+  accmMember?: boolean | null
+  trialEndsAt?: string | Date | null
+}) {
   if (!PAYWALL_ENABLED) return true
   if (user.role && FREE_ROLES.includes(user.role)) return true
-  return !!user.subscriptionStatus && ACTIVE_STATUSES.includes(user.subscriptionStatus)
+  if (user.accmMember) return true // ACCM members are free
+  if (user.subscriptionStatus && ACTIVE_STATUSES.includes(user.subscriptionStatus)) return true
+  // Other-broker members get a free trial window.
+  if (user.trialEndsAt && new Date(user.trialEndsAt).getTime() > Date.now()) return true
+  return false
 }

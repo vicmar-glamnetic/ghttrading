@@ -32,6 +32,8 @@ export const authConfig: NextAuthConfig = {
       if (token && session.user) {
         session.user.role = (token.role as string) ?? 'member'
         session.user.subscriptionStatus = (token.subscriptionStatus as string) ?? 'free'
+        session.user.accmMember = (token.accmMember as boolean) ?? true
+        session.user.trialEndsAt = (token.trialEndsAt as string) ?? null
       }
       return session
     },

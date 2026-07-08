@@ -37,8 +37,10 @@ export async function POST(req: Request) {
     }
 
     // Create the account unverified — they must confirm the emailed code.
+    // Give a 7-day free trial (matters only for non-ACCM/other-broker members).
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     await db.user.create({
-      data: { name, email, password: hashedPassword, username }, // emailVerified stays null
+      data: { name, email, password: hashedPassword, username, trialEndsAt }, // emailVerified stays null
       select: { id: true },
     })
 
