@@ -4,7 +4,8 @@ import { useSession } from 'next-auth/react'
 import { updateMyProfile } from '@/lib/useMyProfile'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
-import { Settings, Shield, User, Camera } from 'lucide-react'
+import { Settings, Shield, User, Camera, Bell } from 'lucide-react'
+import { pushSupported, getPushState, enablePush, disablePush } from '@/lib/pushClient'
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -40,8 +41,34 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
+    { id: 'alerts', label: 'Alerts', icon: Bell },
     { id: 'privacy', label: 'Privacy', icon: Shield },
   ]
+
+  // Push notification state for this device.
+  const [pushOn, setPushOn] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushDenied, setPushDenied] = useState(false)
+  const canPush = pushSupported()
+
+  useEffect(() => {
+    if (!canPush) return
+    getPushState().then(s => { setPushOn(s.subscribed); setPushDenied(s.permission === 'denied') }).catch(() => {})
+  }, [canPush])
+
+  async function togglePush() {
+    setPushBusy(true)
+    try {
+      if (pushOn) { await disablePush(); setPushOn(false) }
+      else {
+        const ok = await enablePush()
+        setPushOn(ok)
+        if (!ok) setPushDenied(Notification.permission === 'denied')
+      }
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   async function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -185,6 +212,39 @@ export default function SettingsPage() {
             <Button variant="gold" onClick={handleSaveProfile} loading={saving} disabled={!name.trim() || username.length < 3}>
               {saved ? '✓ Saved!' : 'Save Changes'}
             </Button>
+          </div>
+        )}
+
+        {activeTab === 'alerts' && (
+          <div className="max-w-md space-y-4">
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-line bg-elevated p-4">
+              <div>
+                <p className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                  <Bell className="w-4 h-4 text-yellow-500" /> New signal alerts
+                </p>
+                <p className="text-xs text-ink3 mt-1">
+                  Get a push notification on this device the moment a coach posts a new signal — even with the app closed.
+                </p>
+              </div>
+              <button
+                onClick={togglePush}
+                disabled={!canPush || pushBusy || pushDenied}
+                aria-label="Toggle signal alerts"
+                className={`relative shrink-0 w-12 h-7 rounded-full transition-colors ${pushOn ? 'bg-yellow-500' : 'bg-line2'} disabled:opacity-50`}
+              >
+                <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${pushOn ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
+            {!canPush && (
+              <p className="text-xs text-ink3">
+                Push isn&rsquo;t available in this browser. On iPhone, add the app to your Home Screen first (Install page), then enable alerts here.
+              </p>
+            )}
+            {pushDenied && (
+              <p className="text-xs text-red-400">
+                Notifications are blocked in your browser settings. Allow notifications for this site, then try again.
+              </p>
+            )}
           </div>
         )}
 

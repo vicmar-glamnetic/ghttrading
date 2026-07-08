@@ -7,6 +7,7 @@ import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
   Globe, Lock, Pencil, Trash2, X, AlertTriangle,
 } from 'lucide-react'
+import { PerformancePanel } from './PerformancePanel'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
@@ -28,7 +29,7 @@ interface TradeIdea {
   createdAt: string
 }
 
-type Tab = 'community' | 'mine'
+type Tab = 'community' | 'mine' | 'stats'
 
 function fmtNum(n: number | null | undefined) {
   if (n == null) return '—'
@@ -444,6 +445,7 @@ export default function IdeasPage() {
   const [editor, setEditor] = useState<{ open: boolean; idea: TradeIdea | null }>({ open: false, idea: null })
 
   const load = useCallback(async (t: Tab) => {
+    if (t === 'stats') return
     setLoading(true)
     try {
       const res = await fetch(`/api/ideas?scope=${t === 'mine' ? 'mine' : 'community'}`)
@@ -487,19 +489,19 @@ export default function IdeasPage() {
         )}
       </div>
 
-      {/* tabs — only coaches/admins have a personal list */}
-      {isStaff && (
-        <div className="flex gap-2">
-          {([['community', 'Community'], ['mine', 'My Signals']] as [Tab, string][]).map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* tabs — Results (performance) is visible to everyone; coaches also get a personal list */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-none">
+        {(([['community', 'Community'], ...(isStaff ? [['mine', 'My Signals']] as [Tab, string][] : []), ['stats', 'Results']]) as [Tab, string][]).map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${tab === t ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
-      {loading ? (
+      {tab === 'stats' ? (
+        <PerformancePanel />
+      ) : loading ? (
         <div className="space-y-4 max-w-xl mx-auto">
           {[1, 2, 3].map(i => <div key={i} className="h-72 bg-surface rounded-xl border border-line animate-pulse" />)}
         </div>

@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { auth } from '@/lib/auth'
 import { requireStaff } from '@/lib/admin'
 import { db } from '@/lib/db'
+import { sendPushToAll } from '@/lib/push'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
 
@@ -78,6 +79,26 @@ export async function POST(req: Request) {
       },
       include: { author: AUTHOR },
     })
+
+    // Alert everyone when a new public signal drops — after the response.
+    if (idea.isPublic) {
+      const dir = idea.direction.toUpperCase()
+      const entry = idea.entryLow != null
+        ? (idea.entryHigh != null && idea.entryHigh !== idea.entryLow ? `${idea.entryLow}–${idea.entryHigh}` : `${idea.entryLow}`)
+        : ''
+      const authorId = session.user.id
+      after(async () => {
+        await sendPushToAll(
+          {
+            title: `📈 New ${dir} signal · ${idea.symbol}`,
+            body: entry ? `Entry ${entry} — tap to view the full setup.` : 'Tap to view the full setup.',
+            url: '/ideas',
+            tag: `signal-${idea.id}`,
+          },
+          authorId,
+        ).catch(() => {})
+      })
+    }
 
     return NextResponse.json(idea, { status: 201 })
   } catch (error) {

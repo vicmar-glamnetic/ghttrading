@@ -62,6 +62,7 @@ model User {
   groupMemberships  GroupMember[]
   ownedPages        Page[]          @relation("PageOwner")
   pageFollows       PageFollow[]
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
 }
@@ -316,6 +317,19 @@ model EducatorVideo {
 
   @@index([createdAt])
   @@map("educator_videos")
+}
+
+// Web Push subscription (for new-signal alerts). One row per browser/device.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 model TradeIdea {

@@ -9,7 +9,7 @@ import { useMyProfile } from '@/lib/useMyProfile'
 import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator,
 } from 'lucide-react'
 
 // Core, daily-use features — kept at the top.
@@ -27,6 +27,7 @@ const moreNav = [
   { href: '/education',    label: 'Education',     icon: BookOpen,        premium: true },
   { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/calendar',     label: 'Calendar',      icon: CalendarDays,    premium: true },
+  { href: '/calculator',   label: 'Calculator',    icon: Calculator      },
   { href: '/news',         label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',      label: 'Traders',       icon: Users           },
   { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
