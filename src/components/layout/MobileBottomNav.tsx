@@ -17,7 +17,7 @@ const items = [
   { href: '/chart', label: 'Chart',   icon: LineChart    },
 ]
 
-// Full navigation shown in the "More" sheet.
+// Full navigation shown in the "More" sheet — same priority order as the sidebar.
 const allNav = [
   { href: '/ideas',         label: 'Signals',       icon: Zap             },
   { href: '/feed',          label: 'Feed',          icon: Home            },
@@ -28,9 +28,9 @@ const allNav = [
   { href: '/education',     label: 'Education',     icon: BookOpen,        premium: true },
   { href: '/journal',       label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/calendar',      label: 'Calendar',      icon: CalendarDays,    premium: true },
-  { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',       label: 'Traders',       icon: Users           },
+  { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/install',       label: 'Install App',   icon: Smartphone      },
   { href: '/notifications', label: 'Notifications', icon: Bell            },
   { href: '/settings',      label: 'Settings',      icon: Settings        },

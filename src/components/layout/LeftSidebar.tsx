@@ -11,19 +11,28 @@ import {
   LineChart, Zap, CandlestickChart, Radio, MessageCircle, Smartphone, UserCheck,
 } from 'lucide-react'
 
-const navItems = [
+// Core, daily-use features — kept at the top.
+const primaryNav = [
   { href: '/ideas',        label: 'Signals',       icon: Zap             },
   { href: '/feed',         label: 'Feed',          icon: Home            },
   { href: '/chat',         label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
   { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
+]
+
+// Secondary features — shown below a divider.
+const moreNav = [
   { href: '/live',         label: 'Live',          icon: Radio,           premium: true },
   { href: '/education',    label: 'Education',     icon: BookOpen,        premium: true },
   { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/calendar',     label: 'Calendar',      icon: CalendarDays,    premium: true },
-  { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/news',         label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',      label: 'Traders',       icon: Users           },
+  { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
+]
+
+// Utility — always last.
+const utilityNav = [
   { href: '/notifications',label: 'Notifications', icon: Bell            },
   { href: '/settings',     label: 'Settings',      icon: Settings        },
 ]
@@ -75,9 +84,26 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
 
   const locked = paywallEnabled && isLockedOut(session?.user)
   const role = session?.user?.role
-  const items = [...navItems]
-  if (role === 'admin' || role === 'coach') items.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
-  if (role === 'admin') items.push({ href: '/admin', label: 'Admin', icon: Shield })
+  const utility = [...utilityNav]
+  if (role === 'admin' || role === 'coach') utility.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
+  if (role === 'admin') utility.push({ href: '/admin', label: 'Admin', icon: Shield })
+
+  const NavLink = ({ href, label, icon: Icon, premium }: { href: string; label: string; icon: typeof Home; premium?: boolean }) => (
+    <Link key={href} href={href}
+      className={cn(
+        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium',
+        pathname === href
+          ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+          : 'text-ink2 hover:bg-elevated hover:text-ink'
+      )}>
+      <Icon className="w-4 h-4 shrink-0" />
+      {label}
+      {href === '/chat' && unread > 0 && (
+        <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{unread}</span>
+      )}
+      {premium && locked && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
+    </Link>
+  )
 
   return (
     <aside className="hidden lg:flex flex-col gap-1 w-56 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">
@@ -95,22 +121,15 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
       )}
 
       <div className="space-y-0.5">
-        {items.map(({ href, label, icon: Icon, premium }) => (
-          <Link key={href} href={href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium',
-              pathname === href
-                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                : 'text-ink2 hover:bg-elevated hover:text-ink'
-            )}>
-            <Icon className="w-4 h-4 shrink-0" />
-            {label}
-            {href === '/chat' && unread > 0 && (
-              <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{unread}</span>
-            )}
-            {premium && locked && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
-          </Link>
-        ))}
+        {primaryNav.map(item => <NavLink key={item.href} {...item} />)}
+      </div>
+
+      <div className="my-2 mx-3 border-t border-line" />
+
+      <div className="space-y-0.5">
+        <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink3">More</p>
+        {moreNav.map(item => <NavLink key={item.href} {...item} />)}
+        {utility.map(item => <NavLink key={item.href} {...item} />)}
       </div>
 
       {/* Gold tip */}
