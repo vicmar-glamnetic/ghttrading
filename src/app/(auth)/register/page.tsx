@@ -53,7 +53,7 @@ export default function RegisterPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="GHT Trading" width={96} height={96} className="mx-auto" />
           </div>
-          <h1 className="text-3xl font-black text-white">Join <span className="text-yellow-500">GHT</span></h1>
+          <h1 className="text-3xl font-black text-ink">Join <span className="text-yellow-500">GHT</span></h1>
           <p className="text-ink2 mt-2 text-sm">Free access to premium gold signals</p>
         </div>
 
