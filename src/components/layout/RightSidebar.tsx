@@ -90,7 +90,7 @@ export function RightSidebar() {
         </div>
         <p className="text-xs text-ink2">Live gold sessions Mon–Fri</p>
         <a
-          href="https://discord.gg/ghttrading"
+          href="https://discord.gg/Vzj8MNwvH"
           target="_blank"
           rel="noopener noreferrer"
           className="mt-2 block text-center text-xs bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 rounded-lg transition-colors"
