@@ -120,7 +120,7 @@ function CommentRow({
           <Link href={`/profile/${comment.author.id}`} className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
             {comment.author.name}
           </Link>
-          <p className="text-sm text-[#e0e0f0] mt-0.5 wrap-break-word">{comment.content}</p>
+          <p className="text-sm text-ink mt-0.5 wrap-break-word">{comment.content}</p>
         </div>
       </div>
       {isOwner && (
@@ -276,7 +276,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
 
       {/* Content */}
       <div className="px-4 pb-3">
-        <p className="text-sm text-[#e0e0f0] leading-relaxed whitespace-pre-wrap">{post.content}</p>
+        <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">{post.content}</p>
       </div>
 
       {/* Media */}

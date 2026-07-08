@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="GHT Trading" width={80} height={80} className="mx-auto" />
           </div>
-          <h1 className="text-3xl font-black text-white">GHT <span className="text-yellow-500">Community</span></h1>
+          <h1 className="text-3xl font-black text-ink">GHT <span className="text-yellow-500">Community</span></h1>
         </div>
 
         <div className="bg-surface rounded-2xl border border-line p-8 shadow-2xl">

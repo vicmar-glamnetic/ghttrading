@@ -175,7 +175,7 @@ export function Navbar() {
                           <span className="absolute -bottom-0.5 -right-0.5 text-xs">{notifIcons[notif.type] || '🔔'}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs text-[#e0e0f0] leading-snug">{notif.message}</p>
+                          <p className="text-xs text-ink leading-snug">{notif.message}</p>
                           <p className="text-[10px] text-ink3 mt-0.5">{timeAgo(notif.createdAt)}</p>
                         </div>
                         {!notif.read && <div className="w-2 h-2 bg-yellow-500 rounded-full mt-1 shrink-0" />}

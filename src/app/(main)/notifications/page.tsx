@@ -111,7 +111,7 @@ export default function NotificationsPage() {
                 <span className="absolute -bottom-1 -right-1 text-sm">{notifIcons[notif.type] || '🔔'}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-[#e0e0f0] leading-snug">{notif.message}</p>
+                <p className="text-sm text-ink leading-snug">{notif.message}</p>
                 <p className="text-xs text-ink3 mt-1">{timeAgo(notif.createdAt)}</p>
               </div>
               {!notif.read && (

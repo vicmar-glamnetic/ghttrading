@@ -57,7 +57,7 @@ function VerifyInner() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 mb-3">
             <MailCheck className="w-7 h-7 text-yellow-500" />
           </div>
-          <h1 className="text-2xl font-black text-white">Verify your email</h1>
+          <h1 className="text-2xl font-black text-ink">Verify your email</h1>
           <p className="text-ink2 mt-2 text-sm">
             We sent a 6-digit code to {email ? <span className="text-ink font-semibold">{email}</span> : 'your email'}. Enter it below.
           </p>
