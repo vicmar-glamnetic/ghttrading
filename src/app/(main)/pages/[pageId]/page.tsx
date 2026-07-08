@@ -6,6 +6,7 @@ import { ArrowLeft, Flag, BadgeCheck, ImageIcon, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { useMyProfile } from '@/lib/useMyProfile'
+import { uploadToBlob } from '@/lib/upload'
 import { PostCard } from '@/components/posts/PostCard'
 import type { PostWithDetails } from '@/types'
 
@@ -53,13 +54,14 @@ function ComposeBox({ pageId, onPost }: { pageId: string; onPost: (post: PostWit
     }
   }
 
-  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => { if (ev.target?.result) setImages(i => [...i, ev.target!.result as string]) }
-    reader.readAsDataURL(file)
     e.target.value = ''
+    if (!file) return
+    try {
+      const { url } = await uploadToBlob(file)
+      setImages(i => [...i, url])
+    } catch { /* ignore failed upload */ }
   }
 
   return (

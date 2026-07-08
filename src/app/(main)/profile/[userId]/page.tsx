@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
 import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
+import { uploadToBlob } from '@/lib/upload'
 import type { PostWithDetails } from '@/types'
 
 interface ProfileData {
@@ -24,15 +25,6 @@ interface ProfileData {
   friendRequest: { status: string; senderId: string } | null
 }
 
-// Converts a File to a base64 data URL
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
 
 function AvatarUploadOverlay({ userId, currentImage, currentName, onUpdated }: {
   userId: string
@@ -48,11 +40,11 @@ function AvatarUploadOverlay({ userId, currentImage, currentName, onUpdated }: {
     if (!file) return
     setUploading(true)
     try {
-      const dataUrl = await fileToDataUrl(file)
+      const { url } = await uploadToBlob(file)
       const res = await fetch(`/api/users/${userId}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataUrl }),
+        body: JSON.stringify({ image: url }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -94,11 +86,11 @@ function CoverUploadOverlay({ userId, currentCover, onUpdated }: {
     if (!file) return
     setUploading(true)
     try {
-      const dataUrl = await fileToDataUrl(file)
+      const { url } = await uploadToBlob(file)
       const res = await fetch(`/api/users/${userId}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coverImage: dataUrl }),
+        body: JSON.stringify({ coverImage: url }),
       })
       if (res.ok) {
         const data = await res.json()

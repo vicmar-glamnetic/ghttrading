@@ -1,36 +1,34 @@
 import { NextResponse } from 'next/server'
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { auth } from '@/lib/auth'
 
-// Simple upload handler using UploadThing
-export async function POST(req: Request) {
+// Vercel Blob client-upload handshake. The browser uploads the file straight to
+// Blob storage; we only mint a scoped token here and store the returned URL.
+export async function POST(request: Request) {
+  const body = (await request.json()) as HandleUploadBody
+
   try {
-    const session = await auth()
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const formData = await req.formData()
-    const files = formData.getAll('files') as File[]
-
-    if (!files.length) return NextResponse.json({ error: 'No files' }, { status: 400 })
-
-    // Upload each file to UploadThing via their API
-    const uploadedFiles = await Promise.all(
-      files.map(async (file) => {
-        // Convert to base64 data URL for simple storage
-        const bytes = await file.arrayBuffer()
-        const buffer = Buffer.from(bytes)
-        const base64 = buffer.toString('base64')
-        const dataUrl = `data:${file.type};base64,${base64}`
+    const json = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => {
+        const session = await auth()
+        if (!session?.user?.id) throw new Error('Unauthorized')
         return {
-          url: dataUrl,
-          name: file.name,
-          type: file.type,
+          allowedContentTypes: [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'video/mp4', 'video/webm', 'video/quicktime',
+          ],
+          maximumSizeInBytes: 64 * 1024 * 1024, // 64 MB
+          addRandomSuffix: true,
         }
-      })
-    )
-
-    return NextResponse.json({ files: uploadedFiles })
+      },
+      onUploadCompleted: async () => {
+        // No-op — the client stores the URL on the relevant record.
+      },
+    })
+    return NextResponse.json(json)
   } catch (error) {
-    console.error('[UPLOAD]', error)
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: (error as Error).message }, { status: 400 })
   }
 }

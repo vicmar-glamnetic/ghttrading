@@ -2,19 +2,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { updateMyProfile } from '@/lib/useMyProfile'
+import { uploadToBlob } from '@/lib/upload'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { Settings, Shield, User, Camera, Bell } from 'lucide-react'
 import { pushSupported, getPushState, enablePush, disablePush } from '@/lib/pushClient'
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession()
@@ -75,15 +67,15 @@ export default function SettingsPage() {
     if (!file) return
     setUploading(true)
     try {
-      const dataUrl = await fileToDataUrl(file)
+      const { url } = await uploadToBlob(file)
       const res = await fetch(`/api/users/${session?.user?.id}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataUrl }),
+        body: JSON.stringify({ image: url }),
       })
       if (res.ok) {
-        setAvatarUrl(dataUrl)
-        updateMyProfile({ image: dataUrl })
+        setAvatarUrl(url)
+        updateMyProfile({ image: url })
         updateSession()
       }
     } finally {

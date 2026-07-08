@@ -2,12 +2,7 @@
 import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { X, Image as ImageIcon, Video, Loader2 } from 'lucide-react'
-
-interface UploadedFile {
-  url: string
-  name: string
-  type: string
-}
+import { uploadToBlob, type UploadedFile } from '@/lib/upload'
 
 interface MediaUploadProps {
   onUpload: (files: UploadedFile[]) => void
@@ -27,17 +22,8 @@ export function MediaUpload({ onUpload, existingFiles = [] }: MediaUploadProps) 
     setError('')
 
     try {
-      const formData = new FormData()
-      Array.from(selectedFiles).forEach(file => formData.append('files', file))
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!res.ok) throw new Error('Upload failed')
-      const data = await res.json()
-      const newFiles = [...files, ...data.files]
+      const uploaded = await Promise.all(Array.from(selectedFiles).map(uploadToBlob))
+      const newFiles = [...files, ...uploaded]
       setFiles(newFiles)
       onUpload(newFiles)
     } catch {
