@@ -17,6 +17,14 @@ function toEmbed(url: string): string {
     if (u.hostname.includes('vimeo.com') && /^\/\d+/.test(u.pathname)) {
       return `https://player.vimeo.com/video${u.pathname}`
     }
+    // Facebook Live / video — wrap in the Video plugin (video must be Public).
+    // Skip if it's already a plugin URL.
+    if (
+      (u.hostname.includes('facebook.com') || u.hostname === 'fb.watch') &&
+      !u.pathname.includes('/plugins/video.php')
+    ) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true`
+    }
     return url
   } catch {
     return url
@@ -140,8 +148,8 @@ function WebinarSettings({ initial, onClose, onSaved }: { initial: Webinar; onCl
         </div>
         <div className="p-4 space-y-3">
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Webinar title" className={inputCls} />
-          <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Stream URL (YouTube, Vimeo, etc.)" className={inputCls} />
-          <p className="text-[10px] text-ink3">Paste a YouTube/Vimeo link or any embeddable stream URL. Toggle live when you start.</p>
+          <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Stream URL (YouTube, Facebook Live, Vimeo…)" className={inputCls} />
+          <p className="text-[10px] text-ink3">Paste a YouTube, Facebook Live, or Vimeo link. Facebook videos must be set to <span className="text-ink2 font-semibold">Public</span> to embed. Toggle live when you start.</p>
           <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={isLive} onChange={e => setIsLive(e.target.checked)} className="accent-yellow-500 w-4 h-4" />
             Currently live
