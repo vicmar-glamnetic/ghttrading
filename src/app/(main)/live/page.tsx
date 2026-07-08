@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
-import { Radio, WifiOff, X, Settings2 } from 'lucide-react'
+import { Radio, WifiOff, X, Settings2, Trash2 } from 'lucide-react'
 
 interface Webinar { title: string | null; embedUrl: string | null; isLive: boolean }
 
@@ -29,6 +29,7 @@ export default function LivePage() {
 
   const [webinar, setWebinar] = useState<Webinar>({ title: null, embedUrl: null, isLive: false })
   const [showSettings, setShowSettings] = useState(false)
+  const [removing, setRemoving] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +39,17 @@ export default function LivePage() {
     } catch { /* ignore */ }
   }, [])
   useEffect(() => { load() }, [load])
+
+  const removeLive = useCallback(async () => {
+    if (!confirm('Remove the live stream? This takes it offline for everyone.')) return
+    setRemoving(true)
+    try {
+      const res = await fetch('/api/live/webinar', { method: 'DELETE' })
+      if (res.ok) setWebinar(await res.json())
+    } finally {
+      setRemoving(false)
+    }
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -51,10 +63,16 @@ export default function LivePage() {
       </div>
 
       {isStaff && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={() => setShowSettings(true)} className="gap-1.5 text-xs">
             <Settings2 className="w-3.5 h-3.5" /> Manage stream
           </Button>
+          {(webinar.isLive || webinar.embedUrl || webinar.title) && (
+            <Button variant="secondary" size="sm" onClick={removeLive} loading={removing}
+              className="gap-1.5 text-xs text-red-400 hover:text-red-300">
+              <Trash2 className="w-3.5 h-3.5" /> Remove live
+            </Button>
+          )}
         </div>
       )}
 
