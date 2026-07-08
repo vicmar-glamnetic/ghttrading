@@ -46,11 +46,13 @@ function RoomChat({ meId, room }: { meId: string; room: string }) {
       setMessages(d)
       if (d.length) lastAt.current = d[d.length - 1].createdAt
     })
-    const id = setInterval(() => {
-      if (!lastAt.current) return
+    const catchUp = () => {
+      if (document.hidden || !lastAt.current) return
       fetch(`/api/chat/room?${q}&since=${encodeURIComponent(lastAt.current)}`).then(r => r.json()).then(d => { if (Array.isArray(d)) merge(d) })
-    }, 3000)
-    return () => { alive = false; clearInterval(id) }
+    }
+    const id = setInterval(catchUp, 4000)
+    document.addEventListener('visibilitychange', catchUp)
+    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', catchUp) }
   }, [merge, room])
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
@@ -122,7 +124,7 @@ function DMs({ meId }: { meId: string }) {
 
   useEffect(() => {
     loadConvos()
-    const id = setInterval(loadConvos, 5000)
+    const id = setInterval(() => { if (!document.hidden) loadConvos() }, 8000)
     return () => clearInterval(id)
   }, [loadConvos])
 
@@ -140,7 +142,7 @@ function DMs({ meId }: { meId: string }) {
       loadConvos()
     })
     const id = setInterval(() => {
-      if (!lastAt.current) return
+      if (document.hidden || !lastAt.current) return
       fetch(`/api/chat/conversations/${activeId}?since=${encodeURIComponent(lastAt.current)}`).then(r => r.json()).then(d => {
         const incoming: DM[] = d.messages ?? []
         if (incoming.length) {
@@ -153,7 +155,7 @@ function DMs({ meId }: { meId: string }) {
           })
         }
       })
-    }, 3000)
+    }, 4000)
     return () => { alive = false; clearInterval(id) }
   }, [activeId, loadConvos])
 

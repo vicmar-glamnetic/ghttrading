@@ -56,7 +56,7 @@ export function Navbar() {
 
   // ── Fetch notifications ──────────────────────────────────────────────────
   const fetchNotifs = useCallback(async () => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id || (typeof document !== 'undefined' && document.hidden)) return
     try {
       const res = await fetch('/api/notifications')
       if (!res.ok) return
@@ -71,7 +71,7 @@ export function Navbar() {
   // Initial load + poll every 30 s
   useEffect(() => {
     fetchNotifs()
-    const id = setInterval(fetchNotifs, 30_000)
+    const id = setInterval(fetchNotifs, 45_000)
     return () => clearInterval(id)
   }, [fetchNotifs])
 
