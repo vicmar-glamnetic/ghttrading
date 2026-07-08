@@ -34,6 +34,7 @@ export const authConfig: NextAuthConfig = {
         session.user.subscriptionStatus = (token.subscriptionStatus as string) ?? 'free'
         session.user.accmMember = (token.accmMember as boolean) ?? true
         session.user.trialEndsAt = (token.trialEndsAt as string) ?? null
+        session.user.approved = (token.approved as boolean | undefined) ?? true
       }
       return session
     },

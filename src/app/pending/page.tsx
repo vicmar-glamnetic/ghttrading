@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
 import { LogoutButton } from '@/app/upgrade/LogoutButton'
 import { Hourglass } from 'lucide-react'
 
@@ -10,8 +9,7 @@ export const metadata = { title: 'Pending Approval · GHT Trading' }
 export default async function PendingPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
-  const me = await db.user.findUnique({ where: { id: session.user.id }, select: { approved: true } })
-  if (me?.approved) redirect('/')
+  if (session.user.approved !== false) redirect('/')
 
   return (
     <div className="min-h-screen bg-app flex items-center justify-center p-4">
@@ -33,7 +31,8 @@ export default async function PendingPage() {
           </p>
         </div>
 
-        <div className="flex items-center justify-between mt-6 px-1">
+        <p className="text-[11px] text-ink3 mt-4">Already approved? Log out and back in to refresh your access.</p>
+        <div className="flex items-center justify-between mt-3 px-1">
           <LogoutButton />
           <Link href="/" className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
             Check again →

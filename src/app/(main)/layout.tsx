@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
 import { PAYWALL_ENABLED } from '@/lib/billing'
 import { Navbar } from '@/components/layout/Navbar'
 import { LeftSidebar } from '@/components/layout/LeftSidebar'
@@ -12,8 +11,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   const session = await auth()
   if (!session?.user) redirect('/login')
   // New accounts must be approved by an admin before they can enter.
-  const me = await db.user.findUnique({ where: { id: session.user.id }, select: { approved: true } })
-  if (me && !me.approved) redirect('/pending')
+  // Read from the session (no per-navigation DB hit); it refreshes within ~5 min.
+  if (session.user.approved === false) redirect('/pending')
   // Per-feature paywall is enforced in middleware (auth.config) for premium paths.
 
   return (

@@ -54,6 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           subscriptionStatus: user.subscriptionStatus,
           accmMember: user.accmMember,
           trialEndsAt: user.trialEndsAt,
+          approved: user.approved,
           sessionToken,
         }
       },
@@ -69,6 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.subscriptionStatus = (user as { subscriptionStatus?: string }).subscriptionStatus
         token.accmMember = (user as { accmMember?: boolean }).accmMember
         token.trialEndsAt = (user as { trialEndsAt?: Date | null }).trialEndsAt?.toISOString?.() ?? null
+        token.approved = (user as { approved?: boolean }).approved
         token.sessionToken = (user as { sessionToken?: string }).sessionToken
         token.lastVerified = Date.now()
       } else if (token.id) {
@@ -79,7 +81,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (due) {
           const dbUser = await db.user.findUnique({
             where: { id: token.id as string },
-            select: { sessionToken: true, role: true, subscriptionStatus: true, accmMember: true, trialEndsAt: true },
+            select: { sessionToken: true, role: true, subscriptionStatus: true, accmMember: true, trialEndsAt: true, approved: true },
           })
           if (!dbUser || dbUser.sessionToken !== token.sessionToken) {
             token.error = 'SessionInvalid'
@@ -88,6 +90,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.subscriptionStatus = dbUser.subscriptionStatus // pick up billing changes
             token.accmMember = dbUser.accmMember
             token.trialEndsAt = dbUser.trialEndsAt ? dbUser.trialEndsAt.toISOString() : null
+            token.approved = dbUser.approved // pick up approval
             token.lastVerified = Date.now()
           }
         }
@@ -103,6 +106,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.subscriptionStatus = (token.subscriptionStatus as string) ?? 'free'
         session.user.accmMember = (token.accmMember as boolean) ?? true
         session.user.trialEndsAt = (token.trialEndsAt as string) ?? null
+        session.user.approved = (token.approved as boolean | undefined) ?? true
         if (token.error) {
           session.error = token.error as string
         }

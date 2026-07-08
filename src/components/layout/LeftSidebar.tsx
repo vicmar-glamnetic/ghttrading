@@ -67,7 +67,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   useEffect(() => {
     const poll = () => fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count || 0)).catch(() => {})
     poll()
-    const id = setInterval(poll, 15000)
+    const id = setInterval(poll, 30000)
     return () => clearInterval(id)
   }, [])
 
