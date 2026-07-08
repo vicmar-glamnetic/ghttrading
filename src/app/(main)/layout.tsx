@@ -16,7 +16,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   // Per-feature paywall is enforced in middleware (auth.config) for premium paths.
 
   return (
-    <div className="min-h-screen bg-app">
+    <div className="min-h-dvh bg-app">
       <SessionGuard />
       <Navbar />
       <div className="w-full pt-14 px-4 sm:px-6 lg:px-8 2xl:px-12">

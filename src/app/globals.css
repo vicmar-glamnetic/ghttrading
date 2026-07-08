@@ -78,6 +78,10 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
+/* Keep the fixed bottom nav pinned on mobile: no rubber-band bounce that makes
+   fixed elements appear to float, and match layout height to the visible area. */
+html, body { overscroll-behavior-y: none; }
+
 /* Prevent iOS Safari from zooming on input focus (requires ≥16px font-size) */
 @media (max-width: 767px) {
   input, textarea, select {
