@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import {
   Home, Bell, Settings, Users,
   Globe, GraduationCap, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, CandlestickChart, Radio, MessageCircle,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle, Smartphone,
 } from 'lucide-react'
 
 const navItems = [
@@ -130,7 +130,11 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         </a>
       </div>
 
-      <p className="text-xs text-ink3 px-3 mt-4">© 2026 GHT Trading</p>
+      <Link href="/install" className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
+        <Smartphone className="w-4 h-4" /> Install as app
+      </Link>
+
+      <p className="text-xs text-ink3 px-3 mt-3">© 2026 GHT Trading</p>
     </aside>
   )
 }

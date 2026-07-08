@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
   CandlestickChart, Radio, GraduationCap, ShieldCheck, Users, Bell, Settings,
-  Shield, User, LogOut,
+  Shield, User, LogOut, Smartphone,
 } from 'lucide-react'
 
 const items = [
@@ -29,6 +29,7 @@ const allNav = [
   { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
   { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',       label: 'Traders',       icon: Users           },
+  { href: '/install',       label: 'Install App',   icon: Smartphone      },
   { href: '/notifications', label: 'Notifications', icon: Bell            },
   { href: '/settings',      label: 'Settings',      icon: Settings        },
 ]
