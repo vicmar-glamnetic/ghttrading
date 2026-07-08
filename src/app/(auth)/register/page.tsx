@@ -10,6 +10,7 @@ import { Eye, EyeOff } from 'lucide-react'
 export default function RegisterPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' })
+  const [accmMember, setAccmMember] = useState(true)
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,7 +30,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password, turnstileToken }),
+        body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password, accmMember, turnstileToken }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Registration failed'); return }
@@ -93,6 +94,26 @@ export default function RegisterPage() {
                 className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-ink placeholder-ink3 transition-colors"
               />
             </div>
+            {/* Broker — decides free (ACCM) vs 7-day trial then $5/mo (other) */}
+            <div>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Your broker</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setAccmMember(true)}
+                  className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${accmMember ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-line bg-elevated hover:border-line2'}`}>
+                  <span className="block text-sm font-semibold text-ink">ACCM member</span>
+                  <span className="block text-[11px] text-ink3">Free access</span>
+                </button>
+                <button type="button" onClick={() => setAccmMember(false)}
+                  className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${!accmMember ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-line bg-elevated hover:border-line2'}`}>
+                  <span className="block text-sm font-semibold text-ink">Other broker</span>
+                  <span className="block text-[11px] text-ink3">7-day free trial</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-ink3 mt-1.5">
+                ACCM members get full access free. Other brokers enjoy a 7-day free trial, then $5/mo. Membership may be verified.
+              </p>
+            </div>
+
             <Turnstile onToken={setTurnstileToken} />
             <Button type="submit" variant="gold" loading={loading} className="w-full py-3 text-base">
               Create Free Account

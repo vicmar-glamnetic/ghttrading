@@ -7,7 +7,9 @@ import { sendVerificationEmail } from '@/lib/email'
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, turnstileToken } = await req.json()
+    const { name, email, password, turnstileToken, accmMember } = await req.json()
+    // Only non-ACCM when explicitly chosen; anything else stays ACCM (free).
+    const isAccm = accmMember !== false
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
     // Give a 7-day free trial (matters only for non-ACCM/other-broker members).
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     await db.user.create({
-      data: { name, email, password: hashedPassword, username, trialEndsAt }, // emailVerified stays null
+      data: { name, email, password: hashedPassword, username, accmMember: isAccm, trialEndsAt }, // emailVerified stays null
       select: { id: true },
     })
 
