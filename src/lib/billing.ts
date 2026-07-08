@@ -19,6 +19,16 @@ export const BILLING = {
   proofContact: process.env.NEXT_PUBLIC_PAYMENT_PROOF_CONTACT || 'our support chat',
 }
 
+// Crypto (USDT) payment — send-to-wallet, then admin activates. Override the
+// address/network via env if needed.
+export const CRYPTO = {
+  address: process.env.NEXT_PUBLIC_USDT_ADDRESS || '0x1f6e0dfba04dae1eee5f6be1cd1ac20e4923ba10',
+  network: process.env.NEXT_PUBLIC_USDT_NETWORK || 'BEP20 (BSC)',
+  get enabled() {
+    return Boolean(this.address)
+  },
+}
+
 // PayPal subscription config (client-safe values).
 export const PAYPAL = {
   clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',

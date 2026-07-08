@@ -2,9 +2,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { hasAccess, BILLING, PAYPAL, tierFor, canSubscribe, getPricePhp } from '@/lib/billing'
+import { hasAccess, BILLING, PAYPAL, CRYPTO, tierFor, canSubscribe, getPricePhp } from '@/lib/billing'
 import { LogoutButton } from './LogoutButton'
 import { PayPalSubscribe } from './PayPalSubscribe'
+import { CryptoPay } from './CryptoPay'
 import { Crown, Check } from 'lucide-react'
 
 export const metadata = { title: 'Upgrade · GHT Trading' }
@@ -67,13 +68,20 @@ export default async function UpgradePage({
         </div>
 
         {/* PayPal — instant recurring subscription */}
-        {subscribable ? (
+        {subscribable && (
           <div className="bg-surface border border-line rounded-2xl p-5">
             <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">Subscribe with PayPal or card</p>
             <p className="text-xs text-ink3 mb-3">${tier.usd}/month (≈ ₱{php.toLocaleString('en-PH')}) · cancel anytime · instant access</p>
             <PayPalSubscribe clientId={PAYPAL.clientId} planId={tier.planId} userId={session.user.id} />
           </div>
-        ) : (
+        )}
+
+        {/* Crypto (USDT) — send-to-wallet, then we activate */}
+        {CRYPTO.enabled && (
+          <CryptoPay amountUsd={tier.usd} email={session.user.email ?? ''} proofContact={BILLING.proofContact} />
+        )}
+
+        {!subscribable && !CRYPTO.enabled && (
           <div className="bg-surface border border-line rounded-2xl p-5 text-center">
             <p className="text-sm text-ink2">Payments are being set up. Please check back shortly or contact {BILLING.proofContact}.</p>
           </div>
