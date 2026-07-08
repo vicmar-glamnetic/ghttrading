@@ -13,6 +13,16 @@
   --color-ink:      var(--c-ink);
   --color-ink2:     var(--c-ink2);
   --color-ink3:     var(--c-ink3);
+
+  /* Brand accent — remap Tailwind's yellow ramp to the landing site's muted
+     gold (#ad9045 gold / #d4b159 soft / #8a7234 deep). Every `yellow-400/500/…`
+     utility (and its /opacity variants) picks this up automatically. */
+  --color-yellow-400: #d4b159;
+  --color-yellow-500: #ad9045;
+  --color-yellow-600: #8a7234;
+  --color-yellow-700: #6f5c2a;
+  --color-yellow-800: #55461f;
+  --color-yellow-900: #3d3216;
 }
 
 /* ---------- Dark theme (default) ---------- */
@@ -41,10 +51,10 @@
   --text-secondary: var(--c-ink2);
   --text-muted:     var(--c-ink3);
 
-  /* Brand + status colors (shared across themes) */
-  --gold: #f5c518;
-  --gold-dark: #d4a017;
-  --gold-glow: rgba(245, 197, 24, 0.12);
+  /* Brand + status colors (shared across themes) — landing-site gold */
+  --gold: #ad9045;
+  --gold-dark: #8a7234;
+  --gold-glow: rgba(173, 144, 69, 0.14);
   --green: #22c55e;
   --red: #ef4444;
 }
@@ -92,7 +102,7 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #f5c518 0%, #f59e0b 50%, #ef4444 100%);
+  background: linear-gradient(120deg, #d4b159 0%, #ad9045 45%, #8a7234 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -110,9 +120,9 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 .badge-analysis {
-  background: rgba(245, 197, 24, 0.15);
-  color: #f5c518;
-  border: 1px solid rgba(245, 197, 24, 0.3);
+  background: rgba(173, 144, 69, 0.15);
+  color: #d4b159;
+  border: 1px solid rgba(173, 144, 69, 0.3);
 }
 .badge-education {
   background: rgba(99, 102, 241, 0.15);

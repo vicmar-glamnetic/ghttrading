@@ -24,12 +24,12 @@ export async function sendVerificationEmail(email: string, code: string) {
     <tr><td align="center">
       <table width="480" cellpadding="0" cellspacing="0" style="background:#16161f;border:1px solid #2a2a3a;border-radius:16px;overflow:hidden;">
         <tr><td style="padding:32px;text-align:center;border-bottom:1px solid #2a2a3a;">
-          <h1 style="margin:0;font-size:24px;font-weight:900;color:#ffffff;">GHT <span style="color:#eab308;">Community</span></h1>
+          <h1 style="margin:0;font-size:24px;font-weight:900;color:#ffffff;">GHT <span style="color:#ad9045;">Community</span></h1>
         </td></tr>
         <tr><td style="padding:32px;text-align:center;">
           <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#f0f0f8;">Verify your email</h2>
           <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;">Enter this code to finish creating your account:</p>
-          <div style="display:inline-block;background:#0a0a0f;border:1px solid #2a2a3a;border-radius:12px;padding:16px 28px;font-size:32px;font-weight:900;letter-spacing:8px;color:#eab308;">${code}</div>
+          <div style="display:inline-block;background:#0a0a0f;border:1px solid #2a2a3a;border-radius:12px;padding:16px 28px;font-size:32px;font-weight:900;letter-spacing:8px;color:#ad9045;">${code}</div>
           <p style="margin:24px 0 0;font-size:13px;color:#5a5a72;line-height:1.6;">This code expires in <strong style="color:#9090a8;">15 minutes</strong>. If you didn't sign up, you can ignore this email.</p>
         </td></tr>
         <tr><td style="padding:20px 32px;border-top:1px solid #2a2a3a;text-align:center;">
@@ -60,7 +60,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
         <tr>
           <td style="padding:32px;text-align:center;border-bottom:1px solid #2a2a3a;">
             <h1 style="margin:0;font-size:24px;font-weight:900;color:#ffffff;">
-              GHT <span style="color:#eab308;">Community</span>
+              GHT <span style="color:#ad9045;">Community</span>
             </h1>
             <p style="margin:8px 0 0;font-size:13px;color:#9090a8;">Premium Trading Insights & Gold Signals</p>
           </td>
@@ -74,7 +74,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td align="center">
-                  <a href="${resetUrl}" style="display:inline-block;background:#eab308;color:#000000;font-weight:700;font-size:14px;text-decoration:none;padding:14px 32px;border-radius:10px;">
+                  <a href="${resetUrl}" style="display:inline-block;background:#ad9045;color:#000000;font-weight:700;font-size:14px;text-decoration:none;padding:14px 32px;border-radius:10px;">
                     Reset Password
                   </a>
                 </td>

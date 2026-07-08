@@ -53,13 +53,25 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
+  const [roomDot, setRoomDot] = useState(false)
 
   useEffect(() => {
-    const poll = () => { if (document.hidden) return; fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count || 0)).catch(() => {}) }
+    const poll = () => {
+      if (document.hidden) return
+      fetch('/api/chat/unread').then(r => r.json()).then(d => {
+        setUnread(d.count || 0)
+        const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
+        setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
+      }).catch(() => {})
+    }
     poll()
     const id = setInterval(poll, 45000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    if (pathname === '/chat') { localStorage.setItem('ght:chatSeenAt', String(Date.now())); setRoomDot(false) }
+  }, [pathname])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
   const role = session?.user?.role
@@ -135,6 +147,9 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
               >
                 {href === '/chat' && unread > 0 && (
                   <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{unread}</span>
+                )}
+                {href === '/chat' && unread === 0 && roomDot && (
+                  <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-yellow-500" />
                 )}
                 <Icon className="w-6 h-6 shrink-0" />
                 <span className="text-[10px] font-semibold tracking-wide">{label}</span>

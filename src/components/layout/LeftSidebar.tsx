@@ -74,13 +74,26 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   const { data: session } = useSession()
   const pathname = usePathname()
   const [unread, setUnread] = useState(0)
+  const [roomDot, setRoomDot] = useState(false)
 
   useEffect(() => {
-    const poll = () => { if (document.hidden) return; fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count || 0)).catch(() => {}) }
+    const poll = () => {
+      if (document.hidden) return
+      fetch('/api/chat/unread').then(r => r.json()).then(d => {
+        setUnread(d.count || 0)
+        const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
+        setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
+      }).catch(() => {})
+    }
     poll()
     const id = setInterval(poll, 45000)
     return () => clearInterval(id)
   }, [])
+
+  // Opening the chat marks room messages as seen and clears the dot.
+  useEffect(() => {
+    if (pathname === '/chat') { localStorage.setItem('ght:chatSeenAt', String(Date.now())); setRoomDot(false) }
+  }, [pathname])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
   const role = session?.user?.role
@@ -100,6 +113,9 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
       {label}
       {href === '/chat' && unread > 0 && (
         <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{unread}</span>
+      )}
+      {href === '/chat' && unread === 0 && roomDot && (
+        <span className="ml-auto shrink-0 w-2 h-2 rounded-full bg-yellow-500" />
       )}
       {premium && locked && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
     </Link>
