@@ -54,6 +54,8 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
+  const [pending, setPending] = useState(0)
+  const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
 
   useEffect(() => {
     const poll = () => {
@@ -63,11 +65,12 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
         const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
         setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
       }).catch(() => {})
+      if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => setPending(d.count || 0)).catch(() => {})
     }
     poll()
     const id = setInterval(poll, 45000)
     return () => clearInterval(id)
-  }, [])
+  }, [isStaff])
 
   useEffect(() => {
     if (pathname === '/chat') { localStorage.setItem('ght:chatSeenAt', String(Date.now())); setRoomDot(false) }
@@ -112,6 +115,9 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
                     )}
                   >
                     {premium && locked && <Lock className="w-3 h-3 absolute top-2 right-2 text-ink3" />}
+                    {href === '/approvals' && pending > 0 && (
+                      <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
+                    )}
                     <Icon className="w-5 h-5" />
                     <span className="text-[11px] font-medium text-center leading-tight">{label}</span>
                   </Link>
@@ -158,8 +164,11 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
           })}
           <button
             onClick={() => setOpen(true)}
-            className="flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl text-ink3 active:text-ink2 transition-colors"
+            className="relative flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl text-ink3 active:text-ink2 transition-colors"
           >
+            {pending > 0 && (
+              <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
+            )}
             <Menu className="w-6 h-6 shrink-0" />
             <span className="text-[10px] font-semibold tracking-wide">More</span>
           </button>

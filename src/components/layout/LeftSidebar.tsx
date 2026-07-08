@@ -75,6 +75,8 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   const pathname = usePathname()
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
+  const [pending, setPending] = useState(0)
+  const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
 
   useEffect(() => {
     const poll = () => {
@@ -84,11 +86,12 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
         setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
       }).catch(() => {})
+      if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => setPending(d.count || 0)).catch(() => {})
     }
     poll()
     const id = setInterval(poll, 45000)
     return () => clearInterval(id)
-  }, [])
+  }, [isStaff])
 
   // Opening the chat marks room messages as seen and clears the dot.
   useEffect(() => {
@@ -116,6 +119,9 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
       )}
       {href === '/chat' && unread === 0 && roomDot && (
         <span className="ml-auto shrink-0 w-2 h-2 rounded-full bg-yellow-500" />
+      )}
+      {href === '/approvals' && pending > 0 && (
+        <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{pending}</span>
       )}
       {premium && locked && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
     </Link>
