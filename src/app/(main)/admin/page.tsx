@@ -17,6 +17,7 @@ interface AdminUser {
   role: 'admin' | 'coach' | 'member'
   accmMember: boolean
   subscriptionStatus: string
+  paymentRef: string | null
   subscriptionEnd: string | null
   createdAt: string
 }
@@ -33,6 +34,7 @@ const roleBadge: Record<string, string> = {
 function subBadge(status: string) {
   if (status === 'active') return 'bg-green-400/15 text-green-400'
   if (status === 'comp') return 'bg-blue-400/15 text-blue-400'
+  if (status === 'pending') return 'bg-amber-400/15 text-amber-400'
   if (status === 'past_due' || status === 'canceled') return 'bg-red-400/15 text-red-400'
   return 'bg-elevated text-ink3'
 }
@@ -250,7 +252,8 @@ export default function AdminPage() {
                   </td>
                   <td className="p-3 hidden sm:table-cell">
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-semibold rounded-full px-2 py-1 capitalize ${subBadge(u.subscriptionStatus)}`}>
+                      <span className={`text-xs font-semibold rounded-full px-2 py-1 capitalize inline-flex items-center gap-1 ${subBadge(u.subscriptionStatus)}`}>
+                        {u.subscriptionStatus === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
                         {u.subscriptionStatus}
                       </span>
                       {u.role === 'member' && (
@@ -267,6 +270,17 @@ export default function AdminPage() {
                         )
                       )}
                     </div>
+                    {u.paymentRef && (
+                      <a
+                        href={`https://bscscan.com/tx/${u.paymentRef}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View transaction on BscScan"
+                        className="mt-1 block text-[10px] font-mono text-amber-400/80 hover:text-amber-400 truncate max-w-[180px]"
+                      >
+                        tx: {u.paymentRef}
+                      </a>
+                    )}
                   </td>
                   <td className="p-3 hidden sm:table-cell">
                     <button

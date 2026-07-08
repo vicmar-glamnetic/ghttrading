@@ -34,6 +34,7 @@ model User {
   stripeCustomerId   String?
   stripeSubId        String?
   paypalSubscriptionId String?
+  paymentRef         String?   // crypto tx hash / manual payment reference (pending review)
   subscriptionEnd    DateTime?
   sessionToken       String?  @unique  // single-session enforcement
 
