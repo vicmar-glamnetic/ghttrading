@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/admin'
+import { resolveFacebookUrl } from '@/lib/fbResolve'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
 
@@ -20,12 +21,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ videoI
   if (!title?.trim() || !embedUrl?.trim()) {
     return NextResponse.json({ error: 'Title and video URL are required' }, { status: 400 })
   }
+  let url = embedUrl.trim()
+  if (/facebook\.com|fb\.watch/.test(url)) url = await resolveFacebookUrl(url)
 
   const updated = await db.educatorVideo.update({
     where: { id: videoId },
     data: {
       title: title.trim(),
-      embedUrl: embedUrl.trim(),
+      embedUrl: url,
       educator: educator?.toString().trim() || null,
       category: category?.toString().trim() || null,
     },
