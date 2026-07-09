@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
-  Rocket, Zap, BarChart3, Bell, MessageCircle, BookOpen, NotebookPen, Calculator, TrendingUp, Check, X,
+  Rocket, Zap, Gauge, ThumbsUp, BarChart3, Bell, MessageCircle, BookOpen, NotebookPen,
+  CalendarDays, Calculator, BellRing, Trophy, Clock, Smartphone, TrendingUp, Check, X,
 } from 'lucide-react'
 
 const SEEN_KEY = 'ght:tourSeen'
@@ -21,56 +22,112 @@ const STEPS: Step[] = [
   {
     icon: Rocket,
     title: 'Welcome to GHT Trading 🥇',
-    body: 'A quick 60-second tour of what you can do here. Tap Next to explore, or skip anytime.',
+    body: 'Here\'s a full tour of everything the app can do — signals, live tools, community, and more. Tap Next to explore, or skip anytime.',
   },
   {
     icon: Zap,
     title: 'Signals',
-    body: 'Live gold trade ideas from our coaches — entry, take-profit, and stop-loss. Copy them straight to MT5 in one tap.',
+    body: 'Live gold trade ideas from our coaches — with entry, multiple take-profits, and a stop-loss. Hit "Copy for MT5" to paste the whole trade into your platform in one tap.',
+    href: '/ideas',
+    cta: 'Open Signals',
+  },
+  {
+    icon: Gauge,
+    title: 'Live signal status',
+    body: 'Every open gold signal shows where the price is right now: 🟢 Entry valid · 🟡 Price in zone · 🔴 Missed (running) · ✅ TP hit. So you instantly know if you can still get in — and signals auto-close when they hit target.',
+    href: '/ideas',
+    cta: 'See it live',
+  },
+  {
+    icon: Calculator,
+    title: 'Your exact lot size',
+    body: 'Set your account balance + risk % once (the bar at the top of Signals) and every signal shows YOUR lot size — e.g. "0.13 lots" — calculated from its entry and stop. It follows you across devices.',
+    href: '/ideas',
+    cta: 'Set your account',
+  },
+  {
+    icon: ThumbsUp,
+    title: 'Community sentiment',
+    body: 'Tap "Taking 👍" or "Skipping 👎" on any signal to see what the community is doing — e.g. "72% taking". A quick read on the crowd.',
     href: '/ideas',
     cta: 'Open Signals',
   },
   {
     icon: BarChart3,
     title: 'Results',
-    body: 'See our real track record — win rate, average risk:reward, monthly breakdown, and a coach leaderboard. Full transparency.',
+    body: 'Our real track record — win rate, average risk:reward, pips banked (this week / month / all-time), a monthly breakdown, and a coach leaderboard. Full transparency.',
     href: '/ideas',
     cta: 'View Results',
   },
   {
-    icon: Bell,
-    title: 'Signal Alerts',
-    body: 'Get a push notification the moment a new signal drops — even with the app closed. Turn it on in Settings → Alerts.',
+    icon: BellRing,
+    title: 'Push alerts',
+    body: 'Get a notification the moment a new signal drops, when one hits TP 🎯, and when a coach goes live 🔴 — even with the app closed. Turn it on in Settings → Alerts.',
     href: '/settings',
     cta: 'Enable alerts',
   },
   {
     icon: MessageCircle,
     title: 'Community & Coaches',
-    body: 'Chat in the community room, join a room for each coach, or message a coach 1-on-1 for guidance.',
+    body: 'Chat in the main community room, join a dedicated room for each coach, or message a coach 1-on-1 for personal guidance.',
     href: '/chat',
     cta: 'Open Chat',
   },
   {
     icon: BookOpen,
     title: 'Education',
-    body: 'Video lessons and tutorials for every level — from getting started to advanced strategy and risk management.',
+    body: 'Video lessons and posts for every level — getting started, technical analysis, strategy, risk management, and psychology. Browse by category.',
     href: '/education',
     cta: 'Start learning',
   },
   {
     icon: NotebookPen,
-    title: 'Journal & Calendar',
-    body: 'Log your trades and notes, then track your profit/loss day by day to see your progress over time.',
+    title: 'Journal & Analytics',
+    body: 'Log every trade with your result and P&L. The Analytics tab then shows your win rate, avg win/loss, profit factor, an equity curve, and a breakdown by pair and by day.',
     href: '/journal',
     cta: 'Open Journal',
   },
   {
+    icon: CalendarDays,
+    title: 'P&L Calendar',
+    body: 'Your journaled profit/loss laid out day by day, so you can see your green and red days at a glance and spot patterns.',
+    href: '/calendar',
+    cta: 'Open Calendar',
+  },
+  {
     icon: Calculator,
     title: 'Position Calculator',
-    body: 'Enter your balance, risk %, entry and stop — get your exact lot size and risk:reward instantly. No more guessing.',
+    body: 'A standalone tool: enter balance, risk %, entry and stop → get your exact lot size, pip value, and risk:reward. Presets for gold, FX majors, and JPY pairs.',
     href: '/calculator',
     cta: 'Try the calculator',
+  },
+  {
+    icon: Bell,
+    title: 'Gold price alerts',
+    body: 'On the Trading View chart, set "ping me when gold hits 4100" and get a push the moment it crosses. Great for catching your levels without staring at the screen.',
+    href: '/chart',
+    cta: 'Set a price alert',
+  },
+  {
+    icon: Trophy,
+    title: 'Leaderboard',
+    body: 'See how members rank by their journaled P&L and win rate. Opt in with "Share my stats" in Settings to join the board — friendly competition and motivation.',
+    href: '/leaderboard',
+    cta: 'View leaderboard',
+  },
+  {
+    icon: Clock,
+    title: 'Sessions & Economic Calendar',
+    body: 'The right sidebar shows live market sessions (London/NY/Tokyo) and flags the peak gold-volatility overlap. The Economic Calendar lists NFP, CPI, and FOMC — the events that move gold.',
+    href: '/events',
+    cta: 'Open Econ Calendar',
+  },
+  {
+    icon: Smartphone,
+    title: 'Install as an app',
+    body: 'Add GHT Trading to your phone\'s home screen for a full-screen, app-like experience — and it\'s required on iPhone to receive push alerts.',
+    href: '/install',
+    cta: 'How to install',
   },
 ]
 
