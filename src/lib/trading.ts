@@ -40,16 +40,17 @@ export interface Idea {
   entryLow: number | null; entryHigh: number | null
   slLow: number | null; slHigh: number | null
   takeProfits: { price: number; pips?: number | null; hit?: boolean }[]
-  status: 'pending' | 'tp_hit' | 'sl_hit'
+  status: 'pending' | 'tp_hit' | 'sl_hit' | 'breakeven'
 }
 
-export type StatusKey = 'valid' | 'zone' | 'missed' | 'tp' | 'sl'
+export type StatusKey = 'valid' | 'zone' | 'missed' | 'tp' | 'sl' | 'be'
 export interface LiveStatus { key: StatusKey; label: string; tone: 'green' | 'amber' | 'red'; dot: string }
 
 /** Where the current price sits relative to the entry zone. */
 export function liveSignalStatus(idea: Idea, price: number | null): LiveStatus | null {
   if (idea.status === 'tp_hit') return { key: 'tp', label: 'TP hit', tone: 'green', dot: '✅' }
   if (idea.status === 'sl_hit') return { key: 'sl', label: 'SL hit', tone: 'red', dot: '🔴' }
+  if (idea.status === 'breakeven') return { key: 'be', label: 'Breakeven', tone: 'amber', dot: '⚪' }
   if (price == null) return null
   const eLo = Math.min(idea.entryLow ?? NaN, idea.entryHigh ?? (idea.entryLow ?? NaN))
   const eHi = Math.max(idea.entryHigh ?? NaN, idea.entryLow ?? (idea.entryHigh ?? NaN))

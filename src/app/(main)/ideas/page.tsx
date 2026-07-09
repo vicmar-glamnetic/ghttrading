@@ -5,7 +5,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
-  Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown,
+  Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
 } from 'lucide-react'
 import { PerformancePanel } from './PerformancePanel'
 import { liveSignalStatus, signalPips, positionSize } from '@/lib/trading'
@@ -23,7 +23,7 @@ interface TradeIdea {
   slHigh: number | null
   takeProfits: TakeProfit[]
   currentPrice: number | null
-  status: 'pending' | 'tp_hit' | 'sl_hit'
+  status: 'pending' | 'tp_hit' | 'sl_hit' | 'breakeven'
   notes: string | null
   isPublic: boolean
   authorId: string
@@ -121,16 +121,20 @@ const TONE: Record<string, string> = {
   red: 'text-red-400 bg-red-400/10 border-red-400/20',
 }
 
-function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
+type CloseStatus = 'tp_hit' | 'sl_hit' | 'breakeven' | 'pending'
+
+function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   idea: TradeIdea
   canManage: boolean
   onEdit: (i: TradeIdea) => void
   onDelete: (i: TradeIdea) => void
+  onClose: (i: TradeIdea, status: CloseStatus) => void
   price: number | null
   acct: Acct | null
 }) {
   const isBuy = idea.direction === 'buy'
   const [votes, setVotes] = useState<Votes>(idea.votes ?? { take: 0, skip: 0, mine: null })
+  const [closing, setClosing] = useState(false)
 
   const isGold = idea.symbol.toUpperCase().startsWith('XAU')
   const live = liveSignalStatus(idea, isGold ? price : null)
@@ -284,6 +288,22 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
         </div>
       )}
 
+      {/* close-outcome menu (staff, running signals) */}
+      {canManage && idea.status === 'pending' && closing && (
+        <div className="mt-3 rounded-lg border border-line bg-sunken p-2">
+          <p className="text-[11px] font-bold text-ink3 uppercase tracking-wider mb-2 px-1">Close signal as…</p>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { onClose(idea, 'tp_hit'); setClosing(false) }}
+              className="flex-1 text-xs font-bold rounded-lg py-2 text-green-400 bg-green-400/10 border border-green-400/20 hover:bg-green-400/20 transition-colors">✅ Win (TP)</button>
+            <button onClick={() => { onClose(idea, 'sl_hit'); setClosing(false) }}
+              className="flex-1 text-xs font-bold rounded-lg py-2 text-red-400 bg-red-400/10 border border-red-400/20 hover:bg-red-400/20 transition-colors">🔴 Loss (SL)</button>
+            <button onClick={() => { onClose(idea, 'breakeven'); setClosing(false) }}
+              className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">⚪ Breakeven</button>
+          </div>
+          <button onClick={() => setClosing(false)} className="mt-2 w-full text-[11px] text-ink3 hover:text-ink2 py-1">Cancel</button>
+        </div>
+      )}
+
       {/* actions */}
       <div className="mt-3 flex items-center gap-2">
         <button
@@ -294,6 +314,17 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
         </button>
         {canManage && (
           <>
+            {idea.status === 'pending' ? (
+              <button onClick={() => setClosing(v => !v)} title="Close signal"
+                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-red-400 hover:border-red-400/40 hover:bg-elevated transition-colors">
+                <XCircle className="w-3.5 h-3.5" /> Close
+              </button>
+            ) : (
+              <button onClick={() => onClose(idea, 'pending')} title="Re-open signal"
+                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
+                <RotateCcw className="w-3.5 h-3.5" /> Reopen
+              </button>
+            )}
             <button onClick={() => onEdit(idea)} className="p-2 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors"><Pencil className="w-4 h-4" /></button>
             <button onClick={() => onDelete(idea)} className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
           </>
@@ -561,6 +592,7 @@ function IdeaEditor({ initial, onClose, onSaved }: {
                 <option value="pending">Pending</option>
                 <option value="tp_hit">TP Hit</option>
                 <option value="sl_hit">SL Hit</option>
+                <option value="breakeven">Breakeven</option>
               </select>
             </div>
           </div>
@@ -705,6 +737,21 @@ export default function IdeasPage() {
     await fetch(`/api/ideas/${idea.id}`, { method: 'DELETE' })
   }
 
+  async function handleClose(idea: TradeIdea, status: CloseStatus) {
+    const prev = idea.status
+    // optimistic
+    setIdeas(list => list.map(i => i.id === idea.id ? { ...i, status } : i))
+    try {
+      const res = await fetch(`/api/ideas/${idea.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error('close failed')
+    } catch {
+      setIdeas(list => list.map(i => i.id === idea.id ? { ...i, status: prev } : i))
+    }
+  }
+
   function handleSaved(saved: TradeIdea, isNew: boolean) {
     setEditor({ open: false, idea: null })
     setIdeas(prev => {
@@ -767,6 +814,7 @@ export default function IdeasPage() {
               canManage={isStaff}
               onEdit={i => setEditor({ open: true, idea: i })}
               onDelete={handleDelete}
+              onClose={handleClose}
               price={price}
               acct={acct}
             />

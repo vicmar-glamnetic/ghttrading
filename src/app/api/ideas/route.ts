@@ -90,7 +90,7 @@ export async function POST(req: Request) {
         slHigh: numOrNull(body.slHigh),
         takeProfits: cleanTakeProfits(body.takeProfits),
         currentPrice: numOrNull(body.currentPrice),
-        status: ['pending', 'tp_hit', 'sl_hit'].includes(body.status) ? body.status : 'pending',
+        status: ['pending', 'tp_hit', 'sl_hit', 'breakeven'].includes(body.status) ? body.status : 'pending',
         notes: body.notes?.toString().trim() || null,
         isPublic: Boolean(body.isPublic),
         authorId: session.user.id,
