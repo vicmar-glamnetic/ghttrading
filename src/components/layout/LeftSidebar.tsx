@@ -128,6 +128,10 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         </Link>
       )}
 
+      <button onClick={openTour} className="mb-2 flex items-center gap-2 rounded-xl border border-yellow-500/25 bg-yellow-500/5 px-3 py-2 text-xs font-semibold text-yellow-500 hover:bg-yellow-500/10 transition-colors">
+        <Sparkles className="w-4 h-4" /> Take a tour
+      </button>
+
       <div className="space-y-0.5">
         {primaryNav.map(item => <NavLink key={item.href} {...item} />)}
       </div>
@@ -140,11 +144,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         {utility.map(item => <NavLink key={item.href} {...item} />)}
       </div>
 
-      <button onClick={openTour} className="mx-3 mt-4 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
-        <Sparkles className="w-4 h-4" /> Take a tour
-      </button>
-
-      <p className="text-xs text-ink3 px-3 mt-3">© 2026 GHT Trading</p>
+      <p className="text-xs text-ink3 px-3 mt-4">© 2026 GHT Trading</p>
     </aside>
   )
 }
