@@ -60,19 +60,6 @@ function timeAgo(iso: string) {
   return `${Math.round(hrs / 24)}d ago`
 }
 
-// Build a clean order ticket to paste into MT5.
-function mt5Ticket(idea: TradeIdea) {
-  const lines = [
-    `GHT Signal`,
-    `Symbol: ${idea.symbol}`,
-    `Type: ${idea.direction.toUpperCase()}`,
-    `Entry: ${fmtRange(idea.entryLow, idea.entryHigh)}`,
-    `SL: ${fmtRange(idea.slLow, idea.slHigh)}`,
-    ...idea.takeProfits.map((tp, i) => `TP${i + 1}: ${fmtNum(tp.price)}`),
-  ]
-  return lines.join('\n')
-}
-
 /* ---------- live price (ticks + flashes up/down) ---------- */
 function LivePrice({ price }: { price: number }) {
   const prev = useRef(price)
@@ -304,32 +291,24 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
         </div>
       )}
 
-      {/* actions */}
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          onClick={async () => { try { await navigator.clipboard.writeText(mt5Ticket(idea)) } catch {} }}
-          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg py-2 transition-colors"
-        >
-          <Copy className="w-3.5 h-3.5" /> Copy for MT5
-        </button>
-        {canManage && (
-          <>
-            {idea.status === 'pending' ? (
-              <button onClick={() => setClosing(v => !v)} title="Close signal"
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-red-400 hover:border-red-400/40 hover:bg-elevated transition-colors">
-                <XCircle className="w-3.5 h-3.5" /> Close
-              </button>
-            ) : (
-              <button onClick={() => onClose(idea, 'pending')} title="Re-open signal"
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
-                <RotateCcw className="w-3.5 h-3.5" /> Reopen
-              </button>
-            )}
-            <button onClick={() => onEdit(idea)} className="p-2 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors"><Pencil className="w-4 h-4" /></button>
-            <button onClick={() => onDelete(idea)} className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
-          </>
-        )}
-      </div>
+      {/* actions (staff manage controls; members use the per-level copy buttons above) */}
+      {canManage && (
+        <div className="mt-3 flex items-center gap-2">
+          {idea.status === 'pending' ? (
+            <button onClick={() => setClosing(v => !v)} title="Close signal"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-red-400 hover:border-red-400/40 hover:bg-elevated transition-colors">
+              <XCircle className="w-3.5 h-3.5" /> Close signal
+            </button>
+          ) : (
+            <button onClick={() => onClose(idea, 'pending')} title="Re-open signal"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
+              <RotateCcw className="w-3.5 h-3.5" /> Reopen
+            </button>
+          )}
+          <button onClick={() => onEdit(idea)} className="p-2 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors"><Pencil className="w-4 h-4" /></button>
+          <button onClick={() => onDelete(idea)} className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      )}
 
       <div className="mt-3 pt-3 border-t border-line flex items-start gap-1.5">
         <AlertTriangle className="w-3.5 h-3.5 text-ink3 shrink-0 mt-px" />

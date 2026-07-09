@@ -27,7 +27,7 @@ const STEPS: Step[] = [
   {
     icon: Zap,
     title: 'Signals',
-    body: 'Live gold trade ideas from our coaches — with entry, multiple take-profits, and a stop-loss. Hit "Copy for MT5" to paste the whole trade into your platform in one tap.',
+    body: 'Live gold trade ideas from our coaches — with entry, multiple take-profits, and a stop-loss. Tap the copy icon next to any level to paste it straight into your MT5 order.',
     href: '/ideas',
     cta: 'Open Signals',
   },
