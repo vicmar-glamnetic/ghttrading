@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { signalPips } from '@/lib/trading'
 
 interface TP { price?: number; pips?: number | null; hit?: boolean }
 
@@ -37,6 +38,11 @@ export async function GET() {
   const byCoach = new Map<string, { id: string; name: string | null; image: string | null; wins: number; losses: number }>()
   const byMonth = new Map<string, { wins: number; losses: number }>()
 
+  const now = Date.now()
+  const WEEK = 7 * 24 * 60 * 60 * 1000
+  const monthStart = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime() })()
+  const pips = { week: 0, month: 0, all: 0 }
+
   for (const i of ideas) {
     const closed = i.status === 'tp_hit' || i.status === 'sl_hit'
     const win = i.status === 'tp_hit'
@@ -47,6 +53,19 @@ export async function GET() {
     if (closed) {
       const rr = plannedRR(mid(i.entryLow, i.entryHigh), mid(i.slLow, i.slHigh), (i.takeProfits as TP[]) || [])
       if (rr != null) rrs.push(rr)
+
+      const p = signalPips({
+        symbol: i.symbol, direction: i.direction as 'buy' | 'sell',
+        entryLow: i.entryLow, entryHigh: i.entryHigh, slLow: i.slLow, slHigh: i.slHigh,
+        takeProfits: (i.takeProfits as TP[]).map(t => ({ price: t.price ?? 0, pips: t.pips, hit: t.hit })),
+        status: i.status as 'tp_hit' | 'sl_hit',
+      })
+      if (p != null) {
+        pips.all += p
+        const t = i.createdAt.getTime()
+        if (t >= monthStart) pips.month += p
+        if (now - t <= WEEK) pips.week += p
+      }
 
       const c = byCoach.get(i.authorId) ?? { id: i.authorId, name: i.author.name, image: i.author.image, wins: 0, losses: 0 }
       if (win) c.wins++; else c.losses++
@@ -76,6 +95,7 @@ export async function GET() {
     total: ideas.length,
     open, wins, losses, closed, winRate,
     avgRR: avgRR != null ? Math.round(avgRR * 100) / 100 : null,
+    pips,
     coaches, months,
   })
 }

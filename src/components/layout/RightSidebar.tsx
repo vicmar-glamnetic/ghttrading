@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Activity, Lightbulb, Globe, Smartphone } from 'lucide-react'
+import { SessionsClock } from '@/components/SessionsClock'
 
 // Inject a TradingView external-embedding widget into a container.
 // Market widgets are always dark to match the trading-terminal aesthetic.
@@ -81,6 +82,7 @@ export function RightSidebar() {
     <aside className="hidden xl:flex flex-col gap-3 w-60 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">
       <LiveGoldWidget />
       <LatestIdea />
+      <SessionsClock />
 
       {/* Join Discord */}
       <div className="p-3 rounded-xl bg-linear-to-br from-yellow-500/10 to-yellow-600/5 border border-yellow-500/20">

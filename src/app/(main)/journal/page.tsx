@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays } from 'lucide-react'
+import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { formatDistanceToNow } from 'date-fns'
+import { JournalAnalytics } from './JournalAnalytics'
 
 interface JournalEntry {
   id: string
@@ -61,6 +62,7 @@ export default function JournalPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [mobileShowEditor, setMobileShowEditor] = useState(false)
+  const [view, setView] = useState<'entries' | 'analytics'>('entries')
 
   const load = useCallback(async () => {
     try {
@@ -188,7 +190,21 @@ export default function JournalPage() {
         </div>
       </div>
 
-      <div className="flex gap-4 h-[calc(100vh-10rem)]">
+      {/* view tabs */}
+      <div className="flex gap-2">
+        {(['entries', 'analytics'] as const).map(v => (
+          <button key={v} onClick={() => setView(v)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${view === v ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+            {v === 'analytics' && <BarChart3 className="w-4 h-4" />}
+            {v === 'entries' ? 'Entries' : 'Analytics'}
+          </button>
+        ))}
+      </div>
+
+      {view === 'analytics' ? (
+        <JournalAnalytics entries={entries} />
+      ) : (
+      <div className="flex gap-4 h-[calc(100vh-13rem)]">
         {/* Entry list */}
         <div className={`flex flex-col w-full lg:w-72 shrink-0 bg-surface rounded-xl border border-line overflow-hidden ${mobileShowEditor ? 'hidden lg:flex' : 'flex'}`}>
           <div className="p-3 border-b border-line">
@@ -388,6 +404,7 @@ export default function JournalPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

@@ -5,12 +5,14 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
-  Globe, Lock, Pencil, Trash2, X, AlertTriangle,
+  Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown,
 } from 'lucide-react'
 import { PerformancePanel } from './PerformancePanel'
+import { liveSignalStatus, signalPips, positionSize } from '@/lib/trading'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
+interface Votes { take: number; skip: number; mine: 'take' | 'skip' | null }
 interface TradeIdea {
   id: string
   symbol: string
@@ -27,6 +29,12 @@ interface TradeIdea {
   authorId: string
   author: Author
   createdAt: string
+  votes?: Votes
+}
+
+interface Acct { balance: number; riskPct: number }
+function loadAcct(): Acct | null {
+  try { const r = localStorage.getItem('ght:acct'); return r ? JSON.parse(r) : null } catch { return null }
 }
 
 type Tab = 'community' | 'mine' | 'stats'
@@ -87,13 +95,51 @@ function CopyBtn({ text, className = '' }: { text: string; className?: string })
 }
 
 /* ---------- idea card ---------- */
-function IdeaCard({ idea, canManage, onEdit, onDelete }: {
+const TONE: Record<string, string> = {
+  green: 'text-green-400 bg-green-400/10 border-green-400/20',
+  amber: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
+  red: 'text-red-400 bg-red-400/10 border-red-400/20',
+}
+
+function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
   idea: TradeIdea
   canManage: boolean
   onEdit: (i: TradeIdea) => void
   onDelete: (i: TradeIdea) => void
+  price: number | null
+  acct: Acct | null
 }) {
   const isBuy = idea.direction === 'buy'
+  const [votes, setVotes] = useState<Votes>(idea.votes ?? { take: 0, skip: 0, mine: null })
+
+  const isGold = idea.symbol.toUpperCase().startsWith('XAU')
+  const live = liveSignalStatus(idea, isGold ? price : null)
+  const pips = signalPips(idea)
+
+  // Auto position size from the member's saved account + this signal's entry/SL.
+  const entryMid = idea.entryLow != null && idea.entryHigh != null ? (idea.entryLow + idea.entryHigh) / 2 : (idea.entryLow ?? idea.entryHigh)
+  const slMid = idea.slLow != null && idea.slHigh != null ? (idea.slLow + idea.slHigh) / 2 : (idea.slLow ?? idea.slHigh)
+  const size = acct && entryMid != null && slMid != null
+    ? positionSize({ balance: acct.balance, riskPct: acct.riskPct, entry: entryMid, sl: slMid, symbol: idea.symbol })
+    : null
+
+  async function vote(v: 'take' | 'skip') {
+    const prev = votes
+    // optimistic
+    const next: Votes = { take: votes.take, skip: votes.skip, mine: votes.mine }
+    if (votes.mine) next[votes.mine]--
+    if (votes.mine === v) next.mine = null
+    else { next[v]++; next.mine = v }
+    setVotes(next)
+    try {
+      const res = await fetch(`/api/ideas/${idea.id}/vote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vote: v }) })
+      if (res.ok) setVotes(await res.json())
+      else setVotes(prev)
+    } catch { setVotes(prev) }
+  }
+  const totalVotes = votes.take + votes.skip
+  const takePct = totalVotes ? Math.round((votes.take / totalVotes) * 100) : 0
+
   return (
     <div className="bg-surface rounded-xl border border-line p-4 flex flex-col">
       {/* post header */}
@@ -114,19 +160,29 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
       </div>
 
       {/* live signal + status */}
-      <div className="flex items-center justify-between mt-3">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
-          <span className="text-sm font-bold text-blue-400">
+      <div className="flex items-center justify-between gap-2 mt-3">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
+          <span className="text-sm font-bold text-blue-400 shrink-0">
             {idea.status === 'pending' ? 'LIVE' : 'Closed'}
           </span>
-          <span className="text-sm font-semibold text-ink2">
-            {idea.entryLow != null || idea.entryHigh != null ? fmtRange(idea.entryLow, idea.entryHigh) : ''}
-          </span>
+          {isGold && price != null && idea.status === 'pending' && (
+            <span className="text-xs text-ink3 tabular-nums truncate">· now {price}</span>
+          )}
         </div>
-        {idea.status === 'tp_hit' && <span className="text-xs font-semibold text-green-400 bg-green-400/10 rounded px-2 py-0.5">TP Hit</span>}
-        {idea.status === 'sl_hit' && <span className="text-xs font-semibold text-red-400 bg-red-400/10 rounded px-2 py-0.5">SL Hit</span>}
-        {idea.status === 'pending' && <span className="text-xs text-ink3 bg-sunken rounded px-2 py-0.5">Pending</span>}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {pips != null && (
+            <span className={`text-xs font-bold rounded px-2 py-0.5 ${pips >= 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+              {pips >= 0 ? `+${pips}` : pips} pips
+            </span>
+          )}
+          {live && (
+            <span className={`text-xs font-semibold rounded-full px-2 py-0.5 border ${TONE[live.tone]}`}>
+              {live.dot} {live.label}
+            </span>
+          )}
+          {!live && idea.status === 'pending' && <span className="text-xs text-ink3 bg-sunken rounded px-2 py-0.5">Pending</span>}
+        </div>
       </div>
 
       {/* rows */}
@@ -162,7 +218,41 @@ function IdeaCard({ idea, canManage, onEdit, onDelete }: {
         )}
       </div>
 
+      {/* auto position size */}
+      {size && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-sunken border border-line px-3 py-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">Your size</span>
+          <span className="text-sm font-bold text-yellow-500 tabular-nums">{size.lots.toFixed(2)} lots</span>
+          <span className="text-[11px] text-ink3">· ${acct!.balance.toLocaleString()} @ {acct!.riskPct}% · {Math.round(size.stopPips)} pip SL</span>
+        </div>
+      )}
+
       {idea.notes && <p className="text-xs text-ink2 mt-3 whitespace-pre-wrap">{idea.notes}</p>}
+
+      {/* community sentiment (open signals) */}
+      {idea.status === 'pending' && (
+        <div className="mt-3 pt-3 border-t border-line">
+          <div className="flex items-center gap-2">
+            <button onClick={() => vote('take')}
+              className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors ${votes.mine === 'take' ? 'text-green-400 bg-green-400/10 border-green-400/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
+              <ThumbsUp className="w-3.5 h-3.5" /> Taking {votes.take > 0 && votes.take}
+            </button>
+            <button onClick={() => vote('skip')}
+              className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors ${votes.mine === 'skip' ? 'text-red-400 bg-red-400/10 border-red-400/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
+              <ThumbsDown className="w-3.5 h-3.5" /> Skipping {votes.skip > 0 && votes.skip}
+            </button>
+            {totalVotes > 0 && (
+              <span className="ml-auto text-[11px] text-ink3">{takePct}% taking · {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          {totalVotes > 0 && (
+            <div className="mt-2 h-1.5 rounded-full bg-elevated overflow-hidden flex">
+              <div className="bg-green-500" style={{ width: `${takePct}%` }} />
+              <div className="bg-red-500/70" style={{ width: `${100 - takePct}%` }} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* actions */}
       <div className="mt-3 flex items-center gap-2">
@@ -464,6 +554,58 @@ function IdeaEditor({ initial, onClose, onSaved }: {
 }
 
 /* ---------- page ---------- */
+/* ---------- auto-size account bar ---------- */
+function AccountBar({ acct, open, setOpen, onSave, onClear }: {
+  acct: Acct | null; open: boolean; setOpen: (v: boolean) => void
+  onSave: (a: Acct) => void; onClear: () => void
+}) {
+  const [bal, setBal] = useState(String(acct?.balance ?? ''))
+  const [risk, setRisk] = useState(String(acct?.riskPct ?? '1'))
+  useEffect(() => { if (open) { setBal(String(acct?.balance ?? '')); setRisk(String(acct?.riskPct ?? '1')) } }, [open, acct])
+
+  if (!open) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
+        {acct ? (
+          <>
+            <span className="text-xs text-ink2">📐 Auto-sizing at <b className="text-ink">${acct.balance.toLocaleString()}</b> · <b className="text-ink">{acct.riskPct}%</b> risk</span>
+            <button onClick={() => setOpen(true)} className="ml-auto text-xs font-semibold text-yellow-500 hover:text-yellow-400">Edit</button>
+          </>
+        ) : (
+          <>
+            <span className="text-xs text-ink3">Set your account to see <b className="text-ink2">your exact lot size</b> on each signal</span>
+            <button onClick={() => setOpen(true)} className="ml-auto text-xs font-semibold text-yellow-500 hover:text-yellow-400 shrink-0">Set up →</button>
+          </>
+        )}
+      </div>
+    )
+  }
+  const inputCls = 'w-full bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40'
+  return (
+    <div className="rounded-xl border border-yellow-500/25 bg-yellow-500/5 p-3 space-y-2">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-yellow-500">Auto position size</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-ink3 block mb-1">Account balance ($)</label>
+          <input type="number" inputMode="decimal" value={bal} onChange={e => setBal(e.target.value)} placeholder="1000" className={inputCls} />
+        </div>
+        <div>
+          <label className="text-[10px] text-ink3 block mb-1">Risk per trade (%)</label>
+          <input type="number" inputMode="decimal" value={risk} onChange={e => setRisk(e.target.value)} placeholder="1" className={inputCls} />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={() => { const b = Number(bal), r = Number(risk); if (b > 0 && r > 0) onSave({ balance: b, riskPct: r }) }}
+          className="text-xs font-bold bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg px-3 py-1.5 transition-colors">Save</button>
+        {acct && <button onClick={onClear} className="text-xs font-semibold text-ink3 hover:text-red-400 px-2 py-1.5">Turn off</button>}
+        <button onClick={() => setOpen(false)} className="ml-auto text-xs text-ink3 hover:text-ink2 px-2 py-1.5">Cancel</button>
+      </div>
+      <p className="text-[10px] text-ink3">Saved on this device only — never sent to us. Uses each signal&rsquo;s entry &amp; stop.</p>
+    </div>
+  )
+}
+
 export default function IdeasPage() {
   const { data: session } = useSession()
   const uid = session?.user?.id
@@ -472,6 +614,22 @@ export default function IdeasPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('community')
   const [editor, setEditor] = useState<{ open: boolean; idea: TradeIdea | null }>({ open: false, idea: null })
+  const [price, setPrice] = useState<number | null>(null)
+  const [acct, setAcct] = useState<Acct | null>(null)
+  const [showAcct, setShowAcct] = useState(false)
+
+  useEffect(() => { setAcct(loadAcct()) }, [])
+
+  // Live gold price for the "still enterable?" status — polled, paused when hidden.
+  useEffect(() => {
+    const poll = () => {
+      if (document.hidden) return
+      fetch('/api/price?symbol=XAUUSD').then(r => r.json()).then(d => { if (typeof d.price === 'number') setPrice(d.price) }).catch(() => {})
+    }
+    poll()
+    const id = setInterval(poll, 60000)
+    return () => clearInterval(id)
+  }, [])
 
   const load = useCallback(async (t: Tab) => {
     if (t === 'stats') return
@@ -548,6 +706,8 @@ export default function IdeasPage() {
         </div>
       ) : (
         <div className="space-y-4 max-w-xl mx-auto">
+          {/* auto position-size account bar */}
+          <AccountBar acct={acct} open={showAcct} setOpen={setShowAcct} onSave={a => { setAcct(a); localStorage.setItem('ght:acct', JSON.stringify(a)); setShowAcct(false) }} onClear={() => { setAcct(null); localStorage.removeItem('ght:acct'); setShowAcct(false) }} />
           {ideas.map(idea => (
             <IdeaCard
               key={idea.id}
@@ -555,6 +715,8 @@ export default function IdeasPage() {
               canManage={isStaff}
               onEdit={i => setEditor({ open: true, idea: i })}
               onDelete={handleDelete}
+              price={price}
+              acct={acct}
             />
           ))}
         </div>

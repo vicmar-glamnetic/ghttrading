@@ -7,8 +7,11 @@ interface Coach { id: string; name: string | null; image: string | null; wins: n
 interface Month { month: string; wins: number; losses: number; total: number; winRate: number }
 interface Stats {
   total: number; open: number; wins: number; losses: number; closed: number
-  winRate: number | null; avgRR: number | null; coaches: Coach[]; months: Month[]
+  winRate: number | null; avgRR: number | null; pips?: { week: number; month: number; all: number }
+  coaches: Coach[]; months: Month[]
 }
+
+const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
 
 function monthLabel(ym: string) {
   const [y, m] = ym.split('-').map(Number)
@@ -52,6 +55,25 @@ export function PerformancePanel() {
           <p className="text-xs text-ink3 mt-0.5">{s.open} open · {s.total} total</p>
         </div>
       </div>
+
+      {/* Net pips */}
+      {s.pips && (
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <p className="text-xs font-semibold text-ink2 mb-3">Pips banked 🎯</p>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              { label: 'This week', v: s.pips.week },
+              { label: 'This month', v: s.pips.month },
+              { label: 'All-time', v: s.pips.all },
+            ].map(({ label, v }) => (
+              <div key={label}>
+                <p className={`text-xl font-black tabular-nums ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>{signed(v)}</p>
+                <p className="text-[10px] text-ink3 uppercase tracking-wider mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Win/loss bar */}
       <div className="rounded-xl border border-line bg-surface p-4">

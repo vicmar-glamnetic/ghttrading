@@ -332,6 +332,18 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+// Community sentiment on a signal: are members taking it or skipping it.
+model SignalVote {
+  id        String   @id @default(cuid())
+  ideaId    String
+  userId    String
+  vote      String   // 'take' | 'skip'
+  createdAt DateTime @default(now())
+  @@unique([ideaId, userId])
+  @@index([ideaId])
+  @@map("signal_votes")
+}
+
 model TradeIdea {
   id           String   @id @default(cuid())
   symbol       String                       // e.g. BTC, XAUUSD

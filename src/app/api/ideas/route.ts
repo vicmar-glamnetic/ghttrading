@@ -44,7 +44,25 @@ export async function GET(req: Request) {
       include: { author: AUTHOR },
     })
 
-    return NextResponse.json(ideas)
+    // Attach community sentiment (take/skip counts + my vote) in two batched queries.
+    const ids = ideas.map(i => i.id)
+    const [grouped, myVotes] = await Promise.all([
+      db.signalVote.groupBy({ by: ['ideaId', 'vote'], where: { ideaId: { in: ids } }, _count: true }),
+      db.signalVote.findMany({ where: { ideaId: { in: ids }, userId: session.user.id }, select: { ideaId: true, vote: true } }),
+    ])
+    const counts = new Map<string, { take: number; skip: number }>()
+    for (const g of grouped) {
+      const c = counts.get(g.ideaId) ?? { take: 0, skip: 0 }
+      if (g.vote === 'take') c.take = g._count; else if (g.vote === 'skip') c.skip = g._count
+      counts.set(g.ideaId, c)
+    }
+    const mine = new Map(myVotes.map(v => [v.ideaId, v.vote]))
+    const withVotes = ideas.map(i => ({
+      ...i,
+      votes: { take: counts.get(i.id)?.take ?? 0, skip: counts.get(i.id)?.skip ?? 0, mine: mine.get(i.id) ?? null },
+    }))
+
+    return NextResponse.json(withVotes)
   } catch (error) {
     console.error('[IDEAS_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
