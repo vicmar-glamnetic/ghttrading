@@ -24,6 +24,7 @@ async function autoCloseGold(price: number) {
   })
   for (const idea of open) {
     const tps = (idea.takeProfits as TP[]) || []
+    const prevAnyHit = tps.some(t => t.hit)
     let changed = false
     const next = tps.map(t => {
       const reached = idea.direction === 'buy' ? price >= t.price : price <= t.price
@@ -31,20 +32,32 @@ async function autoCloseGold(price: number) {
       return t
     })
     if (!changed) continue
-    const nowTpHit = next.some(t => t.hit)
-    const newStatus = nowTpHit ? 'tp_hit' : idea.status
+
+    // Only fully close when EVERY TP is hit; otherwise keep it running (in profit).
+    const allHit = next.length > 0 && next.every(t => t.hit)
+    const nowAnyHit = next.some(t => t.hit)
+    const newStatus = allHit ? 'tp_hit' : idea.status
     await db.tradeIdea.update({ where: { id: idea.id }, data: { takeProfits: next, status: newStatus } })
 
-    if (newStatus === 'tp_hit' && idea.status !== 'tp_hit') {
+    if (allHit && idea.status !== 'tp_hit') {
+      // Final target reached — celebrate with total pips.
       const pips = signalPips({
         symbol: idea.symbol, direction: idea.direction as 'buy' | 'sell',
         entryLow: idea.entryLow, entryHigh: idea.entryHigh, slLow: idea.slLow, slHigh: idea.slHigh,
         takeProfits: next, status: 'tp_hit',
       })
       await sendPushToAll({
-        title: `🎯 TP hit · ${idea.symbol}`,
-        body: pips != null ? `+${pips} pips — auto-closed at target.` : 'Target reached.',
+        title: `🎯 All targets hit · ${idea.symbol}`,
+        body: pips != null ? `+${pips} pips — full close! 🔥` : 'All targets hit — full close!',
         url: '/ideas', tag: `result-${idea.id}`,
+      }, idea.authorId).catch(() => {})
+    } else if (!prevAnyHit && nowAnyHit) {
+      // First TP milestone — trade is secured, but keep it running for the rest.
+      const n = next.filter(t => t.hit).length
+      await sendPushToAll({
+        title: `🎯 TP${n} hit · ${idea.symbol}`,
+        body: 'In profit — consider moving your stop to breakeven. Running for the next targets.',
+        url: '/ideas', tag: `milestone-${idea.id}`,
       }, idea.authorId).catch(() => {})
     }
   }

@@ -116,6 +116,11 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
   const live = liveSignalStatus(idea, isGold ? price : null)
   const pips = signalPips(idea)
 
+  // Partial progress: TPs already hit while the signal is still running.
+  const hitCount = idea.takeProfits.filter(t => t.hit).length
+  const tpTotal = idea.takeProfits.length
+  const inProfit = idea.status === 'pending' && hitCount > 0
+
   // Auto position size from the member's saved account + this signal's entry/SL.
   const entryMid = idea.entryLow != null && idea.entryHigh != null ? (idea.entryLow + idea.entryHigh) / 2 : (idea.entryLow ?? idea.entryHigh)
   const slMid = idea.slLow != null && idea.slHigh != null ? (idea.slLow + idea.slHigh) / 2 : (idea.slLow ?? idea.slHigh)
@@ -164,7 +169,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
         <div className="flex items-center gap-1.5 min-w-0">
           <span className={`w-2 h-2 rounded-full shrink-0 ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
           <span className="text-sm font-bold text-blue-400 shrink-0">
-            {idea.status === 'pending' ? 'LIVE' : 'Closed'}
+            {idea.status === 'pending' ? (inProfit ? 'RUNNING' : 'LIVE') : 'Closed'}
           </span>
           {isGold && price != null && idea.status === 'pending' && (
             <span className="text-xs text-ink3 tabular-nums truncate">· now {price}</span>
@@ -176,12 +181,17 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
               {pips >= 0 ? `+${pips}` : pips} pips
             </span>
           )}
-          {live && (
+          {inProfit ? (
+            <span className="text-xs font-semibold rounded-full px-2 py-0.5 border text-green-400 bg-green-400/10 border-green-400/20">
+              🟢 In profit · TP{hitCount}{tpTotal > 1 ? `/${tpTotal}` : ''} hit
+            </span>
+          ) : live ? (
             <span className={`text-xs font-semibold rounded-full px-2 py-0.5 border ${TONE[live.tone]}`}>
               {live.dot} {live.label}
             </span>
-          )}
-          {!live && idea.status === 'pending' && <span className="text-xs text-ink3 bg-sunken rounded px-2 py-0.5">Pending</span>}
+          ) : idea.status === 'pending' ? (
+            <span className="text-xs text-ink3 bg-sunken rounded px-2 py-0.5">Pending</span>
+          ) : null}
         </div>
       </div>
 
