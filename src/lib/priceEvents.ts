@@ -16,14 +16,34 @@ export async function runGoldPriceEvents(price: number) {
   await Promise.allSettled([autoCloseGold(price), checkAlerts(price)])
 }
 
-// Mark TPs that price has reached and close the signal as tp_hit (TP-only: a TP
-// beyond entry means the trade was entered, so this can't produce false wins).
+// Mark TPs that price has reached and close the signal as tp_hit — but only once
+// the entry has actually been filled. A TP sitting beyond the entry does NOT prove
+// the trade was entered: e.g. a buy-limit below market (entry 4122–4126) can see
+// price rise straight to a TP (4128) without ever dipping into the zone, so the
+// trade never triggered. We gate on `entered` to avoid those false wins.
 async function autoCloseGold(price: number) {
   const open = await db.tradeIdea.findMany({
     where: { status: 'pending', isPublic: true, symbol: { startsWith: 'XAU' } },
   })
   for (const idea of open) {
     const tps = (idea.takeProfits as TP[]) || []
+
+    // Has price traded into the entry zone? Buy fills when price falls to the top
+    // of the zone; sell fills when price rises to the bottom. No zone → treat as
+    // an at-market entry (always considered filled). Latches on once true.
+    const eLo = Math.min(idea.entryLow ?? NaN, idea.entryHigh ?? (idea.entryLow ?? NaN))
+    const eHi = Math.max(idea.entryHigh ?? NaN, idea.entryLow ?? (idea.entryHigh ?? NaN))
+    const hasZone = Number.isFinite(eLo) && Number.isFinite(eHi)
+    const fillsNow = !hasZone || (idea.direction === 'buy' ? price <= eHi : price >= eLo)
+    const entered = idea.entered || fillsNow
+
+    // Persist the entry fill the first time we see it, even if no TP is reached yet.
+    if (entered && !idea.entered) {
+      await db.tradeIdea.update({ where: { id: idea.id }, data: { entered: true } })
+    }
+    // Not entered yet → the trade hasn't triggered, so no TP can be counted.
+    if (!entered) continue
+
     const prevAnyHit = tps.some(t => t.hit)
     let changed = false
     const next = tps.map(t => {

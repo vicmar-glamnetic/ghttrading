@@ -376,6 +376,7 @@ model TradeIdea {
   takeProfits  Json     @default("[]")       // [{ price: number, pips?: number, hit?: boolean }]
   currentPrice Float?                        // optional live/quoted price; null renders as "--"
   status       String   @default("pending")  // pending | tp_hit | sl_hit
+  entered      Boolean  @default(false)      // true once price has traded into the entry zone (gates TP auto-close)
   notes        String?
   isPublic     Boolean  @default(false)      // shared to the community board vs. private
   createdAt    DateTime @default(now())
