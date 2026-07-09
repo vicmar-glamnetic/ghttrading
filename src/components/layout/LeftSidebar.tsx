@@ -6,10 +6,11 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { useMyProfile } from '@/lib/useMyProfile'
+import { openTour } from '@/components/WelcomeTour'
 import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator, Sparkles,
 } from 'lucide-react'
 
 // Core, daily-use features — kept at the top.
@@ -139,7 +140,11 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         {utility.map(item => <NavLink key={item.href} {...item} />)}
       </div>
 
-      <p className="text-xs text-ink3 px-3 mt-4">© 2026 GHT Trading</p>
+      <button onClick={openTour} className="mx-3 mt-4 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
+        <Sparkles className="w-4 h-4" /> Take a tour
+      </button>
+
+      <p className="text-xs text-ink3 px-3 mt-3">© 2026 GHT Trading</p>
     </aside>
   )
 }

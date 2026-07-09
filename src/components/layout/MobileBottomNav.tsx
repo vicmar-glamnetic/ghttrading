@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
   CandlestickChart, Radio, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Users, Bell, Settings,
-  Shield, User, LogOut, Smartphone, UserCheck, Calculator,
+  Shield, User, LogOut, Smartphone, UserCheck, Calculator, Sparkles,
 } from 'lucide-react'
+import { openTour } from '@/components/WelcomeTour'
 
 const items = [
   { href: '/ideas', label: 'Signals', icon: Zap          },
@@ -124,6 +125,13 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
                   </Link>
                 )
               })}
+              <button
+                onClick={() => { setOpen(false); openTour() }}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-ink2 active:bg-elevated p-3"
+              >
+                <Sparkles className="w-5 h-5" />
+                <span className="text-[11px] font-medium">App Tour</span>
+              </button>
               <button
                 onClick={() => { setOpen(false); signOut({ callbackUrl: '/login' }) }}
                 className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-red-400 active:bg-elevated p-3"

@@ -6,6 +6,7 @@ import { LeftSidebar } from '@/components/layout/LeftSidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { SessionGuard } from '@/components/SessionGuard'
+import { WelcomeTour } from '@/components/WelcomeTour'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -27,6 +28,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         </div>
       </div>
       <MobileBottomNav paywallEnabled={PAYWALL_ENABLED} />
+      <WelcomeTour />
     </div>
   )
 }
