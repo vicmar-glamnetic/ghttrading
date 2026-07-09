@@ -33,7 +33,7 @@ interface TradeIdea {
 }
 
 interface Acct { balance: number; riskPct: number }
-function loadAcct(): Acct | null {
+function loadAcctCache(): Acct | null {
   try { const r = localStorage.getItem('ght:acct'); return r ? JSON.parse(r) : null } catch { return null }
 }
 
@@ -618,7 +618,27 @@ export default function IdeasPage() {
   const [acct, setAcct] = useState<Acct | null>(null)
   const [showAcct, setShowAcct] = useState(false)
 
-  useEffect(() => { setAcct(loadAcct()) }, [])
+  // Load account prefs: instant from cache, then sync from the server (cross-device).
+  useEffect(() => {
+    setAcct(loadAcctCache())
+    fetch('/api/me').then(r => r.json()).then(d => {
+      if (d?.acctBalance != null && d?.acctRiskPct != null) {
+        const a = { balance: d.acctBalance, riskPct: d.acctRiskPct }
+        setAcct(a)
+        localStorage.setItem('ght:acct', JSON.stringify(a))
+      }
+    }).catch(() => {})
+  }, [])
+
+  const saveAcct = useCallback((a: Acct | null) => {
+    setAcct(a)
+    setShowAcct(false)
+    if (a) localStorage.setItem('ght:acct', JSON.stringify(a)); else localStorage.removeItem('ght:acct')
+    fetch('/api/me', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acctBalance: a?.balance ?? null, acctRiskPct: a?.riskPct ?? null }),
+    }).catch(() => {})
+  }, [])
 
   // Live gold price for the "still enterable?" status — polled, paused when hidden.
   useEffect(() => {
@@ -707,7 +727,7 @@ export default function IdeasPage() {
       ) : (
         <div className="space-y-4 max-w-xl mx-auto">
           {/* auto position-size account bar */}
-          <AccountBar acct={acct} open={showAcct} setOpen={setShowAcct} onSave={a => { setAcct(a); localStorage.setItem('ght:acct', JSON.stringify(a)); setShowAcct(false) }} onClear={() => { setAcct(null); localStorage.removeItem('ght:acct'); setShowAcct(false) }} />
+          <AccountBar acct={acct} open={showAcct} setOpen={setShowAcct} onSave={saveAcct} onClear={() => saveAcct(null)} />
           {ideas.map(idea => (
             <IdeaCard
               key={idea.id}

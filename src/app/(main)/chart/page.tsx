@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { LineChart, Search } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
+import { PriceAlerts } from '@/components/PriceAlerts'
 
 // Quick-access symbols (TradingView symbol notation)
 const PRESETS = [
@@ -97,6 +98,8 @@ export default function ChartPage() {
       <div className="bg-surface rounded-xl border border-line overflow-hidden h-[calc(100vh-13rem)] min-h-[420px]">
         <TradingViewChart symbol={symbol} theme={resolved} />
       </div>
+
+      <PriceAlerts />
 
       <p className="text-[10px] text-ink3">
         Charts by <a href="https://www.tradingview.com" target="_blank" rel="noopener noreferrer" className="text-yellow-500/70 hover:text-yellow-500">TradingView</a>.

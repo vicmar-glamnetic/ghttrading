@@ -61,6 +61,21 @@ export default function AdminPage() {
   const [migBusy, setMigBusy] = useState(false)
   const [migStatus, setMigStatus] = useState('')
 
+  // Weekly recap
+  const [recapBusy, setRecapBusy] = useState(false)
+  const [recapMsg, setRecapMsg] = useState('')
+
+  async function postRecap() {
+    setRecapBusy(true); setRecapMsg('')
+    try {
+      const res = await fetch('/api/cron/weekly-recap', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) setRecapMsg(d.error || 'Failed')
+      else if (d.skipped) setRecapMsg(`Skipped — ${d.skipped}`)
+      else setRecapMsg(`✓ Posted: ${d.wins}W/${d.losses}L · ${d.net >= 0 ? '+' : ''}${d.net} pips`)
+    } finally { setRecapBusy(false) }
+  }
+
   async function migrateBlob() {
     setMigBusy(true); setMigStatus('Starting…')
     try {
@@ -234,6 +249,20 @@ export default function AdminPage() {
           </Button>
         </div>
         {migStatus && <p className="text-xs text-ink2 mt-2">{migStatus}</p>}
+      </div>
+
+      {/* Weekly recap */}
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-ink">Weekly performance recap</p>
+            <p className="text-xs text-ink3">Post this week&apos;s signal results (W/L, win rate, net pips) to the feed. Also runs automatically every Monday.</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={postRecap} loading={recapBusy} className="text-xs shrink-0">
+            Post recap now
+          </Button>
+        </div>
+        {recapMsg && <p className="text-xs text-ink2 mt-2">{recapMsg}</p>}
       </div>
 
       {/* search + filter */}

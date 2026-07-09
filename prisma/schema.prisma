@@ -63,6 +63,12 @@ model User {
   ownedPages        Page[]          @relation("PageOwner")
   pageFollows       PageFollow[]
   pushSubscriptions PushSubscription[]
+  priceAlerts       PriceAlert[]
+
+  // Trader prefs
+  acctBalance       Float?    // saved account size for auto position-sizing
+  acctRiskPct       Float?    // saved risk % per trade
+  shareStats        Boolean   @default(false) // opt in to the member leaderboard
 
   @@map("users")
 }
@@ -330,6 +336,21 @@ model PushSubscription {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+// A member's price alert — push when the symbol crosses the target.
+model PriceAlert {
+  id          String   @id @default(cuid())
+  userId      String
+  symbol      String   // e.g. XAUUSD
+  targetPrice Float
+  direction   String   // 'above' | 'below'
+  triggered   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([symbol, triggered])
+  @@map("price_alerts")
 }
 
 // Community sentiment on a signal: are members taking it or skipping it.

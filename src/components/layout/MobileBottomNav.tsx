@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
   CandlestickChart, Radio, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Users, Bell, Settings,
-  Shield, User, LogOut, Smartphone, UserCheck, Calculator, Sparkles,
+  Shield, User, LogOut, Smartphone, UserCheck, Calculator, Sparkles, Trophy, CalendarClock,
 } from 'lucide-react'
 import { openTour } from '@/components/WelcomeTour'
 
@@ -30,6 +30,8 @@ const allNav = [
   { href: '/journal',       label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/calendar',      label: 'Calendar',      icon: CalendarDays,    premium: true },
   { href: '/calculator',    label: 'Calculator',    icon: Calculator      },
+  { href: '/leaderboard',   label: 'Leaderboard',   icon: Trophy          },
+  { href: '/events',        label: 'Econ Calendar', icon: CalendarClock   },
   { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',       label: 'Traders',       icon: Users           },
   { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },

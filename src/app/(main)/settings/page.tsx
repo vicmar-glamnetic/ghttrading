@@ -21,6 +21,9 @@ export default function SettingsPage() {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [shareStats, setShareStats] = useState(false)
+  const [statsBusy, setStatsBusy] = useState(false)
+
   // Seed from the live profile — the session strips large avatars, so pull the
   // real image/name from /api/me.
   useEffect(() => {
@@ -28,8 +31,17 @@ export default function SettingsPage() {
       if (d?.image !== undefined) setAvatarUrl(d.image)
       if (d?.name) setName(d.name)
       if (d?.username) setUsername(d.username)
+      setShareStats(!!d?.shareStats)
     }).catch(() => {})
   }, [])
+
+  async function toggleShareStats() {
+    const next = !shareStats
+    setShareStats(next); setStatsBusy(true)
+    try {
+      await fetch('/api/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shareStats: next }) })
+    } finally { setStatsBusy(false) }
+  }
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -237,6 +249,17 @@ export default function SettingsPage() {
                 Notifications are blocked in your browser settings. Allow notifications for this site, then try again.
               </p>
             )}
+
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-line bg-elevated p-4">
+              <div>
+                <p className="text-sm font-semibold text-ink">Share my stats on the leaderboard</p>
+                <p className="text-xs text-ink3 mt-1">Show your journaled net P&amp;L and win rate on the member leaderboard. Off by default.</p>
+              </div>
+              <button onClick={toggleShareStats} disabled={statsBusy} aria-label="Toggle leaderboard sharing"
+                className={`relative shrink-0 w-12 h-7 rounded-full transition-colors ${shareStats ? 'bg-yellow-500' : 'bg-line2'} disabled:opacity-50`}>
+                <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${shareStats ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
           </div>
         )}
 
