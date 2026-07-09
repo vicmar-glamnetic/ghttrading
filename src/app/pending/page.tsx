@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { LogoutButton } from '@/app/upgrade/LogoutButton'
 import { Hourglass } from 'lucide-react'
 
-export const metadata = { title: 'Pending Approval · GHT Trading' }
+export const metadata = { title: 'Pending Approval · Gold Heist Trading' }
 
 export default async function PendingPage() {
   const session = await auth()

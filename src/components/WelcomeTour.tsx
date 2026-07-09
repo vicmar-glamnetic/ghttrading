@@ -21,7 +21,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     icon: Rocket,
-    title: 'Welcome to GHT Trading 🥇',
+    title: 'Welcome to Gold Heist Trading 🥇',
     body: 'Here\'s a full tour of everything the app can do — signals, live tools, community, and more. Tap Next to explore, or skip anytime.',
   },
   {
@@ -125,7 +125,7 @@ const STEPS: Step[] = [
   {
     icon: Smartphone,
     title: 'Install as an app',
-    body: 'Add GHT Trading to your phone\'s home screen for a full-screen, app-like experience — and it\'s required on iPhone to receive push alerts.',
+    body: 'Add Gold Heist Trading to your phone\'s home screen for a full-screen, app-like experience — and it\'s required on iPhone to receive push alerts.',
     href: '/install',
     cta: 'How to install',
   },

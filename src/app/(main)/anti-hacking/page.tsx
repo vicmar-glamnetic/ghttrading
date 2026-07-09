@@ -129,7 +129,7 @@ export default function AntiHackingPage() {
       </div>
 
       <p className="text-[10px] text-ink3 text-center">
-        GHT Trading uses industry-standard protection to keep your account and data safe.
+        Gold Heist Trading uses industry-standard protection to keep your account and data safe.
       </p>
     </div>
   )

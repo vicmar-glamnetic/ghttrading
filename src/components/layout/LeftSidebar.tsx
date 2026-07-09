@@ -146,7 +146,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         {utility.map(item => <NavLink key={item.href} {...item} />)}
       </div>
 
-      <p className="text-xs text-ink3 px-3 mt-4">© 2026 GHT Trading</p>
+      <p className="text-xs text-ink3 px-3 mt-4">© 2026 Gold Heist Trading</p>
     </aside>
   )
 }

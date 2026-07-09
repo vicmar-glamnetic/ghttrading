@@ -8,7 +8,7 @@ import { PayPalSubscribe } from './PayPalSubscribe'
 import { CryptoPay } from './CryptoPay'
 import { Crown, Check } from 'lucide-react'
 
-export const metadata = { title: 'Upgrade · GHT Trading' }
+export const metadata = { title: 'Upgrade · Gold Heist Trading' }
 
 export default async function UpgradePage({
   searchParams,
@@ -46,7 +46,7 @@ export default async function UpgradePage({
           </div>
           <h1 className="text-2xl font-black text-ink">Become a Member</h1>
           <p className="text-ink2 text-sm mt-1">
-            Unlock the full GHT Trading community for{' '}
+            Unlock the full Gold Heist Trading community for{' '}
             <span className="text-yellow-500 font-bold">${tier.usd}/month</span>
             {' '}(≈ ₱{php.toLocaleString('en-PH')} today).
           </p>

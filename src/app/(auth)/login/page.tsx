@@ -130,7 +130,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div className="mb-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="GHT Trading" width={96} height={96} className="mx-auto" />
+            <img src="/logo.png" alt="Gold Heist Trading" width={96} height={96} className="mx-auto" />
           </div>
           <h1 className="text-3xl font-black text-ink">GHT <span className="text-yellow-500">Community</span></h1>
           <p className="text-ink2 mt-2 text-sm">Premium Trading Insights & Gold Signals</p>

@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'GHT Trading Community',
-    short_name: 'GHT Trading',
+    name: 'Gold Heist Trading Community',
+    short_name: 'Gold Heist',
     description: 'Premium gold trading signals, market analysis, and community',
     start_url: '/',
     display: 'standalone',

@@ -12,7 +12,7 @@ export const BILLING = {
   priceUsdAccm: Number(process.env.NEXT_PUBLIC_PRICE_USD_ACCM) || 1.99, // ACCM
   // Fallback USD→PHP rate used only if the live rate can't be fetched.
   fallbackRate: Number(process.env.USD_PHP_FALLBACK_RATE) || 58,
-  gcashName: process.env.NEXT_PUBLIC_GCASH_NAME || 'GHT Trading',
+  gcashName: process.env.NEXT_PUBLIC_GCASH_NAME || 'Gold Heist Trading',
   gcashNumber: process.env.NEXT_PUBLIC_GCASH_NUMBER || '0917 000 0000',
   mayaNumber: process.env.NEXT_PUBLIC_MAYA_NUMBER || '',
   // Where members send proof of payment (e.g. a Messenger/Telegram/email).

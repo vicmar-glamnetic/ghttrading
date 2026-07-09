@@ -74,8 +74,8 @@ async function createProduct(token: string) {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      name: 'GHT Trading Community Membership',
-      description: 'Monthly membership to the GHT Trading community',
+      name: 'Gold Heist Trading Community Membership',
+      description: 'Monthly membership to the Gold Heist Trading community',
       type: 'SERVICE',
     }),
   })

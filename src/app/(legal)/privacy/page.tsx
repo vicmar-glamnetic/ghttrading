@@ -9,7 +9,7 @@ export default function PrivacyPage() {
       <p className="text-sm text-ink3">Last updated: July 9, 2026</p>
 
       <p className="text-sm text-ink2 leading-relaxed pt-2">
-        This Privacy Policy explains how the GHT Trading Community (&ldquo;GHT&rdquo;, &ldquo;we&rdquo;) collects, uses,
+        This Privacy Policy explains how the Gold Heist Trading Community (&ldquo;GHT&rdquo;, &ldquo;we&rdquo;) collects, uses,
         and protects your information when you use community.ghttrading.co (the &ldquo;Service&rdquo;). We keep data
         collection to what we need to run the community.
       </p>

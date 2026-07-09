@@ -1,7 +1,7 @@
 import { Newspaper } from 'lucide-react'
 import { NewsFeed, type NewsItem } from './NewsFeed'
 
-export const metadata = { title: 'Forex News · GHT Trading' }
+export const metadata = { title: 'Forex News · Gold Heist Trading' }
 export const revalidate = 900 // refresh at most every 15 min
 
 // Multiple sources so headlines aren't tied to a single site. Each is fetched

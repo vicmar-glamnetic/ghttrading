@@ -1,10 +1,10 @@
-/* GHT Trading service worker — handles Web Push for signal alerts. */
+/* Gold Heist Trading service worker — handles Web Push for signal alerts. */
 
 self.addEventListener('push', event => {
   let data = {}
   try { data = event.data ? event.data.json() : {} } catch { data = {} }
 
-  const title = data.title || 'GHT Trading'
+  const title = data.title || 'Gold Heist Trading'
   const options = {
     body: data.body || '',
     icon: data.icon || '/icon.png',

@@ -8,7 +8,7 @@ export default function HelpPage() {
     <article className="space-y-3">
       <h1 className="text-2xl sm:text-3xl font-black text-ink">Help &amp; FAQ</h1>
       <p className="text-sm text-ink2 leading-relaxed pt-1">
-        Answers to the most common questions about the GHT Trading Community. Still stuck? Message a coach in{' '}
+        Answers to the most common questions about the Gold Heist Trading Community. Still stuck? Message a coach in{' '}
         <Link href="/chat" className="text-yellow-500 hover:underline">Chat</Link> or email{' '}
         <a href="mailto:support@ghttrading.co" className="text-yellow-500 hover:underline">support@ghttrading.co</a>.
       </p>
@@ -67,7 +67,7 @@ export default function HelpPage() {
         </QA>
         <QA q="Can I install this as an app on my phone?">
           Yes — open the <Link href="/install" className="text-yellow-500 hover:underline">Install</Link> page for
-          Android and iOS steps to add GHT Trading to your home screen.
+          Android and iOS steps to add Gold Heist Trading to your home screen.
         </QA>
         <QA q="How do I switch between light and dark mode?">
           The app follows your device preference by default; you can change it in{' '}

@@ -25,7 +25,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
           <Link href="/terms" className="hover:text-yellow-500 transition-colors">Terms</Link>
           <Link href="/privacy" className="hover:text-yellow-500 transition-colors">Privacy</Link>
           <Link href="/help" className="hover:text-yellow-500 transition-colors">Help</Link>
-          <span className="ml-auto">© 2026 GHT Trading</span>
+          <span className="ml-auto">© 2026 Gold Heist Trading</span>
         </div>
       </footer>
     </div>

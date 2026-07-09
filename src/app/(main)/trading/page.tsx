@@ -1,7 +1,7 @@
 import { Monitor, Smartphone, Download, Apple } from 'lucide-react'
 import { CopyField } from './CopyField'
 
-export const metadata = { title: 'Trading · GHT Trading' }
+export const metadata = { title: 'Trading · Gold Heist Trading' }
 
 // AC Capital Market MT5 server (from your account approval email).
 const MT5_SERVER = 'MT5-ACCapitalMarket(S)-Real'

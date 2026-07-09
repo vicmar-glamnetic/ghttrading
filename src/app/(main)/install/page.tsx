@@ -1,6 +1,6 @@
 import { Apple, Smartphone, Share, Plus, MoreVertical, Download, Check } from 'lucide-react'
 
-export const metadata = { title: 'Install App · GHT Trading' }
+export const metadata = { title: 'Install App · Gold Heist Trading' }
 
 const iosSteps = [
   { icon: Share, text: 'Open community.ghttrading.co in Safari (not Chrome or an in-app browser).' },

@@ -9,7 +9,7 @@ export default function TermsPage() {
       <p className="text-sm text-ink3">Last updated: July 9, 2026</p>
 
       <p className="text-sm text-ink2 leading-relaxed pt-2">
-        Welcome to the GHT Trading Community (&ldquo;GHT&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). By creating an account
+        Welcome to the Gold Heist Trading Community (&ldquo;GHT&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). By creating an account
         or using the community app at community.ghttrading.co (the &ldquo;Service&rdquo;), you agree to these Terms. If you
         do not agree, please do not use the Service.
       </p>
