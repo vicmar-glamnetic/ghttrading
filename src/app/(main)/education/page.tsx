@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
 import { MediaUpload } from '@/components/posts/MediaUpload'
 import { BookOpen, Image as ImageIcon, Play, Plus, Trash2, X, Pencil } from 'lucide-react'
+import { toEmbed } from '@/lib/video'
 import type { PostWithDetails } from '@/types'
 
 interface UploadedFile { url: string; name: string; type: string }
@@ -23,16 +24,6 @@ const CATEGORIES = [
   'Platform & Setup',
 ] as const
 
-// Normalise common video URLs to their embeddable form.
-function toEmbed(url: string): string {
-  try {
-    const u = new URL(url)
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) return `https://www.youtube.com/embed/${u.searchParams.get('v')}`
-    if (u.hostname === 'youtu.be') return `https://www.youtube.com/embed${u.pathname}`
-    if (u.hostname.includes('vimeo.com') && /^\/\d+/.test(u.pathname)) return `https://player.vimeo.com/video${u.pathname}`
-    return url
-  } catch { return url }
-}
 
 function CreateEducationPost({ onCreated }: { onCreated: (post: PostWithDetails) => void }) {
   const { data: session } = useSession()
@@ -331,7 +322,8 @@ function VideoEditor({ initial, onClose, onSaved }: { initial: Video | null; onC
         </div>
         <div className="p-4 space-y-3">
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Video title" className={inputCls} />
-          <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Video URL (YouTube, Vimeo, etc.)" className={inputCls} />
+          <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Video URL (YouTube, Facebook, Vimeo)" className={inputCls} />
+          <p className="text-[10px] text-ink3">YouTube is most reliable. Facebook videos must be set to <span className="text-ink2 font-semibold">Public</span> to embed, or they show a &ldquo;video may no longer exist&rdquo; error.</p>
           <input value={educator} onChange={e => setEducator(e.target.value)} placeholder="Educator name (optional)" className={inputCls} />
           <div>
             <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Category</label>

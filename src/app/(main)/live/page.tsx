@@ -3,33 +3,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { Radio, WifiOff, X, Settings2, Trash2 } from 'lucide-react'
+import { toEmbed } from '@/lib/video'
 
 interface Webinar { title: string | null; embedUrl: string | null; isLive: boolean }
-
-// Normalise common video URLs to their embeddable form.
-function toEmbed(url: string): string {
-  try {
-    const u = new URL(url)
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v')) {
-      return `https://www.youtube.com/embed/${u.searchParams.get('v')}`
-    }
-    if (u.hostname === 'youtu.be') return `https://www.youtube.com/embed${u.pathname}`
-    if (u.hostname.includes('vimeo.com') && /^\/\d+/.test(u.pathname)) {
-      return `https://player.vimeo.com/video${u.pathname}`
-    }
-    // Facebook Live / video — wrap in the Video plugin (video must be Public).
-    // Skip if it's already a plugin URL.
-    if (
-      (u.hostname.includes('facebook.com') || u.hostname === 'fb.watch') &&
-      !u.pathname.includes('/plugins/video.php')
-    ) {
-      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true`
-    }
-    return url
-  } catch {
-    return url
-  }
-}
 
 export default function LivePage() {
   const { data: session } = useSession()
