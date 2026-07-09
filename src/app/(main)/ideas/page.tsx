@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -71,6 +71,26 @@ function mt5Ticket(idea: TradeIdea) {
     ...idea.takeProfits.map((tp, i) => `TP${i + 1}: ${fmtNum(tp.price)}`),
   ]
   return lines.join('\n')
+}
+
+/* ---------- live price (ticks + flashes up/down) ---------- */
+function LivePrice({ price }: { price: number }) {
+  const prev = useRef(price)
+  const [dir, setDir] = useState<'up' | 'down' | null>(null)
+  useEffect(() => {
+    if (price > prev.current) setDir('up')
+    else if (price < prev.current) setDir('down')
+    prev.current = price
+    const t = setTimeout(() => setDir(null), 700)
+    return () => clearTimeout(t)
+  }, [price])
+  const color = dir === 'up' ? 'text-green-400' : dir === 'down' ? 'text-red-400' : 'text-ink3'
+  return (
+    <span className={`text-xs tabular-nums truncate transition-colors duration-500 ${color}`}>
+      · now {price.toFixed(2)}
+      {dir && <span className="ml-0.5">{dir === 'up' ? '▲' : '▼'}</span>}
+    </span>
+  )
 }
 
 /* ---------- copy button ---------- */
@@ -172,7 +192,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, price, acct }: {
             {idea.status === 'pending' ? (inProfit ? 'RUNNING' : 'LIVE') : 'Closed'}
           </span>
           {isGold && price != null && idea.status === 'pending' && (
-            <span className="text-xs text-ink3 tabular-nums truncate">· now {price}</span>
+            <LivePrice price={price} />
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -650,15 +670,17 @@ export default function IdeasPage() {
     }).catch(() => {})
   }, [])
 
-  // Live gold price for the "still enterable?" status — polled, paused when hidden.
+  // Live gold price for the "still enterable?" status — polled every 2s so it
+  // ticks near-live, paused when the tab is hidden to save requests/battery.
   useEffect(() => {
     const poll = () => {
       if (document.hidden) return
       fetch('/api/price?symbol=XAUUSD').then(r => r.json()).then(d => { if (typeof d.price === 'number') setPrice(d.price) }).catch(() => {})
     }
     poll()
-    const id = setInterval(poll, 60000)
-    return () => clearInterval(id)
+    const id = setInterval(poll, 2000)
+    document.addEventListener('visibilitychange', poll) // refresh immediately when tab refocuses
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', poll) }
   }, [])
 
   const load = useCallback(async (t: Tab) => {

@@ -2,8 +2,9 @@ import { NextResponse, after } from 'next/server'
 import { runGoldPriceEvents } from '@/lib/priceEvents'
 
 // Live spot price proxy — used for the "is this signal still enterable?" status.
-// Currently supports gold (XAUUSD/XAU); other symbols return null. Cached ~30s
-// server-side so we hit the upstream at most a couple times a minute.
+// Currently supports gold (XAUUSD/XAU); other symbols return null. Cached ~2s
+// server-side (Next dedupes the upstream fetch across all users) so the client
+// can poll every couple seconds for a near-live tick without hammering upstream.
 export async function GET(req: Request) {
   const symbol = (new URL(req.url).searchParams.get('symbol') || 'XAUUSD').toUpperCase()
 
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   try {
     const res = await fetch('https://api.gold-api.com/price/XAU', {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 30 },
+      next: { revalidate: 2 },
     })
     const data = await res.json()
     const price = data?.price
