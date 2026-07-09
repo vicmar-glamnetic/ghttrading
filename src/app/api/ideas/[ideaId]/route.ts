@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { requireStaff } from '@/lib/admin'
 import { db } from '@/lib/db'
+import { sendPushToAll } from '@/lib/push'
+import { signalPips } from '@/lib/trading'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
 
@@ -26,7 +28,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
     if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { ideaId } = await params
-    const existing = await db.tradeIdea.findUnique({ where: { id: ideaId }, select: { id: true } })
+    const existing = await db.tradeIdea.findUnique({ where: { id: ideaId }, select: { id: true, status: true } })
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const body = await req.json()
@@ -50,6 +52,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
       },
       include: { author: AUTHOR },
     })
+
+    // Celebrate a win: push when a public signal is newly marked TP hit.
+    if (updated.isPublic && existing.status !== 'tp_hit' && updated.status === 'tp_hit') {
+      const pips = signalPips({
+        symbol: updated.symbol, direction: updated.direction as 'buy' | 'sell',
+        entryLow: updated.entryLow, entryHigh: updated.entryHigh, slLow: updated.slLow, slHigh: updated.slHigh,
+        takeProfits: (updated.takeProfits as { price: number; pips?: number | null; hit?: boolean }[]) || [],
+        status: 'tp_hit',
+      })
+      const authorId = session.user.id
+      after(async () => {
+        await sendPushToAll({
+          title: `🎯 TP hit · ${updated.symbol}`,
+          body: pips != null ? `+${pips} pips — great call! See the result.` : 'Target hit — see the result.',
+          url: '/ideas',
+          tag: `result-${updated.id}`,
+        }, authorId).catch(() => {})
+      })
+    }
 
     return NextResponse.json(updated)
   } catch (error) {

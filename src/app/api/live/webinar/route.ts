@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/admin'
+import { sendPushToAll } from '@/lib/push'
 
 // Coaches/admins set the live webinar stream + toggle it live.
 export async function PUT(req: Request) {
   const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const prev = await db.liveWebinar.findUnique({ where: { id: 'default' }, select: { isLive: true } })
 
   const { title, embedUrl, isLive } = await req.json()
   const data = {
@@ -19,6 +22,20 @@ export async function PUT(req: Request) {
     create: { id: 'default', ...data },
     update: data,
   })
+
+  // Alert everyone when a session goes live (only on the off→on transition).
+  if (webinar.isLive && !prev?.isLive) {
+    const who = session.user.name?.split(' ')[0] || 'A coach'
+    const authorId = session.user.id
+    after(async () => {
+      await sendPushToAll({
+        title: '🔴 We\'re live now',
+        body: webinar.title ? `${who}: ${webinar.title} — join the session.` : `${who} just started a live session. Tap to join.`,
+        url: '/live',
+        tag: 'live-webinar',
+      }, authorId).catch(() => {})
+    })
+  }
 
   return NextResponse.json(webinar)
 }
