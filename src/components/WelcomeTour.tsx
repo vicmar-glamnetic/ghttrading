@@ -7,8 +7,9 @@ import {
   CalendarDays, Calculator, BellRing, Trophy, Clock, Smartphone, TrendingUp, Check, X,
 } from 'lucide-react'
 
+import { ACCM_REGISTER_URL } from '@/lib/billing'
+
 const SEEN_KEY = 'ght:tourSeen'
-const ACCM_REGISTER = 'https://accm.global/account/register?shareUserSetId=55d80c5becfd46ccb'
 
 interface Step {
   icon: typeof Zap
@@ -136,7 +137,7 @@ const START_TRADING: Step = {
   icon: TrendingUp,
   title: 'Start Trading',
   body: 'To take the signals for real and unlock full perks, open a funded account with our partner broker ACCM — registering under our team also gives you free community access.',
-  href: ACCM_REGISTER,
+  href: ACCM_REGISTER_URL,
   cta: 'Open ACCM account',
 }
 

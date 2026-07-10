@@ -29,6 +29,12 @@ export const CRYPTO = {
   },
 }
 
+// Our AC Capital Market partner link. Registering under it makes a user an ACCM
+// member, which means the community is free for them.
+export const ACCM_REGISTER_URL =
+  process.env.NEXT_PUBLIC_ACCM_REGISTER_URL ||
+  'https://accm.global/account/register?shareUserSetId=55d80c5becfd46ccb'
+
 // PayPal subscription config (client-safe values).
 export const PAYPAL = {
   clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',

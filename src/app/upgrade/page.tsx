@@ -2,11 +2,11 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { hasAccess, BILLING, PAYPAL, CRYPTO, tierFor, canSubscribe, getPricePhp } from '@/lib/billing'
+import { hasAccess, BILLING, PAYPAL, CRYPTO, tierFor, canSubscribe, getPricePhp, ACCM_REGISTER_URL } from '@/lib/billing'
 import { LogoutButton } from './LogoutButton'
 import { PayPalSubscribe } from './PayPalSubscribe'
 import { CryptoPay } from './CryptoPay'
-import { Crown, Check } from 'lucide-react'
+import { Crown, Check, ExternalLink } from 'lucide-react'
 
 export const metadata = { title: 'Upgrade · Gold Heist Trading' }
 
@@ -50,8 +50,7 @@ export default async function UpgradePage({
             <span className="text-yellow-500 font-bold">${tier.usd}/month</span>
             {' '}(≈ ₱{php.toLocaleString('en-PH')} today).
           </p>
-          <p className="text-[11px] text-ink3 mt-1">Your free trial has ended — subscribe to keep full access.</p>
-          <p className="text-[11px] text-green-400 mt-1">Trading with AC Capital Market? It&apos;s free — contact us to switch.</p>
+          <p className="text-[11px] text-ink3 mt-1">Your free trial has ended — pick an option below to keep full access.</p>
         </div>
 
         {/* perks */}
@@ -64,6 +63,31 @@ export default async function UpgradePage({
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* Free path — open an ACCM account under our partner link */}
+        <div className="bg-surface border border-green-500/30 rounded-2xl p-5 mb-4">
+          <p className="text-[10px] font-bold text-green-400 uppercase tracking-wider mb-1">Free option</p>
+          <p className="text-sm text-ink font-semibold">Trade with AC Capital Market</p>
+          <p className="text-xs text-ink3 mt-1 mb-3">
+            Open an ACCM account through our link and the community is free — no subscription, ever.
+            Once you&apos;re registered, send your ACCM account number to {BILLING.proofContact} and we&apos;ll unlock your account.
+          </p>
+          <a
+            href={ACCM_REGISTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full rounded-lg bg-green-500 hover:bg-green-400 transition-colors text-black text-sm font-bold py-2.5"
+          >
+            Register with ACCM
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-px flex-1 bg-line" />
+          <span className="text-[10px] font-bold text-ink3 uppercase tracking-wider">or subscribe</span>
+          <div className="h-px flex-1 bg-line" />
         </div>
 
         {/* PayPal — instant recurring subscription */}
