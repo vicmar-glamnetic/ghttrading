@@ -57,7 +57,7 @@ export const authConfig: NextAuthConfig = {
       if (isAuthPage) return isLoggedIn ? Response.redirect(new URL('/', nextUrl)) : true
       if (!isLoggedIn) return Response.redirect(new URL('/login', nextUrl))
 
-      // Full paywall: once the 7-day free trial ends without an active
+      // Full paywall: once the 3-day free trial ends without an active
       // subscription, the ENTIRE app is locked — not just premium sections.
       // ACCM members, staff (admin/coach), and active/comp subscribers always
       // pass hasAccess(), so only expired-trial non-ACCM members are locked out.

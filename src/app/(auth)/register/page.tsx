@@ -94,7 +94,7 @@ export default function RegisterPage() {
                 className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-ink placeholder-ink3 transition-colors"
               />
             </div>
-            {/* Broker — decides free (ACCM) vs 7-day trial then $5/mo (other) */}
+            {/* Broker — decides free (ACCM) vs 3-day trial then $5/mo (other) */}
             <div>
               <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Your broker</label>
               <div className="grid grid-cols-2 gap-2">
@@ -106,11 +106,11 @@ export default function RegisterPage() {
                 <button type="button" onClick={() => setAccmMember(false)}
                   className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${!accmMember ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-line bg-elevated hover:border-line2'}`}>
                   <span className="block text-sm font-semibold text-ink">Other broker</span>
-                  <span className="block text-[11px] text-ink3">7-day free trial</span>
+                  <span className="block text-[11px] text-ink3">3-day free trial</span>
                 </button>
               </div>
               <p className="text-[11px] text-ink3 mt-1.5">
-                ACCM members get full access free. Other brokers enjoy a 7-day free trial, then $5/mo. Membership may be verified.
+                ACCM members get full access free. Other brokers enjoy a 3-day free trial, then $5/mo. Membership may be verified.
               </p>
             </div>
 
