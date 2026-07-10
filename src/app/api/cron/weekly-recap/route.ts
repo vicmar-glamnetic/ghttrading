@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { isGold, signalPips } from '@/lib/trading'
+import { isGold, pipUnit, signalPips } from '@/lib/trading'
 
 export const runtime = 'nodejs'
 
@@ -37,24 +37,29 @@ export async function POST(req: Request) {
   })
   if (closed.length === 0) return NextResponse.json({ skipped: 'no closed signals this week' })
 
-  // Win/loss counts cover every symbol; the net-pips figure covers gold only,
-  // matching the performance panel (pips aren't comparable across instruments).
+  // Win/loss counts cover every symbol. Pips are banked per instrument class —
+  // gold headlines, other symbols get their own line under their own unit.
+  const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
   let wins = 0, losses = 0, net = 0
-  const other = { closed: 0, wins: 0, losses: 0 }
+  const other = new Map<string, { pips: number; unit: 'pips' | 'points' }>()
   let best = { pips: -Infinity, symbol: '' }
   for (const i of closed) {
     if (i.status === 'tp_hit') wins++; else losses++
-    if (!isGold(i.symbol)) {
-      other.closed++
-      if (i.status === 'tp_hit') other.wins++; else other.losses++
-      continue
-    }
     const p = signalPips({
       symbol: i.symbol, direction: i.direction as 'buy' | 'sell',
       entryLow: i.entryLow, entryHigh: i.entryHigh, slLow: i.slLow, slHigh: i.slHigh,
       takeProfits: (i.takeProfits as TP[]) || [], status: i.status as 'tp_hit' | 'sl_hit',
     })
-    if (p != null) { net += p; if (p > best.pips) best = { pips: p, symbol: i.symbol } }
+    if (p == null) continue
+    if (isGold(i.symbol)) {
+      net += p
+      if (p > best.pips) best = { pips: p, symbol: i.symbol }
+    } else {
+      const sym = i.symbol.toUpperCase()
+      const o = other.get(sym) ?? { pips: 0, unit: pipUnit(sym) }
+      o.pips += p
+      other.set(sym, o)
+    }
   }
   const decided = wins + losses
   const winRate = decided ? Math.round((wins / decided) * 100) : 0
@@ -63,10 +68,10 @@ export async function POST(req: Request) {
     '📊 Weekly Recap',
     '',
     `This week: ${wins}W / ${losses}L (${winRate}% win rate)`,
-    `Net on gold: ${net >= 0 ? '+' : ''}${net} pips 🎯`,
+    `Net on gold: ${signed(net)} pips 🎯`,
   ]
   if (best.symbol && best.pips > 0) lines.push(`Best call: ${best.symbol} +${best.pips} pips`)
-  if (other.closed > 0) lines.push(`Other symbols: ${other.wins}W/${other.losses}L`)
+  for (const [sym, o] of other) lines.push(`${sym}: ${signed(o.pips)} ${o.unit}`)
   lines.push('', 'Keep it up, team! 💪 Not financial advice.')
 
   const post = await db.post.create({

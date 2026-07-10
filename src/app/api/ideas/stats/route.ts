@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { isGold, signalPips } from '@/lib/trading'
+import { isGold, pipUnit, signalPips } from '@/lib/trading'
 
 interface TP { price?: number; pips?: number | null; hit?: boolean }
 
@@ -42,10 +42,10 @@ export async function GET() {
   const WEEK = 7 * 24 * 60 * 60 * 1000
   const monthStart = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime() })()
   // Pips only add up within one instrument class (a gold pip is 0.1, an FX pip
-  // 0.0001, a crypto point 1), so the banked total covers gold alone. Non-gold
-  // signals are summarised by win/loss instead.
+  // 0.0001, a crypto point 1), so gold gets the headline total and every other
+  // symbol is banked separately under its own unit — never summed together.
   const goldPips = { week: 0, month: 0, all: 0 }
-  const other = { closed: 0, wins: 0, losses: 0 }
+  const otherBySymbol = new Map<string, { symbol: string; unit: 'pips' | 'points'; pips: number; wins: number; losses: number }>()
 
   for (const i of ideas) {
     const closed = i.status === 'tp_hit' || i.status === 'sl_hit'
@@ -58,13 +58,14 @@ export async function GET() {
       const rr = plannedRR(mid(i.entryLow, i.entryHigh), mid(i.slLow, i.slHigh), (i.takeProfits as TP[]) || [])
       if (rr != null) rrs.push(rr)
 
+      const p = signalPips({
+        symbol: i.symbol, direction: i.direction as 'buy' | 'sell',
+        entryLow: i.entryLow, entryHigh: i.entryHigh, slLow: i.slLow, slHigh: i.slHigh,
+        takeProfits: (i.takeProfits as TP[]).map(t => ({ price: t.price ?? 0, pips: t.pips, hit: t.hit })),
+        status: i.status as 'tp_hit' | 'sl_hit',
+      })
+
       if (isGold(i.symbol)) {
-        const p = signalPips({
-          symbol: i.symbol, direction: i.direction as 'buy' | 'sell',
-          entryLow: i.entryLow, entryHigh: i.entryHigh, slLow: i.slLow, slHigh: i.slHigh,
-          takeProfits: (i.takeProfits as TP[]).map(t => ({ price: t.price ?? 0, pips: t.pips, hit: t.hit })),
-          status: i.status as 'tp_hit' | 'sl_hit',
-        })
         if (p != null) {
           goldPips.all += p
           const t = i.createdAt.getTime()
@@ -72,8 +73,11 @@ export async function GET() {
           if (now - t <= WEEK) goldPips.week += p
         }
       } else {
-        other.closed++
-        if (win) other.wins++; else other.losses++
+        const sym = i.symbol.toUpperCase()
+        const o = otherBySymbol.get(sym) ?? { symbol: sym, unit: pipUnit(sym), pips: 0, wins: 0, losses: 0 }
+        if (p != null) o.pips += p
+        if (win) o.wins++; else o.losses++
+        otherBySymbol.set(sym, o)
       }
 
       const c = byCoach.get(i.authorId) ?? { id: i.authorId, name: i.author.name, image: i.author.image, wins: 0, losses: 0 }
@@ -104,7 +108,8 @@ export async function GET() {
     total: ideas.length,
     open, wins, losses, closed, winRate,
     avgRR: avgRR != null ? Math.round(avgRR * 100) / 100 : null,
-    goldPips, other,
+    goldPips,
+    other: [...otherBySymbol.values()].sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses) || a.symbol.localeCompare(b.symbol)),
     coaches, months,
   })
 }

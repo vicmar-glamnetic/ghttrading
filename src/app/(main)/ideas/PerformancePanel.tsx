@@ -9,9 +9,10 @@ interface Stats {
   total: number; open: number; wins: number; losses: number; closed: number
   winRate: number | null; avgRR: number | null
   goldPips?: { week: number; month: number; all: number }
-  other?: { closed: number; wins: number; losses: number }
+  other?: OtherSymbol[]
   coaches: Coach[]; months: Month[]
 }
+interface OtherSymbol { symbol: string; unit: 'pips' | 'points'; pips: number; wins: number; losses: number }
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
 
@@ -74,11 +75,24 @@ export function PerformancePanel() {
               </div>
             ))}
           </div>
-          {s.other && s.other.closed > 0 && (
-            <p className="mt-3 pt-3 border-t border-line text-[11px] text-ink3">
-              Other symbols: {s.other.closed} closed · {s.other.wins}W/{s.other.losses}L —
-              not added in, since a pip means something different on each instrument.
-            </p>
+          {s.other && s.other.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-line">
+              <p className="text-[10px] text-ink3 uppercase tracking-wider mb-2">Other symbols · all-time</p>
+              <div className="space-y-1.5">
+                {s.other.map(o => (
+                  <div key={o.symbol} className="flex items-center gap-3 text-xs">
+                    <span className="font-semibold text-ink2 w-20 shrink-0">{o.symbol}</span>
+                    <span className="text-ink3 tabular-nums flex-1">{o.wins}W/{o.losses}L</span>
+                    <span className={`font-bold tabular-nums ${o.pips >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {signed(o.pips)} <span className="font-normal text-ink3">{o.unit}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] text-ink3">
+                Banked per symbol, not summed — a pip on gold isn&rsquo;t a pip on EURUSD or a point on ETH.
+              </p>
+            </div>
           )}
         </div>
       )}

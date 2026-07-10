@@ -27,6 +27,11 @@ export function pipConfig(symbol: string): PipConfig {
   return { pipSize: 1, pipValue: 1 }                                // indices / fallback (points)
 }
 
+/** What one unit of movement is called on this symbol. */
+export function pipUnit(symbol: string): 'pips' | 'points' {
+  return pipConfig(symbol).pipSize === 1 ? 'points' : 'pips'
+}
+
 export const mid = (lo: number | null | undefined, hi: number | null | undefined): number | null => {
   if (lo != null && hi != null) return (lo + hi) / 2
   return lo ?? hi ?? null
