@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const price = data?.price
     if (typeof price === 'number' && price > 0) {
       const rounded = Math.round(price * 100) / 100
-      after(() => runGoldPriceEvents(rounded)) // auto-close + price alerts (throttled)
+      after(() => runGoldPriceEvents(rounded)) // fire crossed price alerts (throttled)
       return NextResponse.json({ symbol, price: rounded })
     }
   } catch {
