@@ -168,6 +168,18 @@ export default function AdminPage() {
     })
   }
 
+  async function setTrial(u: AdminUser, days: number) {
+    const trialEndsAt = days === 0 ? null : new Date(Date.now() + days * 86400000).toISOString()
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, trialEndsAt } : x))
+    const res = await fetch(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trialDays: days }),
+    })
+    if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Update failed'); }
+    load()
+  }
+
   async function remove(u: AdminUser) {
     if (!confirm(`Delete ${u.name || u.email}? This cannot be undone.`)) return
     setUsers(prev => prev.filter(x => x.id !== u.id))
@@ -375,9 +387,7 @@ export default function AdminPage() {
                     >
                       {u.accmMember ? 'ACCM · Free' : 'Standard · $5'}
                     </button>
-                    {!u.accmMember && trialDaysLeft(u.trialEndsAt) > 0 && (
-                      <span className="mt-1 block text-[10px] text-amber-400">trial: {trialDaysLeft(u.trialEndsAt)}d left</span>
-                    )}
+                    {!u.accmMember && <TrialControl user={u} onSet={days => setTrial(u, days)} />}
                   </td>
                   <td className="p-3 hidden md:table-cell text-ink3 text-xs">
                     {format(new Date(u.createdAt), 'MMM d, yyyy')}
@@ -414,6 +424,67 @@ export default function AdminPage() {
       </p>
 
       {showAdd && <AddUserModal onClose={() => setShowAdd(false)} onCreated={() => { setShowAdd(false); load() }} />}
+    </div>
+  )
+}
+
+/* ---------- trial days editor ---------- */
+const TRIAL_PRESETS = [7, 14, 30]
+
+function TrialControl({ user, onSet }: { user: AdminUser; onSet: (days: number) => void }) {
+  const [open, setOpen] = useState(false)
+  const [custom, setCustom] = useState('')
+  const left = trialDaysLeft(user.trialEndsAt)
+
+  function apply(days: number) {
+    setOpen(false)
+    setCustom('')
+    onSet(days)
+  }
+
+  function applyCustom() {
+    const days = Number(custom)
+    if (!Number.isInteger(days) || days < 0 || days > 365) return
+    apply(days)
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        title="Set trial length"
+        className={`mt-1 block text-[10px] hover:underline ${left > 0 ? 'text-amber-400' : 'text-ink3'}`}
+      >
+        {left > 0 ? `trial: ${left}d left` : 'no trial'} · edit
+      </button>
+    )
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1">
+      {TRIAL_PRESETS.map(d => (
+        <button key={d} onClick={() => apply(d)}
+          className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-elevated border border-line text-ink2 hover:border-yellow-500/40 hover:text-yellow-500">
+          {d}d
+        </button>
+      ))}
+      <input
+        value={custom}
+        onChange={e => setCustom(e.target.value.replace(/\D/g, ''))}
+        onKeyDown={e => { if (e.key === 'Enter') applyCustom(); if (e.key === 'Escape') setOpen(false) }}
+        placeholder="#"
+        aria-label="Custom trial days"
+        className="w-10 rounded bg-sunken border border-line px-1 py-0.5 text-[10px] text-ink outline-none focus:border-yellow-500/40 placeholder-ink3"
+      />
+      {left > 0 && (
+        <button onClick={() => apply(0)}
+          className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-ink3 hover:text-red-400">
+          End
+        </button>
+      )}
+      <button onClick={() => setOpen(false)} className="text-ink3 hover:text-ink" aria-label="Cancel">
+        <X className="w-3 h-3" />
+      </button>
     </div>
   )
 }

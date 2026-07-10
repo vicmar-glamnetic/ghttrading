@@ -9,6 +9,9 @@ const USER_SELECT = {
 
 const SUB_STATUSES = ['free', 'active', 'comp', 'canceled', 'past_due', 'pending']
 
+const DAY = 24 * 60 * 60 * 1000
+const MAX_TRIAL_DAYS = 365
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ userId: string }> }) {
   const session = await requireAdmin()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -47,6 +50,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
 
   if (typeof body.approved === 'boolean') {
     data.approved = body.approved
+  }
+
+  // Trial length, counted from now. 0 ends the trial immediately.
+  if (body.trialDays != null) {
+    const days = Number(body.trialDays)
+    if (!Number.isInteger(days) || days < 0 || days > MAX_TRIAL_DAYS) {
+      return NextResponse.json({ error: `Trial days must be a whole number between 0 and ${MAX_TRIAL_DAYS}` }, { status: 400 })
+    }
+    data.trialEndsAt = days === 0 ? null : new Date(Date.now() + days * DAY)
   }
 
   if (Object.keys(data).length === 0) {
