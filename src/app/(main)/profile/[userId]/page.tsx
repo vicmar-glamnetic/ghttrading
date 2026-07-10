@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
 import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
+import { isOnline, lastSeenLabel } from '@/lib/presence'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import type { PostWithDetails } from '@/types'
 
@@ -20,6 +21,7 @@ interface ProfileData {
   location: string | null
   website: string | null
   createdAt: string
+  lastSeenAt: string | null
   _count: { followers: number; following: number; posts: number }
   isFollowing: boolean
   friendRequest: { status: string; senderId: string } | null
@@ -359,18 +361,27 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
         <div className="px-4 pb-4">
           {/* Avatar + action buttons row */}
           <div className="flex items-end justify-between -mt-12 mb-4">
-            {isOwn ? (
-              <AvatarUploadOverlay
-                userId={userId}
-                currentImage={profile.image}
-                currentName={profile.name}
-                onUpdated={handleAvatarUpdated}
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-app">
-                <Avatar src={profile.image} name={profile.name} className="w-full h-full" />
-              </div>
-            )}
+            <div className="relative">
+              {isOwn ? (
+                <AvatarUploadOverlay
+                  userId={userId}
+                  currentImage={profile.image}
+                  currentName={profile.name}
+                  onUpdated={handleAvatarUpdated}
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-app">
+                  <Avatar src={profile.image} name={profile.name} className="w-full h-full" />
+                </div>
+              )}
+              {isOnline(profile.lastSeenAt) && (
+                <span
+                  title="Online now"
+                  aria-label="Online now"
+                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-green-400 border-4 border-app"
+                />
+              )}
+            </div>
 
             <div className="flex gap-2 mb-1">
               {isOwn ? (
@@ -413,7 +424,18 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
           </div>
 
           {/* Name & bio */}
-          <h1 className="text-xl font-bold text-ink">{profile.name}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-ink">{profile.name}</h1>
+            {isOnline(profile.lastSeenAt) ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-400/10 rounded-full px-2 py-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Online
+              </span>
+            ) : profile.lastSeenAt ? (
+              // Members who predate presence tracking have no timestamp — say
+              // nothing rather than "last seen never".
+              <span className="text-[10px] text-ink3">Last seen {lastSeenLabel(profile.lastSeenAt).toLowerCase()}</span>
+            ) : null}
+          </div>
           <p className="text-sm text-yellow-500">@{profile.username}</p>
           {profile.bio && <p className="mt-2 text-sm text-ink2 leading-relaxed">{profile.bio}</p>}
 

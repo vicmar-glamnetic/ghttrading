@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Avatar } from '@/components/ui/Avatar'
+import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { Button } from '@/components/ui/Button'
 import {
   Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi,
@@ -332,15 +332,7 @@ export default function AdminPage() {
                 <tr key={u.id} className="border-b border-line last:border-0 hover:bg-elevated/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="relative shrink-0">
-                        <Avatar src={u.image} name={u.name} size="sm" />
-                        {isOnline(u.lastSeenAt) && (
-                          <span
-                            title="Online now"
-                            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-surface"
-                          />
-                        )}
-                      </div>
+                      <OnlineAvatar src={u.image} name={u.name} size="sm" lastSeenAt={u.lastSeenAt} />
                       <div className="min-w-0">
                         <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'} {u.id === meId && <span className="text-[10px] text-yellow-500">(you)</span>}</p>
                         <p className="text-xs text-ink3 truncate">{u.email}</p>

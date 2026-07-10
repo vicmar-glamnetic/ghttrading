@@ -9,9 +9,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ userId: 
 
     const { userId } = await params
 
+    // Explicit select: this response is readable by any signed-in member, so it
+    // must never carry credentials (password, sessionToken) or billing fields.
     const user = await db.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true, name: true, username: true, image: true, coverImage: true,
+        bio: true, location: true, website: true, role: true, createdAt: true,
+        lastSeenAt: true,
         _count: { select: { followers: true, following: true, posts: true } },
         followers: { where: { followerId: session.user.id }, select: { followerId: true } },
       },
@@ -28,10 +33,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ userId: 
       },
     })
 
-    const { password, ...safeUser } = user
-
     return NextResponse.json({
-      ...safeUser,
+      ...user,
       isFollowing: user.followers.length > 0,
       friendRequest,
     })

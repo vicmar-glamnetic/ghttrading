@@ -1,7 +1,36 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { HEARTBEAT_WRITE_THROTTLE_MS } from '@/lib/presence'
+import { HEARTBEAT_WRITE_THROTTLE_MS, ONLINE_WINDOW_MS } from '@/lib/presence'
+
+/** Cap on the "who's online" list — the count is exact, the roster is trimmed. */
+const ONLINE_LIST_LIMIT = 24
+
+/**
+ * Who is on the site right now. Any signed-in member can see this; it powers the
+ * "Online now" card in the sidebar.
+ */
+export async function GET() {
+  const session = await auth()
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const where = {
+    lastSeenAt: { gt: new Date(Date.now() - ONLINE_WINDOW_MS) },
+    approved: true, // never surface accounts still waiting on admin approval
+  }
+
+  const [users, total] = await Promise.all([
+    db.user.findMany({
+      where,
+      orderBy: { lastSeenAt: 'desc' },
+      take: ONLINE_LIST_LIMIT,
+      select: { id: true, name: true, username: true, image: true, role: true, lastSeenAt: true },
+    }),
+    db.user.count({ where }),
+  ])
+
+  return NextResponse.json({ users, total })
+}
 
 /**
  * Heartbeat from an open tab. Stamps users.lastSeenAt so admins can see who is
