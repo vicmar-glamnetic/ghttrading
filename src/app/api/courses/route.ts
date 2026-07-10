@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { formatTotalDuration } from '@/lib/courses'
 
 /** Course grid: every published course with the caller's own progress folded in. */
 export async function GET() {
@@ -13,7 +14,7 @@ export async function GET() {
     orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
     select: {
       id: true, slug: true, title: true, description: true, level: true, coverImage: true,
-      lessons: { select: { id: true, youtubeId: true }, orderBy: { order: 'asc' } },
+      lessons: { select: { id: true, youtubeId: true, durationSec: true }, orderBy: { order: 'asc' } },
       enrollments: { where: { userId }, select: { id: true } },
     },
   })
@@ -34,6 +35,7 @@ export async function GET() {
       enrolled: enrollments.length > 0,
       // Fall back to the first lesson's thumbnail when no cover is set.
       previewYoutubeId: lessons[0]?.youtubeId ?? null,
+      totalDuration: formatTotalDuration(lessons.map(l => l.durationSec)),
     })),
   )
 }

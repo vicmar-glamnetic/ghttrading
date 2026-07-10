@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       id: true, slug: true, title: true, description: true, level: true, published: true,
       lessons: {
         orderBy: { order: 'asc' },
-        select: { id: true, section: true, title: true, youtubeId: true, educator: true, summary: true, order: true },
+        select: { id: true, section: true, title: true, youtubeId: true, educator: true, summary: true, durationSec: true, order: true },
       },
       enrollments: { where: { userId }, select: { id: true } },
     },

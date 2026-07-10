@@ -48,6 +48,25 @@ export function nextLessonId<T extends LessonLike>(lessons: T[], completedIds: S
   return next?.id ?? ordered[ordered.length - 1]?.id ?? null
 }
 
+/** 809 → "13:29", 3649 → "1:00:49". Null when the runtime isn't known. */
+export function formatDuration(seconds: number | null | undefined): string | null {
+  if (!seconds || seconds <= 0) return null
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
+}
+
+/** Total runtime of a course, e.g. "4h 12m". Null when nothing is known. */
+export function formatTotalDuration(durations: (number | null | undefined)[]): string | null {
+  const total = durations.reduce<number>((sum, d) => sum + (d ?? 0), 0)
+  if (total <= 0) return null
+  const h = Math.floor(total / 3600)
+  const m = Math.round((total % 3600) / 60)
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
+
 export const LEVEL_LABEL: Record<string, string> = {
   beginner: 'Beginner',
   intermediate: 'Intermediate',

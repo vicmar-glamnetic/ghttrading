@@ -16,6 +16,7 @@ interface CourseCard {
   completedCount: number
   enrolled: boolean
   previewYoutubeId: string | null
+  totalDuration: string | null
 }
 
 export default function CoursesPage() {
@@ -87,6 +88,7 @@ export default function CoursesPage() {
                     </span>
                     <span className="text-[10px] font-semibold text-white/90 bg-black/60 rounded-full px-2 py-0.5">
                       {c.lessonCount} lesson{c.lessonCount === 1 ? '' : 's'}
+                      {c.totalDuration && ` · ${c.totalDuration}`}
                     </span>
                     {done && (
                       <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-black/60 rounded-full px-2 py-0.5">

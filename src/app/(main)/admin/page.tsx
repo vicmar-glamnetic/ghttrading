@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi,
 } from 'lucide-react'
+
 import { format } from 'date-fns'
 import { trialDaysLeft } from '@/lib/billing'
 import { isOnline, lastSeenLabel, activeAgoLabel, HEARTBEAT_MS } from '@/lib/presence'
@@ -207,9 +208,14 @@ export default function AdminPage() {
           <Shield className="w-5 h-5 text-yellow-500" />
           <h1 className="font-bold text-ink text-lg">Admin · Users</h1>
         </div>
-        <Button variant="gold" size="sm" onClick={() => setShowAdd(true)} className="gap-1.5 text-xs">
-          <Plus className="w-3.5 h-3.5" /> Add User
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/courses" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
+            <GraduationCap className="w-3.5 h-3.5" /> Courses
+          </Link>
+          <Button variant="gold" size="sm" onClick={() => setShowAdd(true)} className="gap-1.5 text-xs">
+            <Plus className="w-3.5 h-3.5" /> Add User
+          </Button>
+        </div>
       </div>
 
       {/* stats — the Online Now tile opens the live roster */}

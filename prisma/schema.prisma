@@ -498,11 +498,12 @@ model Lesson {
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   section   String // grouping header in the curriculum, e.g. "Foundations"
   title     String
-  youtubeId String // the 11-char id, not a full URL — the player builds the embed
-  educator  String? // channel/creator credit
-  summary   String?
-  order     Int // position across the whole course, not within the section
-  createdAt DateTime @default(now())
+  youtubeId   String // the 11-char id, not a full URL — the player builds the embed
+  educator    String? // channel/creator credit
+  summary     String?
+  durationSec Int? // scraped best-effort; null renders as no runtime, never a guess
+  order       Int // position across the whole course, not within the section
+  createdAt   DateTime @default(now())
 
   progress LessonProgress[]
 

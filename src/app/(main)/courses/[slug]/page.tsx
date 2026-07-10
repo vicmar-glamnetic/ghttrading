@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, use } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, Circle, PlayCircle, ChevronRight, Loader2 } from 'lucide-react'
-import { youtubeEmbedUrl, groupBySection, nextLessonId, percentComplete, LEVEL_LABEL } from '@/lib/courses'
+import { youtubeEmbedUrl, groupBySection, nextLessonId, percentComplete, formatDuration, formatTotalDuration, LEVEL_LABEL } from '@/lib/courses'
 
 interface Lesson {
   id: string
@@ -11,6 +11,7 @@ interface Lesson {
   youtubeId: string
   educator: string | null
   summary: string | null
+  durationSec: number | null
   order: number
 }
 interface Course {
@@ -52,6 +53,10 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
   }, [slug])
 
   const sections = useMemo(() => (course ? groupBySection(course.lessons) : []), [course])
+  const totalRuntime = useMemo(
+    () => (course ? formatTotalDuration(course.lessons.map(l => l.durationSec)) : null),
+    [course],
+  )
   const active = course?.lessons.find(l => l.id === activeId) ?? null
   const pct = course ? percentComplete(completed.size, course.lessons.length) : 0
 
@@ -187,6 +192,7 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
                 {LEVEL_LABEL[course.level] ?? course.level}
               </span>
             </div>
+            {totalRuntime && <p className="text-[10px] text-ink3 mt-0.5">{course.lessons.length} lessons · {totalRuntime} total</p>}
             <div className="flex items-center justify-between text-[10px] mt-2 mb-1">
               <span className="text-ink3">{completed.size} of {course.lessons.length} complete</span>
               <span className="font-bold text-yellow-500">{pct}%</span>
@@ -223,8 +229,13 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
                       ) : (
                         <Circle className="w-4 h-4 text-ink3 shrink-0 mt-0.5" />
                       )}
-                      <span className={`text-xs leading-snug ${isActive ? 'text-ink font-semibold' : done ? 'text-ink3' : 'text-ink2'}`}>
-                        {l.title}
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-xs leading-snug ${isActive ? 'text-ink font-semibold' : done ? 'text-ink3' : 'text-ink2'}`}>
+                          {l.title}
+                        </span>
+                        {formatDuration(l.durationSec) && (
+                          <span className="block text-[10px] text-ink3 mt-0.5">{formatDuration(l.durationSec)}</span>
+                        )}
                       </span>
                     </button>
                   )
