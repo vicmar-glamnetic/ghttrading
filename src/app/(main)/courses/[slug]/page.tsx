@@ -168,10 +168,14 @@ export default function CoursePage({ params }: { params: Promise<{ slug: string 
                   disabled={saving}
                   className="mt-4 w-full flex items-center justify-between gap-2 rounded-xl bg-yellow-500 hover:bg-yellow-400 disabled:opacity-60 text-black font-bold text-sm px-4 py-2.5 transition-colors"
                 >
-                  <span>Complete &amp; continue</span>
-                  <span className="flex items-center gap-1 text-xs font-semibold truncate">
-                    {upNext.title} <ChevronRight className="w-4 h-4 shrink-0" />
+                  <span className="whitespace-nowrap">Complete &amp; continue</span>
+                  {/* The next title needs min-w-0 to truncate inside a flex row,
+                      and there isn't room for it at all on a phone. */}
+                  <span className="hidden sm:flex items-center gap-1 min-w-0 text-xs font-semibold">
+                    <span className="truncate">{upNext.title}</span>
+                    <ChevronRight className="w-4 h-4 shrink-0" />
                   </span>
+                  <ChevronRight className="w-4 h-4 shrink-0 sm:hidden" />
                 </button>
               )}
               {!upNext && isDone && (

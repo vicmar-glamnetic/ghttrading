@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import {
   Rocket, Zap, Gauge, ThumbsUp, BarChart3, Bell, MessageCircle, BookOpen, NotebookPen,
   CalendarDays, Calculator, BellRing, Trophy, Clock, Smartphone, TrendingUp, Check, X,
+  GraduationCap,
 } from 'lucide-react'
 
 import { ACCM_REGISTER_URL } from '@/lib/billing'
@@ -73,6 +74,13 @@ const STEPS: Step[] = [
     body: 'Chat in the main community room, join a dedicated room for each coach, or message a coach 1-on-1 for personal guidance.',
     href: '/chat',
     cta: 'Open Chat',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Courses',
+    body: 'Structured video courses that track your progress — Trading Basics takes you from pips to your first MT5 order, and Gold Trading covers what actually moves XAUUSD. Pick up wherever you left off.',
+    href: '/courses',
+    cta: 'Browse courses',
   },
   {
     icon: BookOpen,
