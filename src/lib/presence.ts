@@ -23,6 +23,18 @@ export function isOnline(lastSeenAt: string | Date | null | undefined): boolean 
   return Date.now() - new Date(lastSeenAt).getTime() < ONLINE_WINDOW_MS
 }
 
+/**
+ * How recently an already-online user was heard from, e.g. "just now", "3m ago".
+ * lastSeenLabel is useless inside an online-only list — it says "Online" for
+ * everyone — so use this to tell an idle tab from an active one.
+ */
+export function activeAgoLabel(lastSeenAt: string | Date | null | undefined): string {
+  if (!lastSeenAt) return '—'
+  const secs = Math.floor((Date.now() - new Date(lastSeenAt).getTime()) / 1000)
+  if (secs < 60) return 'just now'
+  return `${Math.floor(secs / 60)}m ago`
+}
+
 /** Short "when were they last around" label, e.g. "Online", "12m ago", "3d ago". */
 export function lastSeenLabel(lastSeenAt: string | Date | null | undefined): string {
   if (!lastSeenAt) return 'Never'
