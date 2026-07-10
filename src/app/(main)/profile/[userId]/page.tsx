@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
 import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
-import { uploadToBlob } from '@/lib/upload'
+import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import type { PostWithDetails } from '@/types'
 
 interface ProfileData {
@@ -34,11 +34,16 @@ function AvatarUploadOverlay({ userId, currentImage, currentName, onUpdated }: {
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [err, setErr] = useState('')
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    if (inputRef.current) inputRef.current.value = ''
     if (!file) return
+    const invalid = validateImage(file)
+    if (invalid) { setErr(invalid); return }
     setUploading(true)
+    setErr('')
     try {
       const { url } = await uploadToBlob(file)
       const res = await fetch(`/api/users/${userId}/profile`, {
@@ -49,26 +54,48 @@ function AvatarUploadOverlay({ userId, currentImage, currentName, onUpdated }: {
       if (res.ok) {
         const data = await res.json()
         onUpdated(data.image)
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setErr(d.error || 'Could not save your photo. Please try again.')
       }
+    } catch (e) {
+      setErr(friendlyUploadError(e))
     } finally {
       setUploading(false)
-      if (inputRef.current) inputRef.current.value = ''
     }
   }
 
+  function pick() { if (!uploading) inputRef.current?.click() }
+
   return (
-    <div className="relative group cursor-pointer" onClick={() => inputRef.current?.click()}>
-      <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-app bg-elevated">
-        {/* Always use Avatar — it now handles data: URLs and image errors internally */}
-        <Avatar src={currentImage} name={currentName} className="w-full h-full" />
-      </div>
-      <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-        {uploading
-          ? <div className="w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
-          : <Camera className="w-5 h-5 text-white" />
-        }
-      </div>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={pick}
+        disabled={uploading}
+        aria-label="Change profile photo"
+        className="group relative block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 disabled:cursor-wait"
+      >
+        <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-app bg-elevated">
+          {/* Always use Avatar — it handles data: URLs and image errors internally */}
+          <Avatar src={currentImage} name={currentName} className="w-full h-full" />
+        </div>
+        {/* Full-cover dim + spinner while uploading, dim-on-hover otherwise */}
+        <div className={`absolute inset-0 rounded-full bg-black/50 flex items-center justify-center transition-opacity ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+          {uploading
+            ? <div className="w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+            : <Camera className="w-5 h-5 text-white" />
+          }
+        </div>
+        {/* Always-visible badge so it's obviously editable on touch devices */}
+        {!uploading && (
+          <span className="absolute bottom-0.5 right-0.5 w-7 h-7 rounded-full bg-yellow-500 ring-2 ring-app flex items-center justify-center shadow">
+            <Camera className="w-3.5 h-3.5 text-black" />
+          </span>
+        )}
+      </button>
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      {err && <p className="absolute top-full left-0 mt-1.5 w-48 text-xs text-red-400">{err}</p>}
     </div>
   )
 }
@@ -80,11 +107,16 @@ function CoverUploadOverlay({ userId, currentCover, onUpdated }: {
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [err, setErr] = useState('')
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    if (inputRef.current) inputRef.current.value = ''
     if (!file) return
+    const invalid = validateImage(file)
+    if (invalid) { setErr(invalid); return }
     setUploading(true)
+    setErr('')
     try {
       const { url } = await uploadToBlob(file)
       const res = await fetch(`/api/users/${userId}/profile`, {
@@ -95,26 +127,32 @@ function CoverUploadOverlay({ userId, currentCover, onUpdated }: {
       if (res.ok) {
         const data = await res.json()
         onUpdated(data.coverImage)
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setErr(d.error || 'Could not save your cover. Please try again.')
       }
+    } catch (e) {
+      setErr(friendlyUploadError(e))
     } finally {
       setUploading(false)
-      if (inputRef.current) inputRef.current.value = ''
     }
   }
 
   return (
     <>
       <button
-        onClick={() => inputRef.current?.click()}
-        className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/60 hover:bg-black/80 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+        type="button"
+        onClick={() => { if (!uploading) inputRef.current?.click() }}
+        disabled={uploading}
+        className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/60 hover:bg-black/80 border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:cursor-wait focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500"
       >
         {uploading
-          ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          : <Camera className="w-3.5 h-3.5" />
+          ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Uploading…</>
+          : <><Camera className="w-3.5 h-3.5" /> {currentCover ? 'Change Cover' : 'Add Cover'}</>
         }
-        Change Cover
       </button>
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      {err && <p className="absolute bottom-3 left-3 max-w-[60%] bg-black/75 rounded px-2 py-1 text-xs text-red-300">{err}</p>}
     </>
   )
 }

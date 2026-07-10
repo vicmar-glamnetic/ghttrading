@@ -17,6 +17,9 @@ export async function POST(request: Request) {
         return {
           allowedContentTypes: [
             'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            // iPhone camera photos come through as HEIC/HEIF — without these,
+            // every upload from an iOS device is rejected here.
+            'image/heic', 'image/heif',
             'video/mp4', 'video/webm', 'video/quicktime',
           ],
           maximumSizeInBytes: 64 * 1024 * 1024, // 64 MB

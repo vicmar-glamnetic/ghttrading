@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { updateMyProfile } from '@/lib/useMyProfile'
-import { uploadToBlob } from '@/lib/upload'
+import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
 import { Settings, Shield, User, Camera, Bell } from 'lucide-react'
@@ -76,8 +76,12 @@ export default function SettingsPage() {
 
   async function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    if (fileRef.current) fileRef.current.value = ''
     if (!file) return
+    const invalid = validateImage(file)
+    if (invalid) { setError(invalid); return }
     setUploading(true)
+    setError('')
     try {
       const { url } = await uploadToBlob(file)
       const res = await fetch(`/api/users/${session?.user?.id}/profile`, {
@@ -89,10 +93,14 @@ export default function SettingsPage() {
         setAvatarUrl(url)
         updateMyProfile({ image: url })
         updateSession()
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setError(d.error || 'Could not save your photo. Please try again.')
       }
+    } catch (err) {
+      setError(friendlyUploadError(err))
     } finally {
       setUploading(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
