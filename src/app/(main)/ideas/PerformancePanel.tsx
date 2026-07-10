@@ -12,7 +12,7 @@ interface Stats {
   other?: OtherSymbol[]
   coaches: Coach[]; months: Month[]
 }
-interface OtherSymbol { symbol: string; unit: 'pips' | 'points'; pips: number; wins: number; losses: number }
+interface OtherSymbol { symbol: string; unit: 'pips' | 'points'; week: number; all: number; wins: number; losses: number }
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
 
@@ -77,14 +77,23 @@ export function PerformancePanel() {
           </div>
           {s.other && s.other.length > 0 && (
             <div className="mt-3 pt-3 border-t border-line">
-              <p className="text-[10px] text-ink3 uppercase tracking-wider mb-2">Other symbols · all-time</p>
+              <p className="text-[10px] text-ink3 uppercase tracking-wider mb-2">Other symbols</p>
+              <div className="flex items-center gap-3 text-[10px] text-ink3 uppercase tracking-wider mb-1">
+                <span className="w-20 shrink-0" />
+                <span className="flex-1" />
+                <span className="w-20 text-right shrink-0">This week</span>
+                <span className="w-24 text-right shrink-0">All-time</span>
+              </div>
               <div className="space-y-1.5">
                 {s.other.map(o => (
                   <div key={o.symbol} className="flex items-center gap-3 text-xs">
                     <span className="font-semibold text-ink2 w-20 shrink-0">{o.symbol}</span>
                     <span className="text-ink3 tabular-nums flex-1">{o.wins}W/{o.losses}L</span>
-                    <span className={`font-bold tabular-nums ${o.pips >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {signed(o.pips)} <span className="font-normal text-ink3">{o.unit}</span>
+                    <span className={`font-bold tabular-nums w-20 text-right shrink-0 ${o.week >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {signed(o.week)}
+                    </span>
+                    <span className={`font-bold tabular-nums w-24 text-right shrink-0 ${o.all >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {signed(o.all)} <span className="font-normal text-ink3">{o.unit}</span>
                     </span>
                   </div>
                 ))}

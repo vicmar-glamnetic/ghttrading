@@ -1,13 +1,14 @@
 import { db } from './db'
 import { sendPushToAll, sendPushToUsers } from './push'
-import { signalPips } from './trading'
+import { mid, signalPips } from './trading'
 
 type TP = { price: number; pips?: number | null; hit?: boolean }
 
 let lastRun = 0
 
-// Run gold-price-driven side effects: auto-close signals that reached a TP, and
-// fire any crossed price alerts. Throttled so a burst of client price polls
+// Run gold-price-driven side effects: auto-close signals that reached their stop
+// or all targets, and fire any crossed price alerts. Non-gold signals have no live
+// price feed and stay manual. Throttled so a burst of client price polls
 // doesn't re-run it. Piggybacks on the /api/price route (no cron needed).
 export async function runGoldPriceEvents(price: number) {
   const now = Date.now()
@@ -16,11 +17,16 @@ export async function runGoldPriceEvents(price: number) {
   await Promise.allSettled([autoCloseGold(price), checkAlerts(price)])
 }
 
-// Mark TPs that price has reached and close the signal as tp_hit — but only once
-// the entry has actually been filled. A TP sitting beyond the entry does NOT prove
-// the trade was entered: e.g. a buy-limit below market (entry 4122–4126) can see
-// price rise straight to a TP (4128) without ever dipping into the zone, so the
-// trade never triggered. We gate on `entered` to avoid those false wins.
+// Close gold signals that reached their stop or all of their targets — but only
+// once the entry has actually been filled. A TP sitting beyond the entry does NOT
+// prove the trade was entered: e.g. a buy-limit below market (entry 4122–4126) can
+// see price rise straight to a TP (4128) without ever dipping into the zone, so the
+// trade never triggered. We gate on `entered` to avoid those false wins (and, for
+// the stop, false losses).
+//
+// Stops are checked before targets. We only ever see a spot sample, never the path
+// price took between samples, so when a sample could plausibly be either outcome we
+// book the loss rather than the win.
 async function autoCloseGold(price: number) {
   const open = await db.tradeIdea.findMany({
     where: { status: 'pending', isPublic: true, symbol: { startsWith: 'XAU' } },
@@ -41,8 +47,35 @@ async function autoCloseGold(price: number) {
     if (entered && !idea.entered) {
       await db.tradeIdea.update({ where: { id: idea.id }, data: { entered: true } })
     }
-    // Not entered yet → the trade hasn't triggered, so no TP can be counted.
+    // Not entered yet → the trade hasn't triggered, so no TP or SL can be counted.
     if (!entered) continue
+
+    // Stop reached? A signal that already banked a target closes at breakeven
+    // instead of a full loss — the app tells users to move their stop to BE the
+    // moment TP1 lands, so booking a loss there would contradict its own advice.
+    const sl = mid(idea.slLow, idea.slHigh)
+    const slReached = sl != null && (idea.direction === 'buy' ? price <= sl : price >= sl)
+    if (slReached) {
+      const anyTpHit = tps.some(t => t.hit)
+      const status = anyTpHit ? 'breakeven' : 'sl_hit'
+      await db.tradeIdea.update({ where: { id: idea.id }, data: { status } })
+
+      const pips = signalPips({
+        symbol: idea.symbol, direction: idea.direction as 'buy' | 'sell',
+        entryLow: idea.entryLow, entryHigh: idea.entryHigh, slLow: idea.slLow, slHigh: idea.slHigh,
+        takeProfits: tps, status: 'sl_hit',
+      })
+      await sendPushToAll(anyTpHit ? {
+        title: `⚪ Breakeven · ${idea.symbol}`,
+        body: 'Price came back to the stop after banking a target — closed flat.',
+        url: '/ideas', tag: `result-${idea.id}`,
+      } : {
+        title: `🔴 SL hit · ${idea.symbol}`,
+        body: pips != null ? `${pips} pips — stopped out. On to the next.` : 'Stopped out. On to the next.',
+        url: '/ideas', tag: `result-${idea.id}`,
+      }, idea.authorId).catch(() => {})
+      continue
+    }
 
     const prevAnyHit = tps.some(t => t.hit)
     let changed = false

@@ -45,7 +45,7 @@ export async function GET() {
   // 0.0001, a crypto point 1), so gold gets the headline total and every other
   // symbol is banked separately under its own unit — never summed together.
   const goldPips = { week: 0, month: 0, all: 0 }
-  const otherBySymbol = new Map<string, { symbol: string; unit: 'pips' | 'points'; pips: number; wins: number; losses: number }>()
+  const otherBySymbol = new Map<string, { symbol: string; unit: 'pips' | 'points'; week: number; all: number; wins: number; losses: number }>()
 
   for (const i of ideas) {
     const closed = i.status === 'tp_hit' || i.status === 'sl_hit'
@@ -65,17 +65,20 @@ export async function GET() {
         status: i.status as 'tp_hit' | 'sl_hit',
       })
 
+      const t = i.createdAt.getTime()
       if (isGold(i.symbol)) {
         if (p != null) {
           goldPips.all += p
-          const t = i.createdAt.getTime()
           if (t >= monthStart) goldPips.month += p
           if (now - t <= WEEK) goldPips.week += p
         }
       } else {
         const sym = i.symbol.toUpperCase()
-        const o = otherBySymbol.get(sym) ?? { symbol: sym, unit: pipUnit(sym), pips: 0, wins: 0, losses: 0 }
-        if (p != null) o.pips += p
+        const o = otherBySymbol.get(sym) ?? { symbol: sym, unit: pipUnit(sym), week: 0, all: 0, wins: 0, losses: 0 }
+        if (p != null) {
+          o.all += p
+          if (now - t <= WEEK) o.week += p
+        }
         if (win) o.wins++; else o.losses++
         otherBySymbol.set(sym, o)
       }
