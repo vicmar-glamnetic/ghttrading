@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { requireAdmin, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
+import { ONLINE_WINDOW_MS } from '@/lib/presence'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
   role: true, approved: true, accmMember: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
+  lastSeenAt: true,
 }
 
 export async function GET(req: Request) {
@@ -26,9 +28,11 @@ export async function GET(req: Request) {
   }
   if (role && (ROLES as readonly string[]).includes(role)) where.role = role
 
-  const [users, counts] = await Promise.all([
+  const [users, counts, onlineNow] = await Promise.all([
     db.user.findMany({ where, orderBy: { createdAt: 'desc' }, select: USER_SELECT }),
     db.user.groupBy({ by: ['role'], _count: { _all: true } }),
+    // Site-wide, not scoped to the current search/role filter.
+    db.user.count({ where: { lastSeenAt: { gt: new Date(Date.now() - ONLINE_WINDOW_MS) } } }),
   ])
 
   const byRole: Record<string, number> = {}
@@ -42,6 +46,7 @@ export async function GET(req: Request) {
       admin: byRole.admin ?? 0,
       coach: byRole.coach ?? 0,
       member: byRole.member ?? 0,
+      onlineNow,
     },
   })
 }

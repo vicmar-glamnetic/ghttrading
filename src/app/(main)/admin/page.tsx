@@ -4,10 +4,11 @@ import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import {
-  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign,
+  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { trialDaysLeft } from '@/lib/billing'
+import { isOnline, lastSeenLabel, HEARTBEAT_MS } from '@/lib/presence'
 
 interface AdminUser {
   id: string
@@ -23,8 +24,9 @@ interface AdminUser {
   trialEndsAt: string | null
   subscriptionEnd: string | null
   createdAt: string
+  lastSeenAt: string | null
 }
-interface Stats { total: number; admin: number; coach: number; member: number }
+interface Stats { total: number; admin: number; coach: number; member: number; onlineNow: number }
 
 const ROLE_OPTIONS = ['admin', 'coach', 'member'] as const
 
@@ -46,7 +48,7 @@ export default function AdminPage() {
   const { data: session } = useSession()
   const meId = session?.user?.id
   const [users, setUsers] = useState<AdminUser[]>([])
-  const [stats, setStats] = useState<Stats>({ total: 0, admin: 0, coach: 0, member: 0 })
+  const [stats, setStats] = useState<Stats>({ total: 0, admin: 0, coach: 0, member: 0, onlineNow: 0 })
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('')
@@ -107,8 +109,10 @@ export default function AdminPage() {
     }
   }
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  // `silent` refreshes in place, so the presence poll below doesn't blank the
+  // table into a "Loading…" row every minute.
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
     try {
       const p = new URLSearchParams()
       if (q.trim()) p.set('q', q.trim())
@@ -116,15 +120,21 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin/users?${p.toString()}`)
       const data = await res.json()
       setUsers(data.users ?? [])
-      setStats(data.stats ?? { total: 0, admin: 0, coach: 0, member: 0 })
+      setStats(data.stats ?? { total: 0, admin: 0, coach: 0, member: 0, onlineNow: 0 })
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [q, roleFilter])
 
   useEffect(() => {
     const t = setTimeout(load, 250) // debounce search
     return () => clearTimeout(t)
+  }, [load])
+
+  // Keep the online dots honest — they go stale on their own otherwise.
+  useEffect(() => {
+    const id = setInterval(() => load({ silent: true }), HEARTBEAT_MS)
+    return () => clearInterval(id)
   }, [load])
 
   async function changeRole(u: AdminUser, role: string) {
@@ -201,8 +211,9 @@ export default function AdminPage() {
       </div>
 
       {/* stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
+          { label: 'Online Now', value: stats.onlineNow, icon: Wifi, color: 'text-green-400' },
           { label: 'Total Users', value: stats.total, icon: Users, color: 'text-ink' },
           { label: 'Members', value: stats.member, icon: DollarSign, color: 'text-green-400' },
           { label: 'Coaches', value: stats.coach, icon: GraduationCap, color: 'text-blue-400' },
@@ -321,10 +332,21 @@ export default function AdminPage() {
                 <tr key={u.id} className="border-b border-line last:border-0 hover:bg-elevated/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Avatar src={u.image} name={u.name} size="sm" />
+                      <div className="relative shrink-0">
+                        <Avatar src={u.image} name={u.name} size="sm" />
+                        {isOnline(u.lastSeenAt) && (
+                          <span
+                            title="Online now"
+                            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border-2 border-surface"
+                          />
+                        )}
+                      </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'} {u.id === meId && <span className="text-[10px] text-yellow-500">(you)</span>}</p>
                         <p className="text-xs text-ink3 truncate">{u.email}</p>
+                        <p className={`text-[10px] ${isOnline(u.lastSeenAt) ? 'text-green-400 font-semibold' : 'text-ink3'}`}>
+                          {lastSeenLabel(u.lastSeenAt)}
+                        </p>
                         {!u.approved && (
                           <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-400/10 rounded-full px-1.5 py-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Pending approval

@@ -39,6 +39,7 @@ model User {
   trialEndsAt        DateTime? // free-trial window for non-ACCM (other broker) members
   subscriptionEnd    DateTime?
   sessionToken       String?  @unique  // single-session enforcement
+  lastSeenAt         DateTime? // heartbeat from the open app; drives the online dot
 
   accounts          Account[]
   sessions          Session[]
@@ -70,6 +71,7 @@ model User {
   acctRiskPct       Float?    // saved risk % per trade
   shareStats        Boolean   @default(false) // opt in to the member leaderboard
 
+  @@index([lastSeenAt])
   @@map("users")
 }
 

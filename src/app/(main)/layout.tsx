@@ -6,6 +6,7 @@ import { LeftSidebar } from '@/components/layout/LeftSidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { SessionGuard } from '@/components/SessionGuard'
+import { PresenceHeartbeat } from '@/components/PresenceHeartbeat'
 import { WelcomeTour } from '@/components/WelcomeTour'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <div className="min-h-dvh bg-app">
       <SessionGuard />
+      <PresenceHeartbeat />
       <Navbar />
       <div className="w-full pt-14 px-4 sm:px-6 lg:px-8 2xl:px-12">
         <div className="flex gap-5 py-5">
