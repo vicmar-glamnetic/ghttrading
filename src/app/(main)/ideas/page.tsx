@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
   Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
+  GraduationCap, ChevronDown,
 } from 'lucide-react'
 import { PerformancePanel } from './PerformancePanel'
 import { liveSignalStatus, signalPips, positionSize } from '@/lib/trading'
@@ -666,6 +667,78 @@ function AccountBar({ acct, open, setOpen, onSave, onClear }: {
   )
 }
 
+// Collapsible how-to shown to coaches/staff only. Explains the manual signal
+// workflow so every coach closes and manages ideas consistently. Collapsed state
+// is remembered per-device (default: open the first time).
+function CoachGuide() {
+  const [open, setOpen] = useState(true)
+  useEffect(() => { setOpen(localStorage.getItem('ght:coachGuide') !== 'closed') }, [])
+  const toggle = () => setOpen(o => { localStorage.setItem('ght:coachGuide', o ? 'closed' : 'open'); return !o })
+
+  return (
+    <div className="max-w-xl mx-auto rounded-xl border border-yellow-500/20 bg-yellow-500/5">
+      <button onClick={toggle} className="w-full flex items-center gap-2 px-4 py-3 text-left">
+        <GraduationCap className="w-4 h-4 text-yellow-500 shrink-0" />
+        <span className="text-sm font-bold text-ink flex-1">Coach guide · how signals work</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5">Coaches only</span>
+        <ChevronDown className={`w-4 h-4 text-ink3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-4 text-sm text-ink2">
+          <section>
+            <h3 className="font-bold text-ink mb-1">Posting a signal</h3>
+            <p className="text-ink3 leading-relaxed">
+              Tap <span className="font-semibold text-ink2">New Signal</span> and set the symbol, direction, entry
+              (a single price or a zone), one or more take-profits, and your stop. You can type the whole thing in
+              shorthand — e.g. <span className="font-mono text-[12px] text-ink2">Buy 4110-4105 / TP 4115 4001 / Sl 4088</span> —
+              and it auto-fills. Add notes for your reasoning. New signals go <span className="font-semibold text-ink2">LIVE</span> automatically.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-bold text-ink mb-1">Status &amp; closing (all manual)</h3>
+            <p className="text-ink3 leading-relaxed mb-2">
+              Nothing auto-closes anymore — <span className="font-semibold text-ink2">you</span> set the outcome. Tap
+              <span className="font-semibold text-ink2"> Close signal</span> and pick one:
+            </p>
+            <ul className="space-y-1.5 text-ink3">
+              <li><span className="text-green-400 font-semibold">✅ Win (TP)</span> — target hit. <span className="text-ink2">Counts as a win.</span></li>
+              <li><span className="text-red-400 font-semibold">🔴 Loss (SL)</span> — stop hit. <span className="text-ink2">Counts as a loss.</span></li>
+              <li><span className="text-ink2 font-semibold">⚪ Breakeven</span> — closed at entry, no gain/loss. <span className="text-ink2">Neutral.</span></li>
+              <li><span className="text-ink2 font-semibold">⚫ Closed manually</span> — you <span className="text-ink2 font-semibold">entered</span> then closed by hand before TP/SL. <span className="text-ink2">Neutral.</span></li>
+              <li><span className="text-ink3 font-semibold">🚫 Cancelled</span> — trade <span className="text-ink2 font-semibold">never triggered</span> (didn&rsquo;t reach entry / called off). <span className="text-ink2">Neutral.</span></li>
+            </ul>
+            <p className="text-[12px] text-ink3 leading-relaxed mt-2 rounded-lg bg-sunken border border-line px-3 py-2">
+              <span className="font-bold text-ink2">Only Win (TP) and Loss (SL) affect win-rate.</span> Breakeven,
+              Closed manually, and Cancelled are neutral — they never move your stats. Rule of thumb: <span className="italic">did we
+              actually enter?</span> Yes → Closed manually · No → Cancelled.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-bold text-ink mb-1">Managing a live signal</h3>
+            <ul className="space-y-1.5 text-ink3">
+              <li><span className="font-semibold text-ink2">Edit</span> — adjust entry/TP/SL while running (e.g. move SL to breakeven after TP1, or tick a TP that hit).</li>
+              <li><span className="font-semibold text-ink2">Mark as Live</span> — reopen a closed signal back to LIVE if you closed it by mistake.</li>
+              <li><span className="font-semibold text-ink2">Delete</span> — remove a signal entirely.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 className="font-bold text-ink mb-1">Good to know</h3>
+            <ul className="space-y-1.5 text-ink3">
+              <li>Members see an <span className="font-semibold text-ink2">auto position size</span> (lots) from their own balance &amp; risk %, plus one-tap <span className="font-semibold text-ink2">copy</span> buttons for each price.</li>
+              <li>Closing as <span className="font-semibold text-ink2">Win (TP)</span> sends a push to the whole community — so update outcomes promptly.</li>
+              <li>Stats, the coach leaderboard, and the Monday weekly recap are all computed automatically from your closed signals.</li>
+            </ul>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function IdeasPage() {
   const { data: session } = useSession()
   const uid = session?.user?.id
@@ -782,6 +855,8 @@ export default function IdeasPage() {
           </button>
         ))}
       </div>
+
+      {isStaff && <CoachGuide />}
 
       {tab === 'stats' ? (
         <PerformancePanel />
