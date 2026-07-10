@@ -38,7 +38,7 @@ export default function PrivacyPage() {
         <p>We share limited data with trusted providers only as needed to operate the Service:</p>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong className="text-ink">Hosting &amp; database</strong> — our app and data are hosted with cloud infrastructure providers.</li>
-          <li><strong className="text-ink">Payments</strong> — processors such as PayPal (and manual methods like GCash, Maya, or USDT crypto) handle transactions. Their handling of your data is governed by their own privacy policies.</li>
+          <li><strong className="text-ink">Payments</strong> — processors such as PayPal (and manual methods like USDT crypto) handle transactions. Their handling of your data is governed by their own privacy policies.</li>
           <li><strong className="text-ink">Email</strong> — we use an email service to send verification and account messages.</li>
           <li><strong className="text-ink">Embedded content</strong> — TradingView charts and video embeds (YouTube, Facebook, Vimeo) may set their own cookies when displayed.</li>
         </ul>

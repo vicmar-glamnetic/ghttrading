@@ -50,7 +50,7 @@ export default function HelpPage() {
           Other members can subscribe for USD $5 / month, and new non-ACCM members get a free trial to start.
         </QA>
         <QA q="How do I pay?">
-          We accept PayPal and manual methods including GCash, Maya, and USDT (crypto). After sending payment, share your
+          We accept PayPal and USDT (crypto). After sending payment, share your
           proof/reference as instructed on the <Link href="/upgrade" className="text-yellow-500 hover:underline">Upgrade</Link>{' '}
           page and a coach will activate your access.
         </QA>

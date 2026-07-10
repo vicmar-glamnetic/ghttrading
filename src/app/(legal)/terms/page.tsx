@@ -42,7 +42,7 @@ export default function TermsPage() {
           <li>Some sections are free; certain premium features require an active membership.</li>
           <li>Members who registered with our partner broker (ACCM) receive premium access at no additional cost.</li>
           <li>Other members may access premium features via a paid subscription (currently USD $5 / month) after any free trial period.</li>
-          <li>Payments are handled manually or via third-party processors (e.g. PayPal, GCash, Maya, or USDT crypto). Access is activated once payment is confirmed.</li>
+          <li>Payments are handled manually or via third-party processors (e.g. PayPal or USDT crypto). Access is activated once payment is confirmed.</li>
           <li>Fees are billed in advance and are generally <strong className="text-ink">non-refundable</strong>, except where required by law. You may cancel at any time; access continues until the end of the paid period.</li>
           <li>We may change pricing or features with reasonable notice.</li>
         </ul>
