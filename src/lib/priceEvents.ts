@@ -84,10 +84,13 @@ async function autoCloseGold(price: number) {
       if (reached && !t.hit) { changed = true; return { ...t, hit: true } }
       return t
     })
-    if (!changed) continue
-
     // Only fully close when EVERY TP is hit; otherwise keep it running (in profit).
     const allHit = next.length > 0 && next.every(t => t.hit)
+    // Bail only if there is nothing to record. `allHit` still has to be honoured
+    // when this sample changed nothing: an author can tick every TP by hand in the
+    // edit form, which would otherwise leave the signal pending forever.
+    if (!changed && !allHit) continue
+
     const nowAnyHit = next.some(t => t.hit)
     const newStatus = allHit ? 'tp_hit' : idea.status
     await db.tradeIdea.update({ where: { id: idea.id }, data: { takeProfits: next, status: newStatus } })
