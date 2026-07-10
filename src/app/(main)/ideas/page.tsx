@@ -314,13 +314,16 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
               <XCircle className="w-3.5 h-3.5" /> Close signal
             </button>
           ) : (
-            <button onClick={() => onClose(idea, 'pending')} title="Re-open signal"
+            <button onClick={() => onClose(idea, 'pending')} title="Mark this signal as live again"
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
-              <RotateCcw className="w-3.5 h-3.5" /> Reopen
+              <RotateCcw className="w-3.5 h-3.5" /> Mark as Live
             </button>
           )}
-          <button onClick={() => onEdit(idea)} className="p-2 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-elevated transition-colors"><Pencil className="w-4 h-4" /></button>
-          <button onClick={() => onDelete(idea)} className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={() => onEdit(idea)} title="Edit signal"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
+            <Pencil className="w-3.5 h-3.5" /> Edit
+          </button>
+          <button onClick={() => onDelete(idea)} title="Delete signal" className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
         </div>
       )}
 
