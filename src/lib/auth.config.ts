@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from 'next-auth'
 import type { JWT } from 'next-auth/jwt'
-import { hasAccess, isPremiumPath } from './billing'
+import { hasAccess } from './billing'
 
 // A large avatar (e.g. a base64 data: URI) baked into the JWT bloats the session
 // cookie until it's chunked into Set-Cookie headers that exceed the edge header
@@ -57,8 +57,17 @@ export const authConfig: NextAuthConfig = {
       if (isAuthPage) return isLoggedIn ? Response.redirect(new URL('/', nextUrl)) : true
       if (!isLoggedIn) return Response.redirect(new URL('/login', nextUrl))
 
-      // Per-feature paywall: premium sections require an active subscription.
-      if (isPremiumPath(nextUrl.pathname) && auth?.user && !hasAccess(auth.user)) {
+      // Full paywall: once the 7-day free trial ends without an active
+      // subscription, the ENTIRE app is locked — not just premium sections.
+      // ACCM members, staff (admin/coach), and active/comp subscribers always
+      // pass hasAccess(), so only expired-trial non-ACCM members are locked out.
+      // The upgrade + pending pages stay reachable so they can still subscribe
+      // (or sign out from there).
+      const isBillingPage =
+        nextUrl.pathname === '/upgrade' ||
+        nextUrl.pathname.startsWith('/upgrade/') ||
+        nextUrl.pathname.startsWith('/pending')
+      if (!isBillingPage && auth?.user && !hasAccess(auth.user)) {
         return Response.redirect(new URL('/upgrade', nextUrl))
       }
       return true
