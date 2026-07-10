@@ -378,7 +378,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
                 <span
                   title="Online now"
                   aria-label="Online now"
-                  className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-green-400 border-4 border-app"
+                  className={`absolute bottom-1 w-5 h-5 rounded-full bg-green-400 border-4 border-app ${isOwn ? 'left-1' : 'right-1'}`}
                 />
               )}
             </div>
