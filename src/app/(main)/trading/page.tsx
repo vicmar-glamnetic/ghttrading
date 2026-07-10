@@ -1,5 +1,6 @@
 import { Monitor, Smartphone, Download, Apple } from 'lucide-react'
 import { CopyField } from './CopyField'
+import { ACCM_REGISTER_URL } from '@/lib/billing'
 
 export const metadata = { title: 'Trading · Gold Heist Trading' }
 
@@ -55,7 +56,7 @@ export default function TradingPage() {
           Use the <span className="font-semibold text-ink">Login</span> (account number) and{' '}
           <span className="font-semibold text-ink">password</span> from your {BROKER} approval email.
           Don&apos;t have an account yet?{' '}
-          <a href="https://www.accapitalmarket.com" target="_blank" rel="noopener noreferrer" className="text-yellow-500 hover:text-yellow-400">Open one with {BROKER}</a>.
+          <a href={ACCM_REGISTER_URL} target="_blank" rel="noopener noreferrer" className="text-yellow-500 hover:text-yellow-400">Open one with {BROKER}</a>.
         </p>
       </div>
 
