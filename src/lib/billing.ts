@@ -87,7 +87,7 @@ export async function getPricePhp(usd: number): Promise<{ php: number; live: boo
 
 // Premium (paid) sections. Everything else is free. When the paywall is on,
 // members without an active subscription are redirected to /upgrade for these.
-export const PREMIUM_PATHS = ['/trading', '/live', '/anti-hacking', '/education', '/journal', '/calendar']
+export const PREMIUM_PATHS = ['/trading', '/live', '/anti-hacking', '/education', '/courses', '/journal', '/calendar']
 
 export function isPremiumPath(pathname: string) {
   return PREMIUM_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))

@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '*.googleusercontent.com',      pathname: '/**' },
       { protocol: 'https', hostname: 'avatars.githubusercontent.com', pathname: '/**' },
       { protocol: 'https', hostname: '*.githubusercontent.com',      pathname: '/**' },
+      { protocol: 'https', hostname: 'i.ytimg.com',                  pathname: '/**' }, // course lesson thumbnails
     ],
   },
 }

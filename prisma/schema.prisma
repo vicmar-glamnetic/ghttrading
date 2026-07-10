@@ -65,6 +65,8 @@ model User {
   pageFollows       PageFollow[]
   pushSubscriptions PushSubscription[]
   priceAlerts       PriceAlert[]
+  enrollments       Enrollment[]
+  lessonProgress    LessonProgress[]
 
   // Trader prefs
   acctBalance       Float?    // saved account size for auto position-sizing
@@ -468,4 +470,70 @@ model PageFollow {
   @@id([followerId, pageId])
   @@index([pageId])
   @@map("page_follows")
+}
+
+// A structured video course: sections of lessons, tracked per member.
+model Course {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  level       String   @default("beginner") // beginner | intermediate | advanced
+  coverImage  String?
+  published   Boolean  @default(true)
+  order       Int      @default(0) // display order on the course grid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lessons     Lesson[]
+  enrollments Enrollment[]
+
+  @@index([published, order])
+  @@map("courses")
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  section   String // grouping header in the curriculum, e.g. "Foundations"
+  title     String
+  youtubeId String // the 11-char id, not a full URL — the player builds the embed
+  educator  String? // channel/creator credit
+  summary   String?
+  order     Int // position across the whole course, not within the section
+  createdAt DateTime @default(now())
+
+  progress LessonProgress[]
+
+  @@index([courseId, order])
+  @@map("lessons")
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@map("enrollments")
+}
+
+// One row per lesson a member has finished. Absence means not done — we never
+// store "incomplete" rows, so un-completing is a delete.
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@map("lesson_progress")
 }

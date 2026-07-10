@@ -11,6 +11,7 @@ import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
   LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator, Sparkles, Trophy, CalendarClock,
+  GraduationCap,
 } from 'lucide-react'
 
 // Core, daily-use features — kept at the top.
@@ -25,6 +26,7 @@ const primaryNav = [
 // Secondary features — shown below a divider.
 const moreNav = [
   { href: '/live',         label: 'Live',          icon: Radio,           premium: true },
+  { href: '/courses',      label: 'Courses',       icon: GraduationCap,   premium: true },
   { href: '/education',    label: 'Education',     icon: BookOpen,        premium: true },
   { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/calendar',     label: 'Calendar',      icon: CalendarDays,    premium: true },
