@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
   Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
-  GraduationCap, ChevronDown,
+  GraduationCap,
 } from 'lucide-react'
 import { PerformancePanel } from './PerformancePanel'
 import { liveSignalStatus, signalPips, positionSize } from '@/lib/trading'
@@ -667,25 +667,22 @@ function AccountBar({ acct, open, setOpen, onSave, onClear }: {
   )
 }
 
-// Collapsible how-to shown to coaches/staff only. Explains the manual signal
-// workflow so every coach closes and manages ideas consistently. Collapsed state
-// is remembered per-device (default: open the first time).
-function CoachGuide() {
-  const [open, setOpen] = useState(true)
-  useEffect(() => { setOpen(localStorage.getItem('ght:coachGuide') !== 'closed') }, [])
-  const toggle = () => setOpen(o => { localStorage.setItem('ght:coachGuide', o ? 'closed' : 'open'); return !o })
-
+// How-to popup shown to coaches/staff only. Explains the manual signal workflow
+// so every coach closes and manages ideas consistently. Opened from the "Guide"
+// button beside New Signal.
+function CoachGuide({ onClose }: { onClose: () => void }) {
   return (
-    <div className="max-w-xl mx-auto rounded-xl border border-yellow-500/20 bg-yellow-500/5">
-      <button onClick={toggle} className="w-full flex items-center gap-2 px-4 py-3 text-left">
-        <GraduationCap className="w-4 h-4 text-yellow-500 shrink-0" />
-        <span className="text-sm font-bold text-ink flex-1">Coach guide · how signals work</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5">Coaches only</span>
-        <ChevronDown className={`w-4 h-4 text-ink3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-line max-h-[90vh] flex flex-col">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-line shrink-0">
+          <GraduationCap className="w-4 h-4 text-yellow-500 shrink-0" />
+          <span className="text-sm font-bold text-ink flex-1">Coach guide · how signals work</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5">Coaches only</span>
+          <button onClick={onClose} className="text-ink3 hover:text-ink ml-1"><X className="w-5 h-5" /></button>
+        </div>
 
-      {open && (
-        <div className="px-4 pb-4 space-y-4 text-sm text-ink2">
+        <div className="overflow-y-auto px-4 py-4 space-y-4 text-sm text-ink2">
           <section>
             <h3 className="font-bold text-ink mb-1">Posting a signal</h3>
             <p className="text-ink3 leading-relaxed">
@@ -734,7 +731,7 @@ function CoachGuide() {
             </ul>
           </section>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -750,6 +747,7 @@ export default function IdeasPage() {
   const [price, setPrice] = useState<number | null>(null)
   const [acct, setAcct] = useState<Acct | null>(null)
   const [showAcct, setShowAcct] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
 
   // Load account prefs: instant from cache, then sync from the server (cross-device).
   useEffect(() => {
@@ -840,9 +838,15 @@ export default function IdeasPage() {
           <h1 className="font-bold text-ink text-lg">Signals</h1>
         </div>
         {isStaff && (
-          <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
-            <Plus className="w-3.5 h-3.5" /> New Signal
-          </Button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowGuide(true)} title="Coach guide"
+              className="flex items-center gap-1.5 text-xs font-bold text-ink2 border border-line rounded-lg px-3 py-1.5 hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
+              <GraduationCap className="w-3.5 h-3.5" /> Guide
+            </button>
+            <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
+              <Plus className="w-3.5 h-3.5" /> New Signal
+            </Button>
+          </div>
         )}
       </div>
 
@@ -856,7 +860,7 @@ export default function IdeasPage() {
         ))}
       </div>
 
-      {isStaff && <CoachGuide />}
+      {isStaff && showGuide && <CoachGuide onClose={() => setShowGuide(false)} />}
 
       {tab === 'stats' ? (
         <PerformancePanel />
