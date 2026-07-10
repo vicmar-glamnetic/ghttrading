@@ -73,6 +73,18 @@
   --c-ink3:     #6b7180;
 
   color-scheme: light;
+
+  /* The muted brand gold (#ad9045) only hits ~3:1 contrast as text/icons on the
+     light theme's white surfaces — too faint to read. Deepen the ramp for light
+     mode so gold text passes AA (~4.5:1) while gold *fills* stay readable with
+     their black labels (bold button/badge text → AA-large). Dark mode keeps the
+     brighter ramp defined in @theme. */
+  --color-yellow-400: #93792f;
+  --color-yellow-500: #8a7234;
+  --color-yellow-600: #6f5c2a;
+  --color-yellow-700: #5a4a22;
+  --color-yellow-800: #46391a;
+  --color-yellow-900: #322810;
 }
 
 * { box-sizing: border-box; }
