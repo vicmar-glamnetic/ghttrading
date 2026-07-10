@@ -72,7 +72,7 @@ export default function AdminPage() {
       const d = await res.json()
       if (!res.ok) setRecapMsg(d.error || 'Failed')
       else if (d.skipped) setRecapMsg(`Skipped — ${d.skipped}`)
-      else setRecapMsg(`✓ Posted: ${d.wins}W/${d.losses}L · ${d.net >= 0 ? '+' : ''}${d.net} pips`)
+      else setRecapMsg(`✓ Posted: ${d.wins}W/${d.losses}L · ${d.net >= 0 ? '+' : ''}${d.net} gold pips`)
     } finally { setRecapBusy(false) }
   }
 

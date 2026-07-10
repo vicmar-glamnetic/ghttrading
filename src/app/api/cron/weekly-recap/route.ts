@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { signalPips } from '@/lib/trading'
+import { isGold, signalPips } from '@/lib/trading'
 
 export const runtime = 'nodejs'
 
@@ -37,10 +37,18 @@ export async function POST(req: Request) {
   })
   if (closed.length === 0) return NextResponse.json({ skipped: 'no closed signals this week' })
 
+  // Win/loss counts cover every symbol; the net-pips figure covers gold only,
+  // matching the performance panel (pips aren't comparable across instruments).
   let wins = 0, losses = 0, net = 0
+  const other = { closed: 0, wins: 0, losses: 0 }
   let best = { pips: -Infinity, symbol: '' }
   for (const i of closed) {
     if (i.status === 'tp_hit') wins++; else losses++
+    if (!isGold(i.symbol)) {
+      other.closed++
+      if (i.status === 'tp_hit') other.wins++; else other.losses++
+      continue
+    }
     const p = signalPips({
       symbol: i.symbol, direction: i.direction as 'buy' | 'sell',
       entryLow: i.entryLow, entryHigh: i.entryHigh, slLow: i.slLow, slHigh: i.slHigh,
@@ -55,9 +63,10 @@ export async function POST(req: Request) {
     '📊 Weekly Recap',
     '',
     `This week: ${wins}W / ${losses}L (${winRate}% win rate)`,
-    `Net: ${net >= 0 ? '+' : ''}${net} pips 🎯`,
+    `Net on gold: ${net >= 0 ? '+' : ''}${net} pips 🎯`,
   ]
   if (best.symbol && best.pips > 0) lines.push(`Best call: ${best.symbol} +${best.pips} pips`)
+  if (other.closed > 0) lines.push(`Other symbols: ${other.wins}W/${other.losses}L`)
   lines.push('', 'Keep it up, team! 💪 Not financial advice.')
 
   const post = await db.post.create({

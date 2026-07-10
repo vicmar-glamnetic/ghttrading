@@ -7,7 +7,9 @@ interface Coach { id: string; name: string | null; image: string | null; wins: n
 interface Month { month: string; wins: number; losses: number; total: number; winRate: number }
 interface Stats {
   total: number; open: number; wins: number; losses: number; closed: number
-  winRate: number | null; avgRR: number | null; pips?: { week: number; month: number; all: number }
+  winRate: number | null; avgRR: number | null
+  goldPips?: { week: number; month: number; all: number }
+  other?: { closed: number; wins: number; losses: number }
   coaches: Coach[]; months: Month[]
 }
 
@@ -56,15 +58,15 @@ export function PerformancePanel() {
         </div>
       </div>
 
-      {/* Net pips */}
-      {s.pips && (
+      {/* Gold pips banked */}
+      {s.goldPips && (
         <div className="rounded-xl border border-line bg-surface p-4">
-          <p className="text-xs font-semibold text-ink2 mb-3">Pips banked 🎯</p>
+          <p className="text-xs font-semibold text-ink2 mb-3">Gold pips banked 🎯</p>
           <div className="grid grid-cols-3 gap-2 text-center">
             {[
-              { label: 'This week', v: s.pips.week },
-              { label: 'This month', v: s.pips.month },
-              { label: 'All-time', v: s.pips.all },
+              { label: 'This week', v: s.goldPips.week },
+              { label: 'This month', v: s.goldPips.month },
+              { label: 'All-time', v: s.goldPips.all },
             ].map(({ label, v }) => (
               <div key={label}>
                 <p className={`text-xl font-black tabular-nums ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>{signed(v)}</p>
@@ -72,6 +74,12 @@ export function PerformancePanel() {
               </div>
             ))}
           </div>
+          {s.other && s.other.closed > 0 && (
+            <p className="mt-3 pt-3 border-t border-line text-[11px] text-ink3">
+              Other symbols: {s.other.closed} closed · {s.other.wins}W/{s.other.losses}L —
+              not added in, since a pip means something different on each instrument.
+            </p>
+          )}
         </div>
       )}
 

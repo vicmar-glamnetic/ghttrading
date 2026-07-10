@@ -3,15 +3,27 @@
 
 export interface PipConfig { pipSize: number; pipValue: number }
 
+const CRYPTO_BASES = ['BTC', 'ETH', 'XRP', 'SOL', 'DOGE', 'ADA', 'BNB', 'LTC']
+
+/**
+ * Gold (XAUUSD and friends). Pips are only comparable within one instrument
+ * class, so aggregate "pips banked" totals are restricted to gold.
+ */
+export function isGold(symbol: string) {
+  return (symbol || '').toUpperCase().startsWith('XAU')
+}
+
 /** Pip size + USD value per standard lot, inferred from the symbol. */
 export function pipConfig(symbol: string): PipConfig {
   const s = (symbol || '').toUpperCase()
   if (s.startsWith('XAU')) return { pipSize: 0.1, pipValue: 10 }   // gold
   if (s.startsWith('XAG')) return { pipSize: 0.01, pipValue: 50 }  // silver
   if (s.includes('JPY')) return { pipSize: 0.01, pipValue: 9.1 }   // JPY pairs
+  // Crypto must be checked before the FX regex: ETHUSD/BTCUSD are six letters
+  // ending in USD and would otherwise be priced as forex majors.
+  if (CRYPTO_BASES.some(b => s.startsWith(b))) return { pipSize: 1, pipValue: 1 } // crypto (points)
   if (/^[A-Z]{3}(USD|EUR|GBP|CHF|CAD|AUD|NZD)$/.test(s) || /^(EUR|GBP|USD|AUD|NZD|CAD|CHF)[A-Z]{3}$/.test(s))
     return { pipSize: 0.0001, pipValue: 10 }                        // FX majors
-  if (s.startsWith('BTC') || s.startsWith('ETH')) return { pipSize: 1, pipValue: 1 } // crypto (points)
   return { pipSize: 1, pipValue: 1 }                                // indices / fallback (points)
 }
 
