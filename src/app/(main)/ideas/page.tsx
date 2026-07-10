@@ -107,6 +107,7 @@ const TONE: Record<string, string> = {
   amber: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
   red: 'text-red-400 bg-red-400/10 border-red-400/20',
   slate: 'text-ink2 bg-elevated border-line',
+  void: 'text-ink3 bg-sunken border-line border-dashed line-through',
 }
 
 type CloseStatus = 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled' | 'pending'
@@ -288,11 +289,17 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
             <button onClick={() => { onClose(idea, 'breakeven'); setClosing(false) }}
               className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">⚪ Breakeven</button>
           </div>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-stretch gap-2 mt-2">
             <button onClick={() => { onClose(idea, 'closed'); setClosing(false) }}
-              className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">⚫ Closed manually</button>
+              className="flex-1 rounded-lg py-2 px-1 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">
+              <span className="block text-xs font-bold">⚫ Closed manually</span>
+              <span className="block text-[10px] text-ink3 mt-0.5">Trade taken, ended flat</span>
+            </button>
             <button onClick={() => { onClose(idea, 'cancelled'); setClosing(false) }}
-              className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">🚫 Cancelled</button>
+              className="flex-1 rounded-lg py-2 px-1 text-ink3 bg-sunken border border-dashed border-line hover:bg-elevated transition-colors">
+              <span className="block text-xs font-bold">🚫 Cancelled</span>
+              <span className="block text-[10px] text-ink3 mt-0.5">Never entered</span>
+            </button>
           </div>
           <button onClick={() => setClosing(false)} className="mt-2 w-full text-[11px] text-ink3 hover:text-ink2 py-1">Cancel</button>
         </div>

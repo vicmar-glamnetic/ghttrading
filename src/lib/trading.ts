@@ -61,7 +61,7 @@ export interface Idea {
 }
 
 export type StatusKey = 'valid' | 'zone' | 'missed' | 'tp' | 'sl' | 'be' | 'closed' | 'cancelled'
-export interface LiveStatus { key: StatusKey; label: string; tone: 'green' | 'amber' | 'red' | 'slate'; dot: string }
+export interface LiveStatus { key: StatusKey; label: string; tone: 'green' | 'amber' | 'red' | 'slate' | 'void'; dot: string }
 
 /** Where the current price sits relative to the entry zone. */
 export function liveSignalStatus(idea: Idea, price: number | null): LiveStatus | null {
@@ -69,7 +69,7 @@ export function liveSignalStatus(idea: Idea, price: number | null): LiveStatus |
   if (idea.status === 'sl_hit') return { key: 'sl', label: 'SL hit', tone: 'red', dot: '🔴' }
   if (idea.status === 'breakeven') return { key: 'be', label: 'Breakeven', tone: 'amber', dot: '⚪' }
   if (idea.status === 'closed') return { key: 'closed', label: 'Closed manually', tone: 'slate', dot: '⚫' }
-  if (idea.status === 'cancelled') return { key: 'cancelled', label: 'Cancelled', tone: 'slate', dot: '🚫' }
+  if (idea.status === 'cancelled') return { key: 'cancelled', label: 'Cancelled (no trade)', tone: 'void', dot: '🚫' }
   if (price == null) return null
   const eLo = Math.min(idea.entryLow ?? NaN, idea.entryHigh ?? (idea.entryLow ?? NaN))
   const eHi = Math.max(idea.entryHigh ?? NaN, idea.entryLow ?? (idea.entryHigh ?? NaN))
