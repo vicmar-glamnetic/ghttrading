@@ -23,7 +23,7 @@ interface TradeIdea {
   slHigh: number | null
   takeProfits: TakeProfit[]
   currentPrice: number | null
-  status: 'pending' | 'tp_hit' | 'sl_hit' | 'breakeven'
+  status: 'pending' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
   notes: string | null
   isPublic: boolean
   authorId: string
@@ -106,9 +106,10 @@ const TONE: Record<string, string> = {
   green: 'text-green-400 bg-green-400/10 border-green-400/20',
   amber: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
   red: 'text-red-400 bg-red-400/10 border-red-400/20',
+  slate: 'text-ink2 bg-elevated border-line',
 }
 
-type CloseStatus = 'tp_hit' | 'sl_hit' | 'breakeven' | 'pending'
+type CloseStatus = 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled' | 'pending'
 
 function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   idea: TradeIdea
@@ -180,7 +181,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
         <div className="flex items-center gap-1.5 min-w-0">
           <span className={`w-2 h-2 rounded-full shrink-0 ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
           <span className="text-sm font-bold text-blue-400 shrink-0">
-            {idea.status === 'pending' ? (inProfit ? 'RUNNING' : 'LIVE') : 'Closed'}
+            {idea.status === 'pending' ? (inProfit ? 'RUNNING' : 'LIVE') : idea.status === 'cancelled' ? 'Cancelled' : 'Closed'}
           </span>
           {isGold && price != null && idea.status === 'pending' && (
             <LivePrice price={price} />
@@ -286,6 +287,12 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
               className="flex-1 text-xs font-bold rounded-lg py-2 text-red-400 bg-red-400/10 border border-red-400/20 hover:bg-red-400/20 transition-colors">🔴 Loss (SL)</button>
             <button onClick={() => { onClose(idea, 'breakeven'); setClosing(false) }}
               className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">⚪ Breakeven</button>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <button onClick={() => { onClose(idea, 'closed'); setClosing(false) }}
+              className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">⚫ Closed manually</button>
+            <button onClick={() => { onClose(idea, 'cancelled'); setClosing(false) }}
+              className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">🚫 Cancelled</button>
           </div>
           <button onClick={() => setClosing(false)} className="mt-2 w-full text-[11px] text-ink3 hover:text-ink2 py-1">Cancel</button>
         </div>
@@ -572,6 +579,8 @@ function IdeaEditor({ initial, onClose, onSaved }: {
                 <option value="tp_hit">TP Hit</option>
                 <option value="sl_hit">SL Hit</option>
                 <option value="breakeven">Breakeven</option>
+                <option value="closed">Closed manually</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
           </div>

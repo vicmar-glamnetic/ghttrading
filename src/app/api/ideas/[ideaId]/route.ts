@@ -46,7 +46,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
         slHigh: numOrNull(body.slHigh),
         takeProfits: cleanTakeProfits(body.takeProfits),
         currentPrice: numOrNull(body.currentPrice),
-        status: ['pending', 'tp_hit', 'sl_hit', 'breakeven'].includes(body.status) ? body.status : 'pending',
+        status: ['pending', 'tp_hit', 'sl_hit', 'breakeven', 'closed', 'cancelled'].includes(body.status) ? body.status : 'pending',
         notes: body.notes?.toString().trim() || null,
         isPublic: Boolean(body.isPublic),
       },
@@ -81,7 +81,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
 
 // Quick-close a signal to a final outcome without opening the full editor.
 // Body: { status: 'tp_hit' | 'sl_hit' | 'breakeven' | 'pending' } (pending re-opens).
-const CLOSE_STATUSES = ['tp_hit', 'sl_hit', 'breakeven', 'pending']
+const CLOSE_STATUSES = ['tp_hit', 'sl_hit', 'breakeven', 'closed', 'cancelled', 'pending']
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ ideaId: string }> }) {
   try {
