@@ -41,6 +41,9 @@ function loadAcctCache(): Acct | null {
 type Tab = 'community' | 'mine' | 'stats'
 type DirFilter = 'all' | 'buy' | 'sell'
 type StatusFilter = 'all' | 'live' | 'win' | 'loss'
+type MetalFilter = 'all' | 'gold' | 'other'
+
+const isGoldSymbol = (symbol: string) => symbol.toUpperCase().startsWith('XAU')
 
 const PAGE_SIZE = 5
 
@@ -755,6 +758,7 @@ export default function IdeasPage() {
   const [page, setPage] = useState(1)
   const [dirFilter, setDirFilter] = useState<DirFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [metalFilter, setMetalFilter] = useState<MetalFilter>('all')
   const [coachFilter, setCoachFilter] = useState<string>('all') // author id, or 'all'
 
   // Load account prefs: instant from cache, then sync from the server (cross-device).
@@ -817,6 +821,8 @@ export default function IdeasPage() {
   const filteredIdeas = ideas.filter(i => {
     if (dirFilter !== 'all' && i.direction !== dirFilter) return false
     if (coachFilter !== 'all' && i.author.id !== coachFilter) return false
+    if (metalFilter === 'gold' && !isGoldSymbol(i.symbol)) return false
+    if (metalFilter === 'other' && isGoldSymbol(i.symbol)) return false
     if (statusFilter === 'live') return i.status === 'pending'
     if (statusFilter === 'win') return i.status === 'tp_hit'
     if (statusFilter === 'loss') return i.status === 'sl_hit'
@@ -824,7 +830,7 @@ export default function IdeasPage() {
   })
 
   // Reset to the first page when switching tabs or changing a filter.
-  useEffect(() => { setPage(1) }, [tab, dirFilter, statusFilter, coachFilter])
+  useEffect(() => { setPage(1) }, [tab, dirFilter, statusFilter, metalFilter, coachFilter])
 
   // The selected coach may vanish when the list reloads (e.g. tab switch) — fall back to All.
   useEffect(() => {
@@ -910,6 +916,15 @@ export default function IdeasPage() {
           </div>
           <span className="hidden sm:block w-px h-5 bg-line" />
           <div className="flex gap-1.5">
+            {(([['all', 'All'], ['gold', 'Gold'], ['other', 'Non-gold']]) as [MetalFilter, string][]).map(([m, label]) => (
+              <button key={m} onClick={() => setMetalFilter(m)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${metalFilter === m ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden sm:block w-px h-5 bg-line" />
+          <div className="flex gap-1.5">
             {(([['all', 'All'], ['buy', 'Buy'], ['sell', 'Sell']]) as [DirFilter, string][]).map(([d, label]) => (
               <button key={d} onClick={() => setDirFilter(d)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -961,7 +976,7 @@ export default function IdeasPage() {
               <Lightbulb className="w-10 h-10 text-yellow-500/30 mx-auto mb-3" />
               <p className="text-ink3 text-sm">No signals match these filters.</p>
               <button
-                onClick={() => { setStatusFilter('all'); setDirFilter('all'); setCoachFilter('all') }}
+                onClick={() => { setStatusFilter('all'); setDirFilter('all'); setMetalFilter('all'); setCoachFilter('all') }}
                 className="mt-3 text-sm font-semibold text-yellow-500 hover:text-yellow-400"
               >
                 Clear filters
