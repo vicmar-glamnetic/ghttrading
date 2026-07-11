@@ -87,19 +87,19 @@ export default function ApprovalsPage() {
                 <p className="text-xs text-ink3 truncate">{u.email}</p>
                 <p className="text-[10px] text-ink3 mt-0.5">Registered {format(new Date(u.createdAt), 'MMM d, yyyy')}</p>
               </div>
-              <div className="shrink-0 flex items-center gap-2">
+              <div className="shrink-0 flex flex-col-reverse sm:flex-row sm:items-center gap-2">
                 <button
                   onClick={() => reject(u)}
                   disabled={busy === u.id}
                   title="Reject & delete this sign-up"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold border border-line text-ink2 hover:text-red-400 hover:border-red-400/40 disabled:opacity-60 rounded-lg px-3 py-2 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 text-xs font-bold border border-line text-ink2 hover:text-red-400 hover:border-red-400/40 disabled:opacity-60 rounded-lg px-3 py-2 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" /> Reject
                 </button>
                 <button
                   onClick={() => approve(u)}
                   disabled={busy === u.id}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold bg-green-500 hover:bg-green-400 disabled:opacity-60 text-black rounded-lg px-3 py-2 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-green-500 hover:bg-green-400 disabled:opacity-60 text-black rounded-lg px-3 py-2 transition-colors"
                 >
                   <Check className="w-3.5 h-3.5" /> {busy === u.id ? 'Approving…' : 'Approve'}
                 </button>

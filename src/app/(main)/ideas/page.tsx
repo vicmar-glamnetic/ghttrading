@@ -39,6 +39,8 @@ function loadAcctCache(): Acct | null {
 }
 
 type Tab = 'community' | 'mine' | 'stats'
+type DirFilter = 'all' | 'buy' | 'sell'
+type StatusFilter = 'all' | 'live' | 'win' | 'loss'
 
 const PAGE_SIZE = 5
 
@@ -751,6 +753,9 @@ export default function IdeasPage() {
   const [showAcct, setShowAcct] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const [page, setPage] = useState(1)
+  const [dirFilter, setDirFilter] = useState<DirFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [coachFilter, setCoachFilter] = useState<string>('all') // author id, or 'all'
 
   // Load account prefs: instant from cache, then sync from the server (cross-device).
   useEffect(() => {
@@ -803,12 +808,32 @@ export default function IdeasPage() {
 
   useEffect(() => { load(tab) }, [tab, load])
 
-  // Reset to the first page when switching tabs (each tab is its own list).
-  useEffect(() => { setPage(1) }, [tab])
+  // Distinct coaches present in the current list, for the coach dropdown.
+  const coaches = Array.from(
+    new Map(ideas.map(i => [i.author.id, i.author.name || 'Coach'])).entries()
+  ).sort((a, b) => a[1].localeCompare(b[1]))
 
-  const pageCount = Math.max(1, Math.ceil(ideas.length / PAGE_SIZE))
+  // Live = still open; Win/Loss map to the outcomes that move win-rate.
+  const filteredIdeas = ideas.filter(i => {
+    if (dirFilter !== 'all' && i.direction !== dirFilter) return false
+    if (coachFilter !== 'all' && i.author.id !== coachFilter) return false
+    if (statusFilter === 'live') return i.status === 'pending'
+    if (statusFilter === 'win') return i.status === 'tp_hit'
+    if (statusFilter === 'loss') return i.status === 'sl_hit'
+    return true
+  })
+
+  // Reset to the first page when switching tabs or changing a filter.
+  useEffect(() => { setPage(1) }, [tab, dirFilter, statusFilter, coachFilter])
+
+  // The selected coach may vanish when the list reloads (e.g. tab switch) — fall back to All.
+  useEffect(() => {
+    if (coachFilter !== 'all' && !ideas.some(i => i.author.id === coachFilter)) setCoachFilter('all')
+  }, [ideas, coachFilter])
+
+  const pageCount = Math.max(1, Math.ceil(filteredIdeas.length / PAGE_SIZE))
   const pageSafe = Math.min(page, pageCount)
-  const pagedIdeas = ideas.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE)
+  const pagedIdeas = filteredIdeas.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE)
 
   async function handleDelete(idea: TradeIdea) {
     if (!confirm('Delete this signal?')) return
@@ -872,6 +897,43 @@ export default function IdeasPage() {
 
       {isStaff && showGuide && <CoachGuide onClose={() => setShowGuide(false)} />}
 
+      {/* filters — status + direction + coach */}
+      {tab !== 'stats' && !loading && ideas.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex gap-1.5">
+            {(([['all', 'All'], ['live', 'Live'], ['win', 'Wins'], ['loss', 'Losses']]) as [StatusFilter, string][]).map(([s, label]) => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden sm:block w-px h-5 bg-line" />
+          <div className="flex gap-1.5">
+            {(([['all', 'All'], ['buy', 'Buy'], ['sell', 'Sell']]) as [DirFilter, string][]).map(([d, label]) => (
+              <button key={d} onClick={() => setDirFilter(d)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  dirFilter === d
+                    ? d === 'buy' ? 'text-green-400 bg-green-400/10 border border-green-400/20'
+                    : d === 'sell' ? 'text-red-400 bg-red-400/10 border border-red-400/20'
+                    : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                    : 'text-ink3 hover:bg-elevated border border-transparent'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {coaches.length > 1 && (
+            <select value={coachFilter} onChange={e => setCoachFilter(e.target.value)}
+              aria-label="Filter by coach"
+              className="sm:ml-auto text-xs font-semibold rounded-lg border border-line bg-surface text-ink2 px-2.5 py-1.5 outline-none focus:border-yellow-500/40 scheme-dark">
+              <option value="all">All coaches</option>
+              {coaches.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          )}
+        </div>
+      )}
+
       {tab === 'stats' ? (
         <PerformancePanel />
       ) : loading ? (
@@ -894,6 +956,18 @@ export default function IdeasPage() {
         <div className="space-y-4 max-w-xl mx-auto">
           {/* auto position-size account bar */}
           <AccountBar acct={acct} open={showAcct} setOpen={setShowAcct} onSave={saveAcct} onClear={() => saveAcct(null)} />
+          {filteredIdeas.length === 0 && (
+            <div className="bg-surface rounded-xl border border-line p-10 text-center">
+              <Lightbulb className="w-10 h-10 text-yellow-500/30 mx-auto mb-3" />
+              <p className="text-ink3 text-sm">No signals match these filters.</p>
+              <button
+                onClick={() => { setStatusFilter('all'); setDirFilter('all'); setCoachFilter('all') }}
+                className="mt-3 text-sm font-semibold text-yellow-500 hover:text-yellow-400"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
           {pagedIdeas.map(idea => (
             <IdeaCard
               key={idea.id}
