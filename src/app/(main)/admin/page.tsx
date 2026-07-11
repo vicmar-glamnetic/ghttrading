@@ -31,6 +31,7 @@ interface AdminUser {
 interface Stats { total: number; admin: number; coach: number; member: number; onlineNow: number }
 
 const ROLE_OPTIONS = ['admin', 'coach', 'member'] as const
+const PAGE_SIZE = 20
 
 const roleBadge: Record<string, string> = {
   admin: 'bg-yellow-500/15 text-yellow-500 border-yellow-500/30',
@@ -56,6 +57,7 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<string>('')
   const [showAdd, setShowAdd] = useState(false)
   const [showOnline, setShowOnline] = useState(false)
+  const [page, setPage] = useState(1)
 
   // PayPal plan setup
   const [ppLoading, setPpLoading] = useState(false)
@@ -133,6 +135,13 @@ export default function AdminPage() {
     const t = setTimeout(load, 250) // debounce search
     return () => clearTimeout(t)
   }, [load])
+
+  // Back to the first page whenever the result set changes underneath us.
+  useEffect(() => { setPage(1) }, [q, roleFilter])
+
+  const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE))
+  const pageSafe = Math.min(page, pageCount)
+  const pagedUsers = users.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE)
 
   // Keep the online dots honest — they go stale on their own otherwise.
   useEffect(() => {
@@ -341,7 +350,7 @@ export default function AdminPage() {
                 <tr><td colSpan={6} className="p-8 text-center text-ink3">Loading…</td></tr>
               ) : users.length === 0 ? (
                 <tr><td colSpan={6} className="p-8 text-center text-ink3">No users found.</td></tr>
-              ) : users.map(u => (
+              ) : pagedUsers.map(u => (
                 <tr key={u.id} className="border-b border-line last:border-0 hover:bg-elevated/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -444,6 +453,31 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+
+        {!loading && users.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2.5">
+            <p className="text-[11px] text-ink3">
+              Showing {(pageSafe - 1) * PAGE_SIZE + 1}–{Math.min(pageSafe * PAGE_SIZE, users.length)} of {users.length}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={pageSafe <= 1}
+                className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink2 hover:border-yellow-500/40 hover:text-yellow-500 disabled:opacity-30 disabled:hover:text-ink2 disabled:hover:border-line transition-colors"
+              >
+                Prev
+              </button>
+              <span className="text-[11px] text-ink3 tabular-nums px-1">{pageSafe} / {pageCount}</span>
+              <button
+                onClick={() => setPage(p => Math.min(pageCount, p + 1))}
+                disabled={pageSafe >= pageCount}
+                className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink2 hover:border-yellow-500/40 hover:text-yellow-500 disabled:opacity-30 disabled:hover:text-ink2 disabled:hover:border-line transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <p className="text-[10px] text-ink3">
