@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/admin'
+import { sendApprovalEmail } from '@/lib/email'
 
 // Coaches/admins can review and approve pending sign-ups (no other admin powers).
 export async function GET() {
@@ -22,7 +23,25 @@ export async function POST(req: Request) {
   const { userId } = await req.json()
   if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
 
-  await db.user.update({ where: { id: userId }, data: { approved: true } })
+  const user = await db.user.findUnique({ where: { id: userId }, select: { approved: true } })
+  if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const updated = await db.user.update({
+    where: { id: userId },
+    data: { approved: true },
+    select: { email: true, name: true },
+  })
+
+  // Only notify on the transition into approved, and never let a mail hiccup
+  // fail the approval itself.
+  if (!user.approved && updated.email) {
+    try {
+      await sendApprovalEmail(updated.email, updated.name)
+    } catch (err) {
+      console.error('Failed to send approval email:', err)
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }
 

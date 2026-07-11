@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
+import { sendApprovalEmail } from '@/lib/email'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
@@ -17,7 +18,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId } = await params
-  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true } })
+  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true, approved: true } })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
@@ -66,6 +67,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
   }
 
   const updated = await db.user.update({ where: { id: userId }, data, select: USER_SELECT })
+
+  // Notify the user when an admin flips them from pending to approved.
+  if (data.approved === true && !target.approved && updated.email) {
+    try {
+      await sendApprovalEmail(updated.email, updated.name)
+    } catch (err) {
+      console.error('Failed to send approval email:', err)
+    }
+  }
+
   return NextResponse.json(updated)
 }
 
