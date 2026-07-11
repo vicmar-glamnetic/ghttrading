@@ -21,6 +21,7 @@ interface AdminUser {
   role: 'admin' | 'coach' | 'member'
   approved: boolean
   accmMember: boolean
+  accmNumber: string | null
   subscriptionStatus: string
   paymentRef: string | null
   trialEndsAt: string | null
@@ -423,6 +424,15 @@ export default function AdminPage() {
                     >
                       {u.accmMember ? 'ACCM · Free' : 'Standard · $5'}
                     </button>
+                    {u.accmNumber ? (
+                      <p className="mt-1 text-[10px] font-mono text-ink2" title="ACCM account number">
+                        ACCM #{u.accmNumber}
+                      </p>
+                    ) : u.accmMember && (
+                      <p className="mt-1 text-[10px] text-ink3 italic" title="Member hasn't entered their ACCM number yet">
+                        No ACCM #
+                      </p>
+                    )}
                     {!u.accmMember && <TrialControl user={u} onSet={days => setTrial(u, days)} />}
                   </td>
                   <td className="p-3 hidden md:table-cell text-ink3 text-xs">

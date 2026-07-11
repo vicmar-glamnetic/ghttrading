@@ -32,13 +32,28 @@ export async function PATCH(req: Request) {
   if ('accmNumber' in body) {
     const raw = typeof body.accmNumber === 'string' ? body.accmNumber.trim() : ''
     if (!raw) return NextResponse.json({ error: 'ACCM number is required' }, { status: 400 })
+    // Enforce one ACCM number per member (a DB unique index backs this up too).
+    const taken = await db.user.findFirst({
+      where: { accmNumber: raw, NOT: { id: session.user.id } },
+      select: { id: true },
+    })
+    if (taken) return NextResponse.json({ error: 'That ACCM number is already registered to another account.' }, { status: 409 })
     data.accmNumber = raw
   }
 
-  const user = await db.user.update({
-    where: { id: session.user.id },
-    data,
-    select: { acctBalance: true, acctRiskPct: true, shareStats: true, accmNumber: true },
-  })
+  let user
+  try {
+    user = await db.user.update({
+      where: { id: session.user.id },
+      data,
+      select: { acctBalance: true, acctRiskPct: true, shareStats: true, accmNumber: true },
+    })
+  } catch (err) {
+    // Unique-index race: two members submitting the same number at once.
+    if ((err as { code?: string })?.code === 'P2002') {
+      return NextResponse.json({ error: 'That ACCM number is already registered to another account.' }, { status: 409 })
+    }
+    throw err
+  }
   return NextResponse.json(user)
 }

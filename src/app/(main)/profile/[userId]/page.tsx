@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
-import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check } from 'lucide-react'
+import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check, BadgeCheck } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { isOnline, lastSeenLabel } from '@/lib/presence'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
@@ -22,6 +22,7 @@ interface ProfileData {
   website: string | null
   createdAt: string
   lastSeenAt: string | null
+  accmNumber?: string | null
   _count: { followers: number; following: number; posts: number }
   isFollowing: boolean
   friendRequest: { status: string; senderId: string } | null
@@ -455,6 +456,14 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
               <Calendar className="w-3.5 h-3.5" />Joined {timeAgo(profile.createdAt)}
             </span>
           </div>
+
+          {/* ACCM account number — shown to the owner only (private identifier) */}
+          {isOwn && profile.accmNumber && (
+            <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold bg-yellow-500/10 border border-yellow-500/25 text-yellow-500 rounded-lg px-2.5 py-1">
+              <BadgeCheck className="w-3.5 h-3.5" />
+              ACCM #{profile.accmNumber}
+            </div>
+          )}
 
           {/* Stats */}
           <div className="flex gap-6 mt-4 pt-4 border-t border-line">

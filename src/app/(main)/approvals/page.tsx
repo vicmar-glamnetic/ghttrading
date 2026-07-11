@@ -5,7 +5,7 @@ import { UserCheck, Check, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface Pending {
-  id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string; accmMember: boolean
+  id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string; accmMember: boolean; accmNumber: string | null
 }
 
 export default function ApprovalsPage() {
@@ -85,6 +85,9 @@ export default function ApprovalsPage() {
                   </span>
                 </div>
                 <p className="text-xs text-ink3 truncate">{u.email}</p>
+                {u.accmNumber && (
+                  <p className="text-[10px] font-mono text-yellow-500 mt-0.5" title="ACCM account number">ACCM #{u.accmNumber}</p>
+                )}
                 <p className="text-[10px] text-ink3 mt-0.5">Registered {format(new Date(u.createdAt), 'MMM d, yyyy')}</p>
               </div>
               <div className="shrink-0 flex flex-col-reverse sm:flex-row sm:items-center gap-2">

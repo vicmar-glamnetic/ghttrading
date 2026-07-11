@@ -6,7 +6,7 @@ import { ONLINE_WINDOW_MS } from '@/lib/presence'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
-  role: true, approved: true, accmMember: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
+  role: true, approved: true, accmMember: true, accmNumber: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
   lastSeenAt: true,
 }
 

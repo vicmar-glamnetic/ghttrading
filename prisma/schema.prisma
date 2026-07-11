@@ -31,7 +31,7 @@ model User {
   role               String   @default("member") // admin | coach | member
   approved           Boolean  @default(false)     // admin approval gate for new sign-ups
   accmMember         Boolean  @default(true)      // ACCM member (free) vs other broker ($5)
-  accmNumber         String?                       // ACCM (AC Capital Market) account number — required from members before using the app
+  accmNumber         String?  @unique              // ACCM (AC Capital Market) account number — required from members before using the app; must be unique
   subscriptionStatus String   @default("free")
   stripeCustomerId   String?
   stripeSubId        String?
