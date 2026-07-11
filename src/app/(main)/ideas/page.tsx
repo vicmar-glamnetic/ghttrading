@@ -743,6 +743,33 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
   )
 }
 
+/* ---------- labeled filter pill row ---------- */
+function FilterRow<T extends string>({ label, value, onChange, options, color }: {
+  label: string
+  value: T
+  onChange: (v: T) => void
+  options: readonly (readonly [T, string])[]
+  color?: Partial<Record<T, string>> // active classes per option (defaults to gold)
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="w-12 shrink-0 pt-2 text-[10px] font-bold uppercase tracking-wider text-ink3">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(([v, l]) => {
+          const active = value === v
+          const activeCls = color?.[v] ?? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+          return (
+            <button key={v} onClick={() => onChange(v)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${active ? activeCls : 'text-ink3 border-transparent hover:bg-elevated'}`}>
+              {l}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function IdeasPage() {
   const { data: session } = useSession()
   const uid = session?.user?.id
@@ -829,6 +856,9 @@ export default function IdeasPage() {
     return true
   })
 
+  const anyFilterActive = statusFilter !== 'all' || metalFilter !== 'all' || dirFilter !== 'all' || coachFilter !== 'all'
+  const clearFilters = () => { setStatusFilter('all'); setMetalFilter('all'); setDirFilter('all'); setCoachFilter('all') }
+
   // Reset to the first page when switching tabs or changing a filter.
   useEffect(() => { setPage(1) }, [tab, dirFilter, statusFilter, metalFilter, coachFilter])
 
@@ -903,49 +933,39 @@ export default function IdeasPage() {
 
       {isStaff && showGuide && <CoachGuide onClose={() => setShowGuide(false)} />}
 
-      {/* filters — status + direction + coach */}
+      {/* filters — result / market / side / coach, each clearly labeled */}
       {tab !== 'stats' && !loading && ideas.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <div className="flex gap-1.5">
-            {(([['all', 'All'], ['live', 'Live'], ['win', 'Wins'], ['loss', 'Losses']]) as [StatusFilter, string][]).map(([s, label]) => (
-              <button key={s} onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <span className="hidden sm:block w-px h-5 bg-line" />
-          <div className="flex gap-1.5">
-            {(([['all', 'All'], ['gold', 'Gold'], ['other', 'Non-gold']]) as [MetalFilter, string][]).map(([m, label]) => (
-              <button key={m} onClick={() => setMetalFilter(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${metalFilter === m ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <span className="hidden sm:block w-px h-5 bg-line" />
-          <div className="flex gap-1.5">
-            {(([['all', 'All'], ['buy', 'Buy'], ['sell', 'Sell']]) as [DirFilter, string][]).map(([d, label]) => (
-              <button key={d} onClick={() => setDirFilter(d)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  dirFilter === d
-                    ? d === 'buy' ? 'text-green-400 bg-green-400/10 border border-green-400/20'
-                    : d === 'sell' ? 'text-red-400 bg-red-400/10 border border-red-400/20'
-                    : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                    : 'text-ink3 hover:bg-elevated border border-transparent'
-                }`}>
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className="rounded-xl border border-line bg-surface p-3 space-y-2.5">
+          <FilterRow label="Result" value={statusFilter} onChange={setStatusFilter}
+            options={[['all', 'All'], ['live', 'Live'], ['win', 'Wins'], ['loss', 'Losses']]} />
+          <FilterRow label="Market" value={metalFilter} onChange={setMetalFilter}
+            options={[['all', 'All'], ['gold', 'Gold'], ['other', 'Non-gold']]} />
+          <FilterRow label="Side" value={dirFilter} onChange={setDirFilter}
+            options={[['all', 'All'], ['buy', 'Buy'], ['sell', 'Sell']]}
+            color={{ buy: 'bg-green-400/10 text-green-400 border-green-400/20', sell: 'bg-red-400/10 text-red-400 border-red-400/20' }} />
           {coaches.length > 1 && (
-            <select value={coachFilter} onChange={e => setCoachFilter(e.target.value)}
-              aria-label="Filter by coach"
-              className="sm:ml-auto text-xs font-semibold rounded-lg border border-line bg-surface text-ink2 px-2.5 py-1.5 outline-none focus:border-yellow-500/40 scheme-dark">
-              <option value="all">All coaches</option>
-              {coaches.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-            </select>
+            <div className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-ink3">Coach</span>
+              <select value={coachFilter} onChange={e => setCoachFilter(e.target.value)}
+                aria-label="Filter by coach"
+                className="text-xs font-semibold rounded-lg border border-line bg-sunken text-ink2 px-2.5 py-1.5 outline-none focus:border-yellow-500/40 scheme-dark">
+                <option value="all">All coaches</option>
+                {coaches.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select>
+            </div>
           )}
+          <div className="flex items-center justify-between border-t border-line pt-2.5">
+            <span className="text-[11px] text-ink3">
+              {anyFilterActive
+                ? `${filteredIdeas.length} of ${ideas.length} signal${ideas.length !== 1 ? 's' : ''}`
+                : `${ideas.length} signal${ideas.length !== 1 ? 's' : ''}`}
+            </span>
+            {anyFilterActive && (
+              <button onClick={clearFilters} className="text-[11px] font-semibold text-yellow-500 hover:text-yellow-400">
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -976,7 +996,7 @@ export default function IdeasPage() {
               <Lightbulb className="w-10 h-10 text-yellow-500/30 mx-auto mb-3" />
               <p className="text-ink3 text-sm">No signals match these filters.</p>
               <button
-                onClick={() => { setStatusFilter('all'); setDirFilter('all'); setMetalFilter('all'); setCoachFilter('all') }}
+                onClick={clearFilters}
                 className="mt-3 text-sm font-semibold text-yellow-500 hover:text-yellow-400"
               >
                 Clear filters
