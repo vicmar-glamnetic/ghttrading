@@ -40,6 +40,8 @@ function loadAcctCache(): Acct | null {
 
 type Tab = 'community' | 'mine' | 'stats'
 
+const PAGE_SIZE = 5
+
 function fmtNum(n: number | null | undefined) {
   if (n == null) return '—'
   return n.toLocaleString('en-US', { maximumFractionDigits: 8 })
@@ -748,6 +750,7 @@ export default function IdeasPage() {
   const [acct, setAcct] = useState<Acct | null>(null)
   const [showAcct, setShowAcct] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
+  const [page, setPage] = useState(1)
 
   // Load account prefs: instant from cache, then sync from the server (cross-device).
   useEffect(() => {
@@ -799,6 +802,13 @@ export default function IdeasPage() {
   }, [])
 
   useEffect(() => { load(tab) }, [tab, load])
+
+  // Reset to the first page when switching tabs (each tab is its own list).
+  useEffect(() => { setPage(1) }, [tab])
+
+  const pageCount = Math.max(1, Math.ceil(ideas.length / PAGE_SIZE))
+  const pageSafe = Math.min(page, pageCount)
+  const pagedIdeas = ideas.slice((pageSafe - 1) * PAGE_SIZE, pageSafe * PAGE_SIZE)
 
   async function handleDelete(idea: TradeIdea) {
     if (!confirm('Delete this signal?')) return
@@ -884,7 +894,7 @@ export default function IdeasPage() {
         <div className="space-y-4 max-w-xl mx-auto">
           {/* auto position-size account bar */}
           <AccountBar acct={acct} open={showAcct} setOpen={setShowAcct} onSave={saveAcct} onClear={() => saveAcct(null)} />
-          {ideas.map(idea => (
+          {pagedIdeas.map(idea => (
             <IdeaCard
               key={idea.id}
               idea={idea}
@@ -896,6 +906,31 @@ export default function IdeasPage() {
               acct={acct}
             />
           ))}
+
+          {ideas.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2.5">
+              <p className="text-[11px] text-ink3">
+                Showing {(pageSafe - 1) * PAGE_SIZE + 1}–{Math.min(pageSafe * PAGE_SIZE, ideas.length)} of {ideas.length}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  disabled={pageSafe <= 1}
+                  className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink2 hover:border-yellow-500/40 hover:text-yellow-500 disabled:opacity-30 disabled:hover:text-ink2 disabled:hover:border-line transition-colors"
+                >
+                  Prev
+                </button>
+                <span className="text-[11px] text-ink3 tabular-nums px-1">{pageSafe} / {pageCount}</span>
+                <button
+                  onClick={() => { setPage(p => Math.min(pageCount, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  disabled={pageSafe >= pageCount}
+                  className="rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink2 hover:border-yellow-500/40 hover:text-yellow-500 disabled:opacity-30 disabled:hover:text-ink2 disabled:hover:border-line transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
