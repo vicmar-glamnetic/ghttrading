@@ -938,23 +938,39 @@ export default function IdeasPage() {
       {/* filters — collapsible; result / market / side / coach, each clearly labeled */}
       {tab !== 'stats' && !loading && ideas.length > 0 && (
         <div className="rounded-xl border border-line bg-surface">
-          <button
-            onClick={() => setFiltersOpen(o => !o)}
-            aria-expanded={filtersOpen}
-            className="w-full flex items-center gap-2 px-3 py-2.5"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-ink3" />
-            <span className="text-sm font-semibold text-ink">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="text-[10px] font-bold text-black bg-yellow-500 rounded-full px-1.5 py-0.5 leading-none">
-                {activeFilterCount}
+          <div className="w-full flex items-center gap-2 px-3 py-2.5">
+            <button
+              onClick={() => setFiltersOpen(o => !o)}
+              aria-expanded={filtersOpen}
+              className="flex items-center gap-2 flex-1 min-w-0"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-ink3 shrink-0" />
+              <span className="text-sm font-semibold text-ink">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="text-[10px] font-bold text-black bg-yellow-500 rounded-full px-1.5 py-0.5 leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
+              <span className="ml-auto text-[11px] text-ink3 whitespace-nowrap">
+                {anyFilterActive ? `${filteredIdeas.length} of ${ideas.length}` : ideas.length} signal{ideas.length !== 1 ? 's' : ''}
               </span>
+            </button>
+            {anyFilterActive && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-[11px] font-semibold text-yellow-500 hover:text-yellow-400 shrink-0"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Reset
+              </button>
             )}
-            <span className="ml-auto text-[11px] text-ink3">
-              {anyFilterActive ? `${filteredIdeas.length} of ${ideas.length}` : ideas.length} signal{ideas.length !== 1 ? 's' : ''}
-            </span>
-            <ChevronDown className={`w-4 h-4 text-ink3 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
-          </button>
+            <button
+              onClick={() => setFiltersOpen(o => !o)}
+              aria-label={filtersOpen ? 'Collapse filters' : 'Expand filters'}
+              className="shrink-0"
+            >
+              <ChevronDown className={`w-4 h-4 text-ink3 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
 
           {filtersOpen && (
             <div className="border-t border-line p-3 space-y-2.5">
@@ -974,13 +990,6 @@ export default function IdeasPage() {
                     <option value="all">All coaches</option>
                     {coaches.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                   </select>
-                </div>
-              )}
-              {anyFilterActive && (
-                <div className="flex justify-end border-t border-line pt-2.5">
-                  <button onClick={clearFilters} className="text-[11px] font-semibold text-yellow-500 hover:text-yellow-400">
-                    Clear all
-                  </button>
                 </div>
               )}
             </div>
