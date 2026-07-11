@@ -68,6 +68,7 @@ model User {
   priceAlerts       PriceAlert[]
   enrollments       Enrollment[]
   lessonProgress    LessonProgress[]
+  coachingOffers    CoachingOffer[]   @relation("CoachingOffers")
 
   // Trader prefs
   acctBalance       Float?    // saved account size for auto position-sizing
@@ -328,6 +329,21 @@ model EducatorVideo {
 
   @@index([createdAt])
   @@map("educator_videos")
+}
+
+// A 1-on-1 coaching offer shown under Education. Members tap through to a
+// direct message with the coach, who quotes pricing in the PM.
+model CoachingOffer {
+  id        String   @id @default(cuid())
+  topic     String                       // what the sessions cover (may be multiline)
+  coverage  String?                      // extra scope / schedule notes
+  createdAt DateTime @default(now())
+
+  coachId   String
+  coach     User     @relation("CoachingOffers", fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("coaching_offers")
 }
 
 // Web Push subscription (for new-signal alerts). One row per browser/device.

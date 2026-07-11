@@ -103,7 +103,7 @@ function RoomChat({ meId, room }: { meId: string; room: string }) {
 }
 
 /* ================= Direct messages ================= */
-function DMs({ meId }: { meId: string }) {
+function DMs({ meId, initialUserId }: { meId: string; initialUserId?: string | null }) {
   const [convos, setConvos] = useState<Convo[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [other, setOther] = useState<Lite | null>(null)
@@ -178,10 +178,22 @@ function DMs({ meId }: { meId: string }) {
     } finally { setSending(false) }
   }
 
-  async function openWith(userId: string) {
+  const openWith = useCallback(async (userId: string) => {
     const res = await fetch('/api/chat/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) })
     if (res.ok) { const { id } = await res.json(); setShowNew(false); setActiveId(id) }
-  }
+  }, [])
+
+  // Deep-link: /chat?dm=<coachId> opens (or creates) that DM directly — used by
+  // the "Message coach" button on the Education 1-on-1 coaching cards.
+  useEffect(() => {
+    if (!initialUserId) return
+    let alive = true
+    fetch('/api/chat/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: initialUserId }) })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (alive && d?.id) setActiveId(d.id) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [initialUserId])
 
   return (
     <div className="flex h-full">
@@ -321,8 +333,10 @@ function ChatPageInner() {
   const meId = session?.user?.id || ''
   // Deep-link support: /chat?room=coach:<id> opens that room directly (used by
   // the coach's "new message in your room" notification).
-  const initialRoom = useSearchParams().get('room')
-  const [tab, setTab] = useState<Tab>('room')
+  const params = useSearchParams()
+  const initialRoom = params.get('room')
+  const initialDm = params.get('dm')
+  const [tab, setTab] = useState<Tab>(initialDm ? 'dm' : 'room')
   const [coaches, setCoaches] = useState<Lite[]>([])
   const [room, setRoom] = useState(initialRoom || 'community')
 
@@ -371,7 +385,7 @@ function ChatPageInner() {
               <RoomChat key={room} meId={meId} room={room} />
             </div>
           </div>
-        ) : <DMs meId={meId} />)}
+        ) : <DMs meId={meId} initialUserId={initialDm} />)}
       </div>
     </div>
   )
