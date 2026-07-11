@@ -85,6 +85,16 @@
   --color-yellow-700: #5a4a22;
   --color-yellow-800: #46391a;
   --color-yellow-900: #322810;
+
+  /* Same problem for the success green: Tailwind's default green-400 (#05df72)
+     is far too light to read as text/icons on white (~1.5:1). Deepen the green
+     ramp for light mode so gold-standard "+pips", TP prices, and win markers pass
+     AA (~5:1); green *fills* stay fine with their black labels. Dark mode keeps
+     the bright default green. */
+  --color-green-300: #189150;
+  --color-green-400: #157f3c;
+  --color-green-500: #0f6d35;
+  --color-green-600: #0c5c2c;
 }
 
 * { box-sizing: border-box; }
@@ -145,6 +155,13 @@ body {
   color: #818cf8;
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
+
+/* The badge text colors above are tuned for dark surfaces. On the light theme's
+   pale tints they wash out, so deepen the label colors (bg tints stay the same). */
+:root[data-theme="light"] .badge-buy      { color: #157f3c; }
+:root[data-theme="light"] .badge-sell     { color: #c0271f; }
+:root[data-theme="light"] .badge-analysis { color: #8a7234; }
+:root[data-theme="light"] .badge-education { color: #4c50c7; }
 
 /* Video upload */
 .upload-zone {
