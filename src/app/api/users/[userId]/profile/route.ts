@@ -58,6 +58,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
     const body = await req.json()
     const { name, bio, location, website, image, coverImage } = body
 
+    // Optional ACCM number change — required (non-empty) + uniqueness-checked.
+    let accmNumber: string | undefined
+    if (body.accmNumber !== undefined) {
+      accmNumber = String(body.accmNumber).trim()
+      if (!accmNumber) return NextResponse.json({ error: 'ACCM number is required.' }, { status: 400 })
+      const taken = await db.user.findFirst({ where: { accmNumber, NOT: { id: userId } }, select: { id: true } })
+      if (taken) return NextResponse.json({ error: 'That ACCM number is already registered to another account.' }, { status: 409 })
+    }
+
     // Optional username change — validated + uniqueness-checked.
     let username: string | undefined
     if (body.username !== undefined) {
@@ -74,12 +83,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
 
     const user = await db.user.update({
       where: { id: userId },
-      data: { name, bio, location, website, image, coverImage, ...(username !== undefined ? { username } : {}) },
-      select: { id: true, name: true, bio: true, location: true, website: true, image: true, coverImage: true, username: true },
+      data: {
+        name, bio, location, website, image, coverImage,
+        ...(username !== undefined ? { username } : {}),
+        ...(accmNumber !== undefined ? { accmNumber } : {}),
+      },
+      select: { id: true, name: true, bio: true, location: true, website: true, image: true, coverImage: true, username: true, accmNumber: true },
     })
 
     return NextResponse.json(user)
   } catch (error) {
+    // Unique-index race on the ACCM number: two saves of the same value at once.
+    if ((error as { code?: string })?.code === 'P2002') {
+      return NextResponse.json({ error: 'That ACCM number is already registered to another account.' }, { status: 409 })
+    }
     console.error('[USER_PROFILE_PATCH]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

@@ -169,19 +169,27 @@ function EditBioModal({ profile, onSave, onClose }: {
   const [bio, setBio] = useState(profile.bio || '')
   const [location, setLocation] = useState(profile.location || '')
   const [website, setWebsite] = useState(profile.website || '')
+  const [accmNumber, setAccmNumber] = useState(profile.accmNumber || '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSave() {
+    const num = accmNumber.trim()
+    if (!num) { setError('ACCM number is required.'); return }
     setSaving(true)
+    setError(null)
     try {
       const res = await fetch(`/api/users/${profile.id}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, bio, location, website }),
+        body: JSON.stringify({ name, bio, location, website, accmNumber: num }),
       })
       if (res.ok) {
-        onSave({ name, bio, location, website })
+        onSave({ name, bio, location, website, accmNumber: num })
         onClose()
+      } else {
+        const d = await res.json().catch(() => null)
+        setError(d?.error || 'Could not save your changes. Please try again.')
       }
     } finally {
       setSaving(false)
@@ -223,7 +231,18 @@ function EditBioModal({ profile, onSave, onClose }: {
               className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 resize-none transition-colors"
             />
           </div>
+          <div>
+            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1">ACCM Number</label>
+            <input
+              value={accmNumber}
+              onChange={e => { setAccmNumber(e.target.value); setError(null) }}
+              placeholder="e.g. 1234567"
+              inputMode="numeric"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 transition-colors"
+            />
+          </div>
         </div>
+        {error && <p className="mt-3 text-xs font-semibold text-red-400">{error}</p>}
         <div className="flex gap-2 mt-5">
           <Button variant="ghost" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button variant="gold" className="flex-1" loading={saving} onClick={handleSave}>
