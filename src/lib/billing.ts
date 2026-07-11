@@ -42,6 +42,22 @@ export const PAYPAL = {
   planIdAccm: process.env.NEXT_PUBLIC_PAYPAL_PLAN_ID_ACCM || '',   // $1.99 ACCM
 }
 
+// PayMongo (GCash / Maya) — one-time monthly payment via a hosted checkout.
+// E-wallets can't auto-recur, so each paid checkout grants ACCESS_DAYS of access
+// and the member re-pays next month. Secret key + webhook secret are server-only.
+//   PAYMONGO_SECRET_KEY    (sk_test_… / sk_live_…)
+//   PAYMONGO_WEBHOOK_SECRET (whsk_…, from the webhook you register)
+// NEXT_PUBLIC_PAYMONGO_ENABLED=true turns the button on in the UI.
+export const PAYMONGO = {
+  enabled: process.env.NEXT_PUBLIC_PAYMONGO_ENABLED === 'true',
+  accessDays: Number(process.env.PAYMONGO_ACCESS_DAYS) || 30,
+}
+
+/** Whether PayMongo is wired up (server-side check). */
+export function paymongoConfigured() {
+  return Boolean(process.env.PAYMONGO_SECRET_KEY)
+}
+
 /**
  * Pricing tier. ACCM members are free; other-broker members pay the standard
  * $5/mo (after their trial).

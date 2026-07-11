@@ -2,9 +2,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { hasAccess, BILLING, PAYPAL, CRYPTO, tierFor, canSubscribe, getPricePhp, ACCM_REGISTER_URL } from '@/lib/billing'
+import { hasAccess, BILLING, PAYPAL, CRYPTO, PAYMONGO, tierFor, canSubscribe, getPricePhp, ACCM_REGISTER_URL } from '@/lib/billing'
 import { LogoutButton } from './LogoutButton'
 import { PayPalSubscribe } from './PayPalSubscribe'
+import { PayMongoPay } from './PayMongoPay'
 import { CryptoPay } from './CryptoPay'
 import { Crown, Check, ExternalLink } from 'lucide-react'
 
@@ -99,12 +100,17 @@ export default async function UpgradePage({
           </div>
         )}
 
+        {/* PayMongo — GCash / Maya hosted checkout (monthly one-time) */}
+        {PAYMONGO.enabled && !tier.free && (
+          <PayMongoPay amountPhp={php} />
+        )}
+
         {/* Crypto (USDT) — send-to-wallet, then we activate */}
         {CRYPTO.enabled && (
           <CryptoPay amountUsd={tier.usd} email={session.user.email ?? ''} proofContact={BILLING.proofContact} />
         )}
 
-        {!subscribable && !CRYPTO.enabled && (
+        {!subscribable && !CRYPTO.enabled && !(PAYMONGO.enabled && !tier.free) && (
           <div className="bg-surface border border-line rounded-2xl p-5 text-center">
             <p className="text-sm text-ink2">Payments are being set up. Please check back shortly or contact {BILLING.proofContact}.</p>
           </div>
