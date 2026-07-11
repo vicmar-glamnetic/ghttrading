@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
   Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
-  GraduationCap,
+  GraduationCap, SlidersHorizontal, ChevronDown,
 } from 'lucide-react'
 import { PerformancePanel } from './PerformancePanel'
 import { liveSignalStatus, signalPips, positionSize } from '@/lib/trading'
@@ -787,6 +787,7 @@ export default function IdeasPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [metalFilter, setMetalFilter] = useState<MetalFilter>('all')
   const [coachFilter, setCoachFilter] = useState<string>('all') // author id, or 'all'
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Load account prefs: instant from cache, then sync from the server (cross-device).
   useEffect(() => {
@@ -856,7 +857,8 @@ export default function IdeasPage() {
     return true
   })
 
-  const anyFilterActive = statusFilter !== 'all' || metalFilter !== 'all' || dirFilter !== 'all' || coachFilter !== 'all'
+  const activeFilterCount = [statusFilter, metalFilter, dirFilter, coachFilter].filter(f => f !== 'all').length
+  const anyFilterActive = activeFilterCount > 0
   const clearFilters = () => { setStatusFilter('all'); setMetalFilter('all'); setDirFilter('all'); setCoachFilter('all') }
 
   // Reset to the first page when switching tabs or changing a filter.
@@ -933,39 +935,56 @@ export default function IdeasPage() {
 
       {isStaff && showGuide && <CoachGuide onClose={() => setShowGuide(false)} />}
 
-      {/* filters — result / market / side / coach, each clearly labeled */}
+      {/* filters — collapsible; result / market / side / coach, each clearly labeled */}
       {tab !== 'stats' && !loading && ideas.length > 0 && (
-        <div className="rounded-xl border border-line bg-surface p-3 space-y-2.5">
-          <FilterRow label="Result" value={statusFilter} onChange={setStatusFilter}
-            options={[['all', 'All'], ['live', 'Live'], ['win', 'Wins'], ['loss', 'Losses']]} />
-          <FilterRow label="Market" value={metalFilter} onChange={setMetalFilter}
-            options={[['all', 'All'], ['gold', 'Gold'], ['other', 'Non-gold']]} />
-          <FilterRow label="Side" value={dirFilter} onChange={setDirFilter}
-            options={[['all', 'All'], ['buy', 'Buy'], ['sell', 'Sell']]}
-            color={{ buy: 'bg-green-400/10 text-green-400 border-green-400/20', sell: 'bg-red-400/10 text-red-400 border-red-400/20' }} />
-          {coaches.length > 1 && (
-            <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-ink3">Coach</span>
-              <select value={coachFilter} onChange={e => setCoachFilter(e.target.value)}
-                aria-label="Filter by coach"
-                className="text-xs font-semibold rounded-lg border border-line bg-sunken text-ink2 px-2.5 py-1.5 outline-none focus:border-yellow-500/40 scheme-dark">
-                <option value="all">All coaches</option>
-                {coaches.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-              </select>
+        <div className="rounded-xl border border-line bg-surface">
+          <button
+            onClick={() => setFiltersOpen(o => !o)}
+            aria-expanded={filtersOpen}
+            className="w-full flex items-center gap-2 px-3 py-2.5"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-ink3" />
+            <span className="text-sm font-semibold text-ink">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="text-[10px] font-bold text-black bg-yellow-500 rounded-full px-1.5 py-0.5 leading-none">
+                {activeFilterCount}
+              </span>
+            )}
+            <span className="ml-auto text-[11px] text-ink3">
+              {anyFilterActive ? `${filteredIdeas.length} of ${ideas.length}` : ideas.length} signal{ideas.length !== 1 ? 's' : ''}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-ink3 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {filtersOpen && (
+            <div className="border-t border-line p-3 space-y-2.5">
+              <FilterRow label="Result" value={statusFilter} onChange={setStatusFilter}
+                options={[['all', 'All'], ['live', 'Live'], ['win', 'Wins'], ['loss', 'Losses']]} />
+              <FilterRow label="Market" value={metalFilter} onChange={setMetalFilter}
+                options={[['all', 'All'], ['gold', 'Gold'], ['other', 'Non-gold']]} />
+              <FilterRow label="Side" value={dirFilter} onChange={setDirFilter}
+                options={[['all', 'All'], ['buy', 'Buy'], ['sell', 'Sell']]}
+                color={{ buy: 'bg-green-400/10 text-green-400 border-green-400/20', sell: 'bg-red-400/10 text-red-400 border-red-400/20' }} />
+              {coaches.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-ink3">Coach</span>
+                  <select value={coachFilter} onChange={e => setCoachFilter(e.target.value)}
+                    aria-label="Filter by coach"
+                    className="text-xs font-semibold rounded-lg border border-line bg-sunken text-ink2 px-2.5 py-1.5 outline-none focus:border-yellow-500/40 scheme-dark">
+                    <option value="all">All coaches</option>
+                    {coaches.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  </select>
+                </div>
+              )}
+              {anyFilterActive && (
+                <div className="flex justify-end border-t border-line pt-2.5">
+                  <button onClick={clearFilters} className="text-[11px] font-semibold text-yellow-500 hover:text-yellow-400">
+                    Clear all
+                  </button>
+                </div>
+              )}
             </div>
           )}
-          <div className="flex items-center justify-between border-t border-line pt-2.5">
-            <span className="text-[11px] text-ink3">
-              {anyFilterActive
-                ? `${filteredIdeas.length} of ${ideas.length} signal${ideas.length !== 1 ? 's' : ''}`
-                : `${ideas.length} signal${ideas.length !== 1 ? 's' : ''}`}
-            </span>
-            {anyFilterActive && (
-              <button onClick={clearFilters} className="text-[11px] font-semibold text-yellow-500 hover:text-yellow-400">
-                Clear all
-              </button>
-            )}
-          </div>
         </div>
       )}
 
