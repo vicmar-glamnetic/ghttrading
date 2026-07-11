@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { MessageCircle, Users, Send, Search, ChevronLeft, Plus, X } from 'lucide-react'
@@ -315,12 +316,15 @@ function NewMessage({ meId, onClose, onPick }: { meId: string; onClose: () => vo
 }
 
 /* ================= page ================= */
-export default function ChatPage() {
+function ChatPageInner() {
   const { data: session } = useSession()
   const meId = session?.user?.id || ''
+  // Deep-link support: /chat?room=coach:<id> opens that room directly (used by
+  // the coach's "new message in your room" notification).
+  const initialRoom = useSearchParams().get('room')
   const [tab, setTab] = useState<Tab>('room')
   const [coaches, setCoaches] = useState<Lite[]>([])
-  const [room, setRoom] = useState('community')
+  const [room, setRoom] = useState(initialRoom || 'community')
 
   useEffect(() => {
     fetch('/api/chat/coaches').then(r => r.json()).then(d => { if (Array.isArray(d)) setCoaches(d) }).catch(() => {})
@@ -328,6 +332,8 @@ export default function ChatPage() {
 
   const rooms = [
     { id: 'community', name: 'Community' },
+    // A coach always sees their own room (the coaches list excludes self).
+    ...(session?.user?.role === 'coach' && meId ? [{ id: `coach:${meId}`, name: 'My Room' }] : []),
     ...coaches.map(c => ({ id: `coach:${c.id}`, name: `${c.name?.split(' ')[0] || 'Coach'}'s Room` })),
   ]
 
@@ -368,5 +374,13 @@ export default function ChatPage() {
         ) : <DMs meId={meId} />)}
       </div>
     </div>
+  )
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatPageInner />
+    </Suspense>
   )
 }

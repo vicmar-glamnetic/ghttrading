@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import type { NotificationWithSender } from '@/types'
 
 const notifIcons: Record<string, string> = {
-  like: '👍', comment: '💬', friend_request: '👥', friend_accept: '🤝', follow: '📈', post_tag: '🏷️',
+  like: '👍', comment: '💬', friend_request: '👥', friend_accept: '🤝', follow: '📈', post_tag: '🏷️', coach_room: '📨',
 }
 
 export default function NotificationsPage() {
