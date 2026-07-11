@@ -78,9 +78,9 @@ export default function ApprovalsPage() {
             <div key={u.id} className="flex items-center gap-3 bg-surface rounded-xl border border-line p-3">
               <Avatar src={u.image} name={u.name} size="md" />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'}</p>
-                  <span className={`shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border ${u.accmMember ? 'text-yellow-500 border-yellow-500/40 bg-yellow-500/10' : 'text-ink3 border-line bg-elevated'}`}>
+                  <span className={`self-start shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border ${u.accmMember ? 'text-yellow-500 border-yellow-500/40 bg-yellow-500/10' : 'text-ink3 border-line bg-elevated'}`}>
                     {u.accmMember ? 'ACCM member' : 'Other broker'}
                   </span>
                 </div>
