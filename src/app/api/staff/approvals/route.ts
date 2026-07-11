@@ -10,7 +10,7 @@ export async function GET() {
   const pending = await db.user.findMany({
     where: { approved: false },
     orderBy: { createdAt: 'desc' },
-    select: { id: true, name: true, email: true, username: true, image: true, createdAt: true },
+    select: { id: true, name: true, email: true, username: true, image: true, createdAt: true, accmMember: true },
   })
   return NextResponse.json(pending)
 }

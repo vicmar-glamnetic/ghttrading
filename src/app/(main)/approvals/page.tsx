@@ -5,7 +5,7 @@ import { UserCheck, Check, X } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface Pending {
-  id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string
+  id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string; accmMember: boolean
 }
 
 export default function ApprovalsPage() {
@@ -78,7 +78,12 @@ export default function ApprovalsPage() {
             <div key={u.id} className="flex items-center gap-3 bg-surface rounded-xl border border-line p-3">
               <Avatar src={u.image} name={u.name} size="md" />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'}</p>
+                  <span className={`shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border ${u.accmMember ? 'text-yellow-500 border-yellow-500/40 bg-yellow-500/10' : 'text-ink3 border-line bg-elevated'}`}>
+                    {u.accmMember ? 'ACCM member' : 'Other broker'}
+                  </span>
+                </div>
                 <p className="text-xs text-ink3 truncate">{u.email}</p>
                 <p className="text-[10px] text-ink3 mt-0.5">Registered {format(new Date(u.createdAt), 'MMM d, yyyy')}</p>
               </div>
