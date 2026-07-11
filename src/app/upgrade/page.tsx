@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { hasAccess, BILLING, PAYPAL, CRYPTO, PAYMONGO, tierFor, canSubscribe, getPricePhp, ACCM_REGISTER_URL } from '@/lib/billing'
+import { hasAccess, BILLING, PAYPAL, CRYPTO, PAYMONGO, MANUAL_PAY, tierFor, canSubscribe, getPricePhp, ACCM_REGISTER_URL } from '@/lib/billing'
 import { LogoutButton } from './LogoutButton'
 import { PayPalSubscribe } from './PayPalSubscribe'
 import { PayMongoPay } from './PayMongoPay'
+import { GcashMayaPay } from './GcashMayaPay'
 import { CryptoPay } from './CryptoPay'
 import { Crown, Check, ExternalLink } from 'lucide-react'
 
@@ -105,12 +106,17 @@ export default async function UpgradePage({
           <PayMongoPay amountPhp={php} />
         )}
 
+        {/* Manual GCash / Maya — send-to-wallet, then an admin activates */}
+        {MANUAL_PAY.enabled && !tier.free && (
+          <GcashMayaPay amountPhp={php} email={session.user.email ?? ''} />
+        )}
+
         {/* Crypto (USDT) — send-to-wallet, then we activate */}
         {CRYPTO.enabled && (
           <CryptoPay amountUsd={tier.usd} email={session.user.email ?? ''} proofContact={BILLING.proofContact} />
         )}
 
-        {!subscribable && !CRYPTO.enabled && !(PAYMONGO.enabled && !tier.free) && (
+        {!subscribable && !CRYPTO.enabled && !((PAYMONGO.enabled || MANUAL_PAY.enabled) && !tier.free) && (
           <div className="bg-surface border border-line rounded-2xl p-5 text-center">
             <p className="text-sm text-ink2">Payments are being set up. Please check back shortly or contact {BILLING.proofContact}.</p>
           </div>

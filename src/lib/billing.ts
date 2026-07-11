@@ -14,9 +14,21 @@ export const BILLING = {
   fallbackRate: Number(process.env.USD_PHP_FALLBACK_RATE) || 58,
   gcashName: process.env.NEXT_PUBLIC_GCASH_NAME || 'Gold Heist Trading',
   gcashNumber: process.env.NEXT_PUBLIC_GCASH_NUMBER || '0917 000 0000',
+  mayaName: process.env.NEXT_PUBLIC_MAYA_NAME || process.env.NEXT_PUBLIC_GCASH_NAME || 'Gold Heist Trading',
   mayaNumber: process.env.NEXT_PUBLIC_MAYA_NUMBER || '',
+  // Optional links to your real scannable QR images (upload the GCash/Maya
+  // "receive money" QR somewhere public, e.g. Vercel Blob, and paste the URL).
+  gcashQrUrl: process.env.NEXT_PUBLIC_GCASH_QR_URL || '',
+  mayaQrUrl: process.env.NEXT_PUBLIC_MAYA_QR_URL || '',
   // Where members send proof of payment (e.g. a Messenger/Telegram/email).
   proofContact: process.env.NEXT_PUBLIC_PAYMENT_PROOF_CONTACT || 'our support chat',
+}
+
+// Manual GCash / Maya proof-of-payment flow: member pays your wallet, taps
+// "I've paid", an admin verifies and activates. No gateway / business
+// registration needed. Turn on with NEXT_PUBLIC_MANUAL_PAY_ENABLED=true.
+export const MANUAL_PAY = {
+  enabled: process.env.NEXT_PUBLIC_MANUAL_PAY_ENABLED === 'true',
 }
 
 // Crypto (USDT) payment — send-to-wallet, then admin activates. Override the
