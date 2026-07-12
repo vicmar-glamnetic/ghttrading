@@ -484,8 +484,17 @@ function IdeaEditor({ initial, onClose, onSaved }: {
 
   function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) { setF(s => ({ ...s, [k]: v })) }
   function setTp(i: number, patch: Partial<{ price: string; pips: string; hit: boolean }>) {
-    setF(s => ({ ...s, takeProfits: s.takeProfits.map((t, idx) => idx === i ? { ...t, ...patch } : t) }))
+    setF(s => {
+      const takeProfits = s.takeProfits.map((t, idx) => idx === i ? { ...t, ...patch } : t)
+      // Ticking a TP means the trade entered and is now running — reopen it from any
+      // closed outcome back to pending (which renders as RUNNING once a TP is hit).
+      const status = patch.hit && s.status !== 'pending' ? 'pending' : s.status
+      return { ...s, takeProfits, status }
+    })
   }
+
+  // A pending signal with a hit TP is "running" (in profit) — reflect that in the label.
+  const anyTpHit = f.takeProfits.some(t => t.hit)
 
   async function save() {
     if (!f.symbol.trim()) return
@@ -593,7 +602,7 @@ function IdeaEditor({ initial, onClose, onSaved }: {
             <div>
               <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Status</label>
               <select value={f.status} onChange={e => set('status', e.target.value as TradeIdea['status'])} className={`${inputCls} mt-1 scheme-dark`}>
-                <option value="pending">Pending</option>
+                <option value="pending">{anyTpHit ? 'Running (TP hit)' : 'Pending / Live'}</option>
                 <option value="tp_hit">TP Hit</option>
                 <option value="sl_hit">SL Hit</option>
                 <option value="breakeven">Breakeven</option>
