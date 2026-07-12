@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { normalizePnl } from '@/lib/journal'
 
 export async function GET(
   _req: Request,
@@ -47,7 +48,7 @@ export async function PUT(
         symbol: symbol || null,
         direction: direction || null,
         result: result || null,
-        pnl: pnl === '' || pnl == null ? null : Number(pnl),
+        pnl: normalizePnl(pnl, result),
         tradedAt: tradedAt ? new Date(tradedAt) : null,
       },
     })

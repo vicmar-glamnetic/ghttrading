@@ -333,7 +333,7 @@ export default function JournalPage() {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-ink3">P&L $</span>
                   <input
                     type="number"
@@ -343,6 +343,15 @@ export default function JournalPage() {
                     placeholder="e.g. 250 or -80"
                     className="w-32 bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2"
                   />
+                  {result === 'loss' && (
+                    <span className="text-[11px] text-red-400">Recorded as a loss ({fmtMoney(-Math.abs(Number(pnl) || 0))})</span>
+                  )}
+                  {result === 'win' && (
+                    <span className="text-[11px] text-green-400">Recorded as a win ({fmtMoney(Math.abs(Number(pnl) || 0))})</span>
+                  )}
+                  {result !== 'loss' && result !== 'win' && (
+                    <span className="text-[11px] text-ink3">Use a minus sign for a loss, e.g. -80</span>
+                  )}
                 </div>
               </div>
               <textarea
