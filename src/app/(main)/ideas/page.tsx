@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
   Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
-  GraduationCap, SlidersHorizontal, ChevronDown,
+  GraduationCap, SlidersHorizontal, ChevronDown, Activity,
 } from 'lucide-react'
 import { PerformancePanel } from './PerformancePanel'
 import { liveSignalStatus, signalPips, positionSize } from '@/lib/trading'
@@ -132,6 +132,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   const isBuy = idea.direction === 'buy'
   const [votes, setVotes] = useState<Votes>(idea.votes ?? { take: 0, skip: 0, mine: null })
   const [closing, setClosing] = useState(false)
+  const [statusOpen, setStatusOpen] = useState(false)
 
   const isGold = idea.symbol.toUpperCase().startsWith('XAU')
   const live = liveSignalStatus(idea, isGold ? price : null)
@@ -321,11 +322,31 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
         </div>
       )}
 
+      {/* quick status toggle (staff, open signals) — flip pending ⇄ running without the full editor */}
+      {canManage && isOpen && statusOpen && (
+        <div className="mt-3 rounded-lg border border-line bg-sunken p-2">
+          <p className="text-[11px] font-bold text-ink3 uppercase tracking-wider mb-2 px-1">Trade status</p>
+          <div className="flex items-stretch gap-2">
+            <button onClick={() => { onClose(idea, 'pending'); setStatusOpen(false) }}
+              className={`flex-1 rounded-lg py-2 px-1 border transition-colors ${idea.status === 'pending' ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30' : 'text-ink2 bg-elevated border-line hover:bg-line/40'}`}>
+              <span className="block text-xs font-bold">⏳ Pending</span>
+              <span className="block text-[10px] text-ink3 mt-0.5">Waiting for entry</span>
+            </button>
+            <button onClick={() => { onClose(idea, 'running'); setStatusOpen(false) }}
+              className={`flex-1 rounded-lg py-2 px-1 border transition-colors ${idea.status === 'running' ? 'text-blue-400 bg-blue-400/10 border-blue-400/30' : 'text-ink2 bg-elevated border-line hover:bg-line/40'}`}>
+              <span className="block text-xs font-bold">🔵 Running</span>
+              <span className="block text-[10px] text-ink3 mt-0.5">Entry hit</span>
+            </button>
+          </div>
+          <button onClick={() => setStatusOpen(false)} className="mt-2 w-full text-[11px] text-ink3 hover:text-ink2 py-1">Cancel</button>
+        </div>
+      )}
+
       {/* actions (staff manage controls; members use the per-level copy buttons above) */}
       {canManage && (
         <div className="mt-3 flex items-center gap-2">
           {isOpen ? (
-            <button onClick={() => setClosing(v => !v)} title="Close signal"
+            <button onClick={() => { setClosing(v => !v); setStatusOpen(false) }} title="Close signal"
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-red-400 hover:border-red-400/40 hover:bg-elevated transition-colors">
               <XCircle className="w-3.5 h-3.5" /> Close signal
             </button>
@@ -333,6 +354,12 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
             <button onClick={() => onClose(idea, 'pending')} title="Mark this signal as live again"
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
               <RotateCcw className="w-3.5 h-3.5" /> Mark as Live
+            </button>
+          )}
+          {isOpen && (
+            <button onClick={() => { setStatusOpen(v => !v); setClosing(false) }} title="Update trade status (pending / running)"
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${idea.status === 'running' ? 'text-blue-400 border-blue-400/40 bg-blue-400/10' : 'text-ink2 border-line hover:text-blue-400 hover:border-blue-400/40 hover:bg-elevated'}`}>
+              <Activity className="w-3.5 h-3.5" /> {idea.status === 'running' ? 'Running' : 'Status'}
             </button>
           )}
           <button onClick={() => onEdit(idea)} title="Edit signal"
@@ -718,11 +745,13 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
           <section>
             <h3 className="font-bold text-ink mb-1">Marking a signal Running (entry hit)</h3>
             <p className="text-ink3 leading-relaxed">
-              When price trades into your entry, set the status to <span className="font-semibold text-blue-400">Running</span> —
-              open <span className="font-semibold text-ink2">Edit</span> and pick <span className="font-mono text-[12px] text-ink2">Running (entry hit)</span>
-              from the Status dropdown. The card then shows a <span className="font-semibold text-blue-400">🔵 RUNNING · entry hit</span> badge
-              so members know the trade is live in the market, not just waiting. Ticking any take-profit does this for you
-              automatically. It stays a neutral, open state — it never touches win-rate until you close the signal.
+              When price trades into your entry, tap the <span className="font-semibold text-blue-400">Status</span> button
+              (between <span className="font-semibold text-ink2">Close signal</span> and <span className="font-semibold text-ink2">Edit</span>)
+              and pick <span className="font-semibold text-blue-400">🔵 Running · entry hit</span> — one tap, no need to open the editor.
+              The card then shows a <span className="font-semibold text-blue-400">RUNNING</span> badge so members know the trade is live
+              in the market, not just waiting. Ticking any take-profit sets Running for you automatically, and you can flip it back
+              to <span className="font-semibold text-ink2">Pending</span> the same way. It stays a neutral, open state — it never
+              touches win-rate until you close the signal.
             </p>
           </section>
 
