@@ -296,8 +296,21 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action }),
     })
+    if (!res.ok) { setActionLoading(false); return }
     const data = await res.json()
-    setProfile(prev => prev ? { ...prev, friendRequest: action === 'send' ? data : null } : prev)
+    setProfile(prev => {
+      if (!prev) return prev
+      if (action === 'send') return { ...prev, friendRequest: data }
+      if (action === 'accept') return {
+        ...prev,
+        // Reflect the accepted state so the button flips to "Friends" instead
+        // of falling back to "Add Trader". Accepting also creates a mutual follow.
+        friendRequest: { status: 'accepted', senderId: prev.friendRequest?.senderId ?? userId },
+        isFollowing: true,
+      }
+      // decline / cancel
+      return { ...prev, friendRequest: null }
+    })
     setActionLoading(false)
   }
 
