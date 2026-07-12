@@ -57,7 +57,7 @@ export interface Idea {
   entryLow: number | null; entryHigh: number | null
   slLow: number | null; slHigh: number | null
   takeProfits: { price: number; pips?: number | null; hit?: boolean }[]
-  status: 'pending' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
+  status: 'pending' | 'running' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
 }
 
 export type StatusKey = 'valid' | 'zone' | 'missed' | 'tp' | 'sl' | 'be' | 'closed' | 'cancelled'

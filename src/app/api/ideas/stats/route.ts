@@ -50,7 +50,7 @@ export async function GET() {
   for (const i of ideas) {
     const closed = i.status === 'tp_hit' || i.status === 'sl_hit'
     const win = i.status === 'tp_hit'
-    if (i.status === 'pending') open++
+    if (i.status === 'pending' || i.status === 'running') open++
     else if (win) wins++
     else if (i.status === 'sl_hit') losses++
 

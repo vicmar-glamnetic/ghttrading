@@ -24,7 +24,7 @@ interface TradeIdea {
   slHigh: number | null
   takeProfits: TakeProfit[]
   currentPrice: number | null
-  status: 'pending' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
+  status: 'pending' | 'running' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
   notes: string | null
   isPublic: boolean
   authorId: string
@@ -118,7 +118,7 @@ const TONE: Record<string, string> = {
   void: 'text-ink3 bg-sunken border-line border-dashed line-through',
 }
 
-type CloseStatus = 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled' | 'pending'
+type CloseStatus = 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled' | 'pending' | 'running'
 
 function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   idea: TradeIdea
@@ -137,10 +137,14 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   const live = liveSignalStatus(idea, isGold ? price : null)
   const pips = signalPips(idea)
 
+  // "Open" = not yet closed. Pending (waiting for entry) and running (entry hit) both count.
+  const isOpen = idea.status === 'pending' || idea.status === 'running'
   // Partial progress: TPs already hit while the signal is still running.
   const hitCount = idea.takeProfits.filter(t => t.hit).length
   const tpTotal = idea.takeProfits.length
-  const inProfit = idea.status === 'pending' && hitCount > 0
+  const inProfit = isOpen && hitCount > 0
+  // Show the RUNNING label when the coach marked entry hit, or once a TP is hit.
+  const isRunning = idea.status === 'running' || inProfit
 
   // Auto position size from the member's saved account + this signal's entry/SL.
   const entryMid = idea.entryLow != null && idea.entryHigh != null ? (idea.entryLow + idea.entryHigh) / 2 : (idea.entryLow ?? idea.entryHigh)
@@ -188,11 +192,11 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       {/* live signal + status */}
       <div className="flex items-center justify-between gap-2 mt-3">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
+          <span className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
           <span className="text-sm font-bold text-blue-400 shrink-0">
-            {idea.status === 'pending' ? (inProfit ? 'RUNNING' : 'LIVE') : idea.status === 'cancelled' ? 'Cancelled' : 'Closed'}
+            {isOpen ? (isRunning ? 'RUNNING' : 'LIVE') : idea.status === 'cancelled' ? 'Cancelled' : 'Closed'}
           </span>
-          {isGold && price != null && idea.status === 'pending' && (
+          {isGold && price != null && isOpen && (
             <LivePrice price={price} />
           )}
         </div>
@@ -205,6 +209,10 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
           {inProfit ? (
             <span className="text-xs font-semibold rounded-full px-2 py-0.5 border text-green-400 bg-green-400/10 border-green-400/20">
               🟢 In profit · TP{hitCount}{tpTotal > 1 ? `/${tpTotal}` : ''} hit
+            </span>
+          ) : idea.status === 'running' ? (
+            <span className="text-xs font-semibold rounded-full px-2 py-0.5 border text-blue-400 bg-blue-400/10 border-blue-400/20">
+              🔵 Running · entry hit
             </span>
           ) : live ? (
             <span className={`text-xs font-semibold rounded-full px-2 py-0.5 border ${TONE[live.tone]}`}>
@@ -261,7 +269,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       {idea.notes && <p className="text-xs text-ink2 mt-3 whitespace-pre-wrap">{idea.notes}</p>}
 
       {/* community sentiment (open signals) */}
-      {idea.status === 'pending' && (
+      {isOpen && (
         <div className="mt-3 pt-3 border-t border-line">
           <div className="flex items-center gap-2">
             <button onClick={() => vote('take')}
@@ -286,7 +294,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       )}
 
       {/* close-outcome menu (staff, running signals) */}
-      {canManage && idea.status === 'pending' && closing && (
+      {canManage && isOpen && closing && (
         <div className="mt-3 rounded-lg border border-line bg-sunken p-2">
           <p className="text-[11px] font-bold text-ink3 uppercase tracking-wider mb-2 px-1">Close signal as…</p>
           <div className="flex items-center gap-2">
@@ -316,7 +324,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       {/* actions (staff manage controls; members use the per-level copy buttons above) */}
       {canManage && (
         <div className="mt-3 flex items-center gap-2">
-          {idea.status === 'pending' ? (
+          {isOpen ? (
             <button onClick={() => setClosing(v => !v)} title="Close signal"
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-red-400 hover:border-red-400/40 hover:bg-elevated transition-colors">
               <XCircle className="w-3.5 h-3.5" /> Close signal
@@ -486,15 +494,12 @@ function IdeaEditor({ initial, onClose, onSaved }: {
   function setTp(i: number, patch: Partial<{ price: string; pips: string; hit: boolean }>) {
     setF(s => {
       const takeProfits = s.takeProfits.map((t, idx) => idx === i ? { ...t, ...patch } : t)
-      // Ticking a TP means the trade entered and is now running — reopen it from any
-      // closed outcome back to pending (which renders as RUNNING once a TP is hit).
-      const status = patch.hit && s.status !== 'pending' ? 'pending' : s.status
+      // Ticking a TP means entry was hit and the trade is now running — flag it running
+      // (unless it's already been closed to a final outcome, which the coach set on purpose).
+      const status = patch.hit && s.status === 'pending' ? 'running' : s.status
       return { ...s, takeProfits, status }
     })
   }
-
-  // A pending signal with a hit TP is "running" (in profit) — reflect that in the label.
-  const anyTpHit = f.takeProfits.some(t => t.hit)
 
   async function save() {
     if (!f.symbol.trim()) return
@@ -602,7 +607,8 @@ function IdeaEditor({ initial, onClose, onSaved }: {
             <div>
               <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Status</label>
               <select value={f.status} onChange={e => set('status', e.target.value as TradeIdea['status'])} className={`${inputCls} mt-1 scheme-dark`}>
-                <option value="pending">{anyTpHit ? 'Running (TP hit)' : 'Pending / Live'}</option>
+                <option value="pending">Pending (waiting for entry)</option>
+                <option value="running">Running (entry hit)</option>
                 <option value="tp_hit">TP Hit</option>
                 <option value="sl_hit">SL Hit</option>
                 <option value="breakeven">Breakeven</option>
@@ -706,6 +712,17 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
               (a single price or a zone), one or more take-profits, and your stop. You can type the whole thing in
               shorthand — e.g. <span className="font-mono text-[12px] text-ink2">Buy 4110-4105 / TP 4115 4001 / Sl 4088</span> —
               and it auto-fills. Add notes for your reasoning. New signals go <span className="font-semibold text-ink2">LIVE</span> automatically.
+            </p>
+          </section>
+
+          <section>
+            <h3 className="font-bold text-ink mb-1">Marking a signal Running (entry hit)</h3>
+            <p className="text-ink3 leading-relaxed">
+              When price trades into your entry, set the status to <span className="font-semibold text-blue-400">Running</span> —
+              open <span className="font-semibold text-ink2">Edit</span> and pick <span className="font-mono text-[12px] text-ink2">Running (entry hit)</span>
+              from the Status dropdown. The card then shows a <span className="font-semibold text-blue-400">🔵 RUNNING · entry hit</span> badge
+              so members know the trade is live in the market, not just waiting. Ticking any take-profit does this for you
+              automatically. It stays a neutral, open state — it never touches win-rate until you close the signal.
             </p>
           </section>
 
@@ -860,7 +877,7 @@ export default function IdeasPage() {
     if (coachFilter !== 'all' && i.author.id !== coachFilter) return false
     if (metalFilter === 'gold' && !isGoldSymbol(i.symbol)) return false
     if (metalFilter === 'other' && isGoldSymbol(i.symbol)) return false
-    if (statusFilter === 'live') return i.status === 'pending'
+    if (statusFilter === 'live') return i.status === 'pending' || i.status === 'running'
     if (statusFilter === 'win') return i.status === 'tp_hit'
     if (statusFilter === 'loss') return i.status === 'sl_hit'
     return true
