@@ -17,6 +17,7 @@ export async function GET(req: Request) {
   const params = new URL(req.url).searchParams
   const q = params.get('q')?.trim()
   const role = params.get('role')?.trim()
+  const accm = params.get('accm')?.trim() // 'true' = ACCM members, 'false' = non-ACCM (other broker)
 
   const where: Record<string, unknown> = {}
   if (q) {
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
     ]
   }
   if (role && (ROLES as readonly string[]).includes(role)) where.role = role
+  if (accm === 'true') where.accmMember = true
+  else if (accm === 'false') where.accmMember = false
 
   const [users, counts, onlineNow] = await Promise.all([
     db.user.findMany({ where, orderBy: { createdAt: 'desc' }, select: USER_SELECT }),

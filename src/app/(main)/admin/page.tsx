@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('')
+  const [accmFilter, setAccmFilter] = useState<'' | 'true' | 'false'>('')
   const [showAdd, setShowAdd] = useState(false)
   const [showOnline, setShowOnline] = useState(false)
   const [page, setPage] = useState(1)
@@ -123,6 +124,7 @@ export default function AdminPage() {
       const p = new URLSearchParams()
       if (q.trim()) p.set('q', q.trim())
       if (roleFilter) p.set('role', roleFilter)
+      if (accmFilter) p.set('accm', accmFilter)
       const res = await fetch(`/api/admin/users?${p.toString()}`)
       const data = await res.json()
       setUsers(data.users ?? [])
@@ -130,7 +132,7 @@ export default function AdminPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [q, roleFilter])
+  }, [q, roleFilter, accmFilter])
 
   useEffect(() => {
     const t = setTimeout(load, 250) // debounce search
@@ -138,7 +140,7 @@ export default function AdminPage() {
   }, [load])
 
   // Back to the first page whenever the result set changes underneath us.
-  useEffect(() => { setPage(1) }, [q, roleFilter])
+  useEffect(() => { setPage(1) }, [q, roleFilter, accmFilter])
 
   const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE))
   const pageSafe = Math.min(page, pageCount)
@@ -322,11 +324,22 @@ export default function AdminPage() {
             className="w-full bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-ink3"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {['', ...ROLE_OPTIONS].map(r => (
             <button key={r || 'all'} onClick={() => setRoleFilter(r)}
               className={`px-3 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${roleFilter === r ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
               {r === '' ? 'All' : r}
+            </button>
+          ))}
+          <span className="w-px self-stretch bg-line mx-1" aria-hidden />
+          {([
+            { value: '', label: 'All tiers' },
+            { value: 'true', label: 'ACCM' },
+            { value: 'false', label: 'Non-ACCM' },
+          ] as const).map(({ value, label }) => (
+            <button key={value || 'all-tiers'} onClick={() => setAccmFilter(value)}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${accmFilter === value ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+              {label}
             </button>
           ))}
         </div>
