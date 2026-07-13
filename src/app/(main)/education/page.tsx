@@ -25,6 +25,7 @@ const CATEGORIES = [
   'Risk Management',
   'Psychology',
   'Platform & Setup',
+  'ACCM Tutorials',
 ] as const
 
 
