@@ -38,8 +38,11 @@ export async function GET() {
   const byCoach = new Map<string, { id: string; name: string | null; image: string | null; wins: number; losses: number }>()
   const byMonth = new Map<string, { wins: number; losses: number }>()
 
-  const now = Date.now()
-  const WEEK = 7 * 24 * 60 * 60 * 1000
+  // Start of the current calendar week (Sunday 00:00 local), not a rolling 7 days.
+  const weekStart = (() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()).getTime()
+  })()
   const monthStart = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime() })()
   // Pips only add up within one instrument class (a gold pip is 0.1, an FX pip
   // 0.0001, a crypto point 1), so gold gets the headline total and every other
@@ -70,14 +73,14 @@ export async function GET() {
         if (p != null) {
           goldPips.all += p
           if (t >= monthStart) goldPips.month += p
-          if (now - t <= WEEK) goldPips.week += p
+          if (t >= weekStart) goldPips.week += p
         }
       } else {
         const sym = i.symbol.toUpperCase()
         const o = otherBySymbol.get(sym) ?? { symbol: sym, unit: pipUnit(sym), week: 0, all: 0, wins: 0, losses: 0 }
         if (p != null) {
           o.all += p
-          if (now - t <= WEEK) o.week += p
+          if (t >= weekStart) o.week += p
         }
         if (win) o.wins++; else o.losses++
         otherBySymbol.set(sym, o)
