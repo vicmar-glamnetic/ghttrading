@@ -80,15 +80,29 @@ export async function POST(req: Request) {
     const direction = body.direction === 'sell' ? 'sell' : 'buy'
     if (!symbol) return NextResponse.json({ error: 'Symbol is required' }, { status: 400 })
 
+    // Guard against empty signals (e.g. a coach who forgot to parse their paste):
+    // require an entry, and at least a target or a stop.
+    const entryLow = numOrNull(body.entryLow)
+    const entryHigh = numOrNull(body.entryHigh)
+    const slLow = numOrNull(body.slLow)
+    const slHigh = numOrNull(body.slHigh)
+    const takeProfits = cleanTakeProfits(body.takeProfits)
+    if (entryLow == null && entryHigh == null) {
+      return NextResponse.json({ error: 'Add an entry price before posting this signal.' }, { status: 400 })
+    }
+    if (takeProfits.length === 0 && slLow == null && slHigh == null) {
+      return NextResponse.json({ error: 'Add at least one take-profit or a stop loss before posting.' }, { status: 400 })
+    }
+
     const idea = await db.tradeIdea.create({
       data: {
         symbol,
         direction,
-        entryLow: numOrNull(body.entryLow),
-        entryHigh: numOrNull(body.entryHigh),
-        slLow: numOrNull(body.slLow),
-        slHigh: numOrNull(body.slHigh),
-        takeProfits: cleanTakeProfits(body.takeProfits),
+        entryLow,
+        entryHigh,
+        slLow,
+        slHigh,
+        takeProfits,
         currentPrice: numOrNull(body.currentPrice),
         status: ['pending', 'running', 'tp_hit', 'sl_hit', 'breakeven', 'closed', 'cancelled'].includes(body.status) ? body.status : 'pending',
         notes: body.notes?.toString().trim() || null,

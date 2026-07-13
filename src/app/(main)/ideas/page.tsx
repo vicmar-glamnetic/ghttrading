@@ -495,11 +495,29 @@ function IdeaEditor({ initial, onClose, onSaved }: {
   })
   const [saving, setSaving] = useState(false)
   const [paste, setPaste] = useState('')
+  // Whether the current paste text has been run through Parse & fill. Reset on
+  // every keystroke so we can catch a coach who typed a signal but never parsed it.
+  const [pasteApplied, setPasteApplied] = useState(false)
+  // Inline result of the last Parse & fill attempt (error = unreadable, ok = summary).
+  const [pasteInfo, setPasteInfo] = useState<{ type: 'error' | 'ok'; msg: string } | null>(null)
+  // Blocking validation errors shown above the Post button.
+  const [errors, setErrors] = useState<string[]>([])
 
   // Parse a pasted shorthand signal and fill the form.
   function applyPaste() {
-    if (!paste.trim()) return
+    if (!paste.trim()) {
+      setPasteInfo({ type: 'error', msg: 'Type or paste a signal above first.' })
+      return
+    }
     const p = parseSignal(paste)
+    // Nothing usable came out — warn instead of silently doing nothing.
+    if (p.entryLow == null && p.slLow == null && p.takeProfits.length === 0 && !p.symbol && !p.direction) {
+      setPasteInfo({
+        type: 'error',
+        msg: "Couldn't read a signal from that text. Check the format — e.g. “Buy 4110-4105 / TP 4115 4120 / SL 4088”.",
+      })
+      return
+    }
     setF(s => ({
       ...s,
       symbol: p.symbol ?? s.symbol,
@@ -515,10 +533,62 @@ function IdeaEditor({ initial, onClose, onSaved }: {
         ? `${s.notes ? s.notes + '\n' : ''}Add more: ${p.moreEntries.join(', ')}`
         : s.notes,
     }))
+    // Summarise what was filled so the coach can confirm at a glance.
+    const parts: string[] = []
+    if (p.symbol) parts.push(p.symbol)
+    if (p.direction) parts.push(p.direction.toUpperCase())
+    if (p.entryLow != null) parts.push('entry')
+    if (p.takeProfits.length) parts.push(`${p.takeProfits.length} TP${p.takeProfits.length > 1 ? 's' : ''}`)
+    if (p.slLow != null) parts.push('SL')
+    setPasteApplied(true)
+    setErrors([])
+    setPasteInfo({ type: 'ok', msg: `Filled: ${parts.join(' · ')}. Review the fields below, then post.` })
   }
 
-  function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) { setF(s => ({ ...s, [k]: v })) }
+  // Check the form before saving. Returns human-readable problems ([] = all good).
+  function validate(): string[] {
+    const errs: string[] = []
+    if (!f.symbol.trim()) errs.push('Enter a symbol (e.g. XAUUSD).')
+
+    // The classic mistake: text left in Quick paste that was never parsed.
+    if (paste.trim() && !pasteApplied) {
+      errs.push("You've typed a signal in Quick paste but haven't filled the form — tap “Parse & fill ↓”, or clear the box.")
+    }
+
+    const num = (v: string) => (v.trim() === '' ? null : Number(v))
+    const eLow = num(f.entryLow), eHigh = num(f.entryHigh)
+    const slLow = num(f.slLow), slHigh = num(f.slHigh)
+    const tpNums = f.takeProfits.map(t => num(t.price)).filter((n): n is number => n != null && Number.isFinite(n))
+
+    // A signal with no entry, no target and no stop is empty — almost always the
+    // "forgot to parse" case. Block it with a clear message.
+    if (eLow == null && eHigh == null) errs.push('Add an entry price.')
+    if (tpNums.length === 0 && slLow == null && slHigh == null) {
+      errs.push('Add at least one take-profit or a stop loss.')
+    }
+
+    // Reject non-positive / non-numeric prices.
+    const bad = [eLow, eHigh, slLow, slHigh, ...tpNums].filter(v => v != null && (!Number.isFinite(v) || v <= 0))
+    if (bad.length) errs.push('Prices must be numbers greater than zero.')
+
+    // Directional sanity: for a buy, targets sit above entry and the stop below (reversed for a sell).
+    const entryMid = eLow != null && eHigh != null ? (eLow + eHigh) / 2 : (eLow ?? eHigh)
+    const slMid = slLow != null && slHigh != null ? (slLow + slHigh) / 2 : (slLow ?? slHigh)
+    if (entryMid != null && Number.isFinite(entryMid)) {
+      if (f.direction === 'buy') {
+        tpNums.forEach((tp, i) => { if (tp <= entryMid) errs.push(`TP${i + 1} (${tp}) is at or below your BUY entry — targets go above entry.`) })
+        if (slMid != null && slMid >= entryMid) errs.push('Stop loss is at or above your BUY entry — the stop goes below entry.')
+      } else {
+        tpNums.forEach((tp, i) => { if (tp >= entryMid) errs.push(`TP${i + 1} (${tp}) is at or above your SELL entry — targets go below entry.`) })
+        if (slMid != null && slMid <= entryMid) errs.push('Stop loss is at or below your SELL entry — the stop goes above entry.')
+      }
+    }
+    return errs
+  }
+
+  function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) { setErrors([]); setF(s => ({ ...s, [k]: v })) }
   function setTp(i: number, patch: Partial<{ price: string; pips: string; hit: boolean }>) {
+    setErrors([])
     setF(s => {
       const takeProfits = s.takeProfits.map((t, idx) => idx === i ? { ...t, ...patch } : t)
       // Ticking a TP means entry was hit and the trade is now running — flag it running
@@ -529,7 +599,12 @@ function IdeaEditor({ initial, onClose, onSaved }: {
   }
 
   async function save() {
-    if (!f.symbol.trim()) return
+    // Stop obviously-broken signals (empty form, unparsed paste, wrong-side stop…) before they post.
+    const errs = validate()
+    if (errs.length) {
+      setErrors(errs)
+      return
+    }
     setSaving(true)
     try {
       const payload = {
@@ -543,7 +618,15 @@ function IdeaEditor({ initial, onClose, onSaved }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (res.ok) onSaved(await res.json(), !initial)
+      if (res.ok) {
+        onSaved(await res.json(), !initial)
+      } else {
+        // Surface the server's reason (e.g. validation guard) instead of failing silently.
+        const data = await res.json().catch(() => null)
+        setErrors([data?.error || 'Something went wrong saving this signal. Please try again.'])
+      }
+    } catch {
+      setErrors(['Network error — check your connection and try again.'])
     } finally {
       setSaving(false)
     }
@@ -565,7 +648,7 @@ function IdeaEditor({ initial, onClose, onSaved }: {
             <label className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider">⚡ Quick paste signal</label>
             <textarea
               value={paste}
-              onChange={e => setPaste(e.target.value)}
+              onChange={e => { setPaste(e.target.value); setPasteApplied(false); setPasteInfo(null) }}
               rows={4}
               placeholder={"Buy now 4110-4105 buy more 4098 4001\n4115\n4120\n4125\nSl 4088"}
               className={`${inputCls} mt-1.5 resize-none font-mono text-xs`}
@@ -577,6 +660,21 @@ function IdeaEditor({ initial, onClose, onSaved }: {
               Parse &amp; fill ↓
             </button>
             <span className="ml-2 text-[10px] text-ink3">Fills the fields below — review, then post.</span>
+            {pasteInfo && (
+              <div className={`mt-2 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug ${pasteInfo.type === 'error' ? 'text-red-400 bg-red-400/10 border border-red-400/20' : 'text-green-400 bg-green-400/10 border border-green-400/20'}`}>
+                {pasteInfo.type === 'error'
+                  ? <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  : <Check className="w-3.5 h-3.5 shrink-0 mt-px" />}
+                <span>{pasteInfo.msg}</span>
+              </div>
+            )}
+            {/* Reminder: coach typed a signal but hasn't parsed it yet. */}
+            {paste.trim() && !pasteApplied && !pasteInfo && (
+              <div className="mt-2 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug text-yellow-500 bg-yellow-500/10 border border-yellow-500/20">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                <span>Don&rsquo;t forget to tap <b>Parse &amp; fill</b> — otherwise this text won&rsquo;t be added to the signal.</span>
+              </div>
+            )}
           </div>
 
           {/* symbol + direction */}
@@ -654,9 +752,24 @@ function IdeaEditor({ initial, onClose, onSaved }: {
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-surface flex gap-2 p-4 border-t border-line">
-          <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button variant="gold" size="sm" onClick={save} loading={saving} className="flex-1">{initial ? 'Save' : 'Post Idea'}</Button>
+        <div className="sticky bottom-0 bg-surface border-t border-line">
+          {errors.length > 0 && (
+            <div className="mx-4 mt-3 rounded-lg border border-red-400/30 bg-red-400/10 p-3">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <span className="text-xs font-bold text-red-400">
+                  {errors.length === 1 ? 'Please fix this before posting:' : `Please fix ${errors.length} issues before posting:`}
+                </span>
+              </div>
+              <ul className="space-y-1 pl-5 list-disc marker:text-red-400/60">
+                {errors.map((e, i) => <li key={i} className="text-[11px] text-ink2 leading-snug">{e}</li>)}
+              </ul>
+            </div>
+          )}
+          <div className="flex gap-2 p-4">
+            <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">Cancel</Button>
+            <Button variant="gold" size="sm" onClick={save} loading={saving} className="flex-1">{initial ? 'Save' : 'Post Idea'}</Button>
+          </div>
         </div>
       </div>
     </div>
