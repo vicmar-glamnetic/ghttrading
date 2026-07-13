@@ -11,6 +11,7 @@ import {
   GraduationCap,
 } from 'lucide-react'
 import { openTour } from '@/components/WelcomeTour'
+import { useLiveStatus } from '@/lib/useLiveStatus'
 
 const items = [
   { href: '/ideas', label: 'Signals', icon: Zap          },
@@ -61,6 +62,7 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
   const [pending, setPending] = useState(0)
+  const isLive = useLiveStatus()
   const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
 
   useEffect(() => {
@@ -120,7 +122,12 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
                         : 'border-line bg-surface text-ink2 active:bg-elevated'
                     )}
                   >
-                    {premium && locked && <Lock className="w-3 h-3 absolute top-2 right-2 text-ink3" />}
+                    {href === '/live' && isLive && (
+                      <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-full bg-red-500/15 text-red-500 px-1 py-0.5 text-[8px] font-black tracking-wide">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> LIVE
+                      </span>
+                    )}
+                    {premium && locked && !(href === '/live' && isLive) && <Lock className="w-3 h-3 absolute top-2 right-2 text-ink3" />}
                     {href === '/approvals' && pending > 0 && (
                       <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
                     )}
@@ -181,6 +188,9 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
           >
             {pending > 0 && (
               <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
+            )}
+            {pending === 0 && isLive && (
+              <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-red-500 animate-pulse ring-2 ring-[#0d0d14]" />
             )}
             <Menu className="w-6 h-6 shrink-0" />
             <span className="text-[10px] font-semibold tracking-wide">More</span>

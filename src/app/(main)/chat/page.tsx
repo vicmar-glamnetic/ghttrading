@@ -352,7 +352,9 @@ function ChatPageInner() {
   ]
 
   return (
-    <div className="space-y-3">
+    // -mb-28 cancels the mobile bottom padding the main layout adds for the fixed
+    // bottom nav, so the chat can own the full height and pin its input just above it.
+    <div className="space-y-3 -mb-28 lg:mb-0">
       <div className="flex items-center gap-2">
         <MessageCircle className="w-5 h-5 text-yellow-500" />
         <h1 className="font-bold text-ink text-lg">Chat</h1>
@@ -369,7 +371,7 @@ function ChatPageInner() {
         </button>
       </div>
 
-      <div className="bg-surface rounded-xl border border-line overflow-hidden h-[calc(100vh-14rem)] min-h-[420px]">
+      <div className="bg-surface rounded-xl border border-line overflow-hidden min-h-[320px] h-[calc(100dvh-15rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] lg:h-[calc(100vh-14rem)]">
         {meId && (tab === 'room' ? (
           <div className="flex flex-col h-full">
             {/* room selector */}

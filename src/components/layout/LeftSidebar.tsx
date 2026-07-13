@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { useMyProfile } from '@/lib/useMyProfile'
+import { useLiveStatus } from '@/lib/useLiveStatus'
 import { openTour } from '@/components/WelcomeTour'
 import {
   Home, Bell, Settings, Users,
@@ -66,6 +67,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
   const [pending, setPending] = useState(0)
+  const isLive = useLiveStatus()
   const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
 
   useEffect(() => {
@@ -113,7 +115,13 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
       {href === '/approvals' && pending > 0 && (
         <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{pending}</span>
       )}
-      {premium && locked && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
+      {href === '/live' && isLive && (
+        <span className="ml-auto shrink-0 flex items-center gap-1 rounded-full bg-red-500/15 text-red-500 px-1.5 py-0.5 text-[9px] font-black tracking-wide">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> LIVE
+        </span>
+      )}
+      {premium && locked && href !== '/live' && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
+      {premium && locked && href === '/live' && !isLive && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
     </Link>
   )
 
