@@ -9,7 +9,7 @@ import {
   GraduationCap, SlidersHorizontal, ChevronDown, Activity,
 } from 'lucide-react'
 import { PerformancePanel } from './PerformancePanel'
-import { liveSignalStatus, signalPips, positionSize } from '@/lib/trading'
+import { liveSignalStatus, signalPips, positionSize, pipConfig, mid } from '@/lib/trading'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
@@ -495,21 +495,35 @@ function IdeaEditor({ initial, onClose, onSaved }: {
       })
       return
     }
-    setF(s => ({
+    setF(s => {
+      // Anchor pips to the parsed entry (mid of the range) so each TP shows its
+      // distance from entry. Falls back to the existing entry / blank if unknown.
+      const symbol = p.symbol ?? s.symbol
+      const entryRef = mid(
+        p.entryLow ?? (s.entryLow ? Number(s.entryLow) : null),
+        p.entryHigh ?? (s.entryHigh ? Number(s.entryHigh) : null),
+      )
+      const { pipSize } = pipConfig(symbol)
+      const pipsFor = (price: number) =>
+        entryRef != null && Number.isFinite(price)
+          ? String(Math.round(Math.abs(price - entryRef) / pipSize))
+          : ''
+      return {
       ...s,
-      symbol: p.symbol ?? s.symbol,
+      symbol,
       direction: p.direction ?? s.direction,
       entryLow: p.entryLow != null ? String(p.entryLow) : s.entryLow,
       entryHigh: p.entryHigh != null && p.entryHigh !== p.entryLow ? String(p.entryHigh) : '',
       slLow: p.slLow != null ? String(p.slLow) : s.slLow,
       slHigh: p.slHigh != null && p.slHigh !== p.slLow ? String(p.slHigh) : '',
       takeProfits: p.takeProfits.length
-        ? p.takeProfits.map(n => ({ price: String(n), pips: '', hit: false }))
+        ? p.takeProfits.map(n => ({ price: String(n), pips: pipsFor(n), hit: false }))
         : s.takeProfits,
       notes: p.moreEntries.length
         ? `${s.notes ? s.notes + '\n' : ''}Add more: ${p.moreEntries.join(', ')}`
         : s.notes,
-    }))
+      }
+    })
     // Summarise what was filled so the coach can confirm at a glance.
     const parts: string[] = []
     if (p.symbol) parts.push(p.symbol)
