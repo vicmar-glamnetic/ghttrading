@@ -20,7 +20,10 @@ export async function GET() {
   try {
     const pem = (process.env.JAAS_PRIVATE_KEY ?? '').replace(/\\n/g, '\n')
     const key = crypto.createPrivateKey(pem)
-    out.privateKey = { ok: true, type: key.asymmetricKeyType }
+    // Derive the matching public key (public keys aren't secret) so we can
+    // confirm the private key belongs to the registered API key pair.
+    const publicKey = crypto.createPublicKey(key).export({ type: 'spki', format: 'pem' }).toString()
+    out.privateKey = { ok: true, type: key.asymmetricKeyType, derivedPublicKey: publicKey }
   } catch (e) {
     out.privateKey = { ok: false, error: (e as Error).message }
   }
