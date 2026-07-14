@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -66,25 +66,6 @@ function timeAgo(iso: string) {
   const hrs = Math.round(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
   return `${Math.round(hrs / 24)}d ago`
-}
-
-/* ---------- live price (ticks + flashes up/down) ---------- */
-function LivePrice({ price }: { price: number }) {
-  const prev = useRef(price)
-  const [dir, setDir] = useState<'up' | 'down' | null>(null)
-  useEffect(() => {
-    if (price > prev.current) setDir('up')
-    else if (price < prev.current) setDir('down')
-    prev.current = price
-    const t = setTimeout(() => setDir(null), 700)
-    return () => clearTimeout(t)
-  }, [price])
-  return (
-    <span>
-      · now {price.toFixed(2)}
-      {dir && <span className="ml-0.5">{dir === 'up' ? '▲' : '▼'}</span>}
-    </span>
-  )
 }
 
 /* ---------- copy button ---------- */
@@ -196,9 +177,6 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
           <span className="text-sm font-bold text-blue-400 shrink-0">
             {isOpen ? (isRunning ? 'RUNNING' : 'LIVE') : idea.status === 'cancelled' ? 'Cancelled' : 'Closed'}
           </span>
-          {isGold && price != null && isOpen && (
-            <LivePrice price={price} />
-          )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {pips != null && (
