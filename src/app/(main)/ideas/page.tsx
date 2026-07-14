@@ -79,9 +79,8 @@ function LivePrice({ price }: { price: number }) {
     const t = setTimeout(() => setDir(null), 700)
     return () => clearTimeout(t)
   }, [price])
-  const color = dir === 'up' ? 'text-green-400' : dir === 'down' ? 'text-red-400' : 'text-ink3'
   return (
-    <span className={`text-xs tabular-nums truncate transition-colors duration-500 ${color}`}>
+    <span>
       · now {price.toFixed(2)}
       {dir && <span className="ml-0.5">{dir === 'up' ? '▲' : '▼'}</span>}
     </span>
