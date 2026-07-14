@@ -308,8 +308,10 @@ model EmailVerificationCode {
 // Single-row config for the live webinar (managed by coaches/admins).
 model LiveWebinar {
   id        String   @id @default("default")
+  mode      String   @default("webinar") // "webinar" = embedded stream, "room" = interactive Jitsi call
   title     String?
   embedUrl  String?
+  roomName  String? // Jitsi room slug (used when mode = "room")
   isLive    Boolean  @default(false)
   updatedAt DateTime @updatedAt
 

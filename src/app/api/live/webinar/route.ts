@@ -3,20 +3,31 @@ import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/admin'
 import { sendPushToAll } from '@/lib/push'
 import { resolveFacebookUrl } from '@/lib/fbResolve'
+import { randomRoomName } from '@/lib/jitsi'
 
 // Coaches/admins set the live webinar stream + toggle it live.
 export async function PUT(req: Request) {
   const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const prev = await db.liveWebinar.findUnique({ where: { id: 'default' }, select: { isLive: true } })
+  const prev = await db.liveWebinar.findUnique({ where: { id: 'default' }, select: { isLive: true, roomName: true } })
 
-  const { title, embedUrl, isLive } = await req.json()
+  const { title, embedUrl, isLive, mode, roomName } = await req.json()
+  const cleanMode = mode === 'room' ? 'room' : 'webinar'
   let cleanUrl = embedUrl?.toString().trim() || null
   if (cleanUrl && /facebook\.com|fb\.watch/.test(cleanUrl)) cleanUrl = await resolveFacebookUrl(cleanUrl)
+
+  // In room mode, keep a stable room slug: reuse a provided/existing one,
+  // otherwise mint a fresh hard-to-guess room.
+  const cleanRoom = cleanMode === 'room'
+    ? (roomName?.toString().trim() || prev?.roomName || randomRoomName())
+    : null
+
   const data = {
+    mode: cleanMode,
     title: title?.toString().trim() || null,
     embedUrl: cleanUrl,
+    roomName: cleanRoom,
     isLive: Boolean(isLive),
   }
 
@@ -48,7 +59,7 @@ export async function DELETE() {
   const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const cleared = { title: null, embedUrl: null, isLive: false }
+  const cleared = { mode: 'webinar', title: null, embedUrl: null, roomName: null, isLive: false }
   const webinar = await db.liveWebinar.upsert({
     where: { id: 'default' },
     create: { id: 'default', ...cleared },

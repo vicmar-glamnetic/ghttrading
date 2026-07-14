@@ -2,27 +2,44 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
-import { Radio, WifiOff, X, Settings2, Trash2 } from 'lucide-react'
+import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2 } from 'lucide-react'
 import { toEmbed } from '@/lib/video'
 
-interface Webinar { title: string | null; embedUrl: string | null; isLive: boolean }
+type LiveMode = 'webinar' | 'room'
+interface Webinar { title: string | null; embedUrl: string | null; isLive: boolean; mode: LiveMode; roomName: string | null }
 
 export default function LivePage() {
   const { data: session } = useSession()
   const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
 
-  const [webinar, setWebinar] = useState<Webinar>({ title: null, embedUrl: null, isLive: false })
+  const [webinar, setWebinar] = useState<Webinar>({ title: null, embedUrl: null, isLive: false, mode: 'webinar', roomName: null })
   const [showSettings, setShowSettings] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const [roomUrl, setRoomUrl] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/live')
       const data = await res.json()
-      setWebinar(data.webinar ?? { title: null, embedUrl: null, isLive: false })
+      setWebinar(data.webinar ?? { title: null, embedUrl: null, isLive: false, mode: 'webinar', roomName: null })
     } catch { /* ignore */ }
   }, [])
   useEffect(() => { load() }, [load])
+
+  // For an interactive room, fetch a per-user room URL (signed w/ moderator
+  // rights for staff when JaaS is configured).
+  useEffect(() => {
+    let alive = true
+    if (webinar.isLive && webinar.mode === 'room' && webinar.roomName) {
+      fetch('/api/live/token')
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => { if (alive) setRoomUrl(d?.url ?? null) })
+        .catch(() => { if (alive) setRoomUrl(null) })
+    } else {
+      setRoomUrl(null)
+    }
+    return () => { alive = false }
+  }, [webinar.isLive, webinar.mode, webinar.roomName])
 
   const removeLive = useCallback(async () => {
     if (!confirm('Remove the live stream? This takes it offline for everyone.')) return
@@ -61,7 +78,22 @@ export default function LivePage() {
       )}
 
       <div className="rounded-2xl border border-line bg-surface overflow-hidden aspect-video">
-        {webinar.isLive && webinar.embedUrl ? (
+        {webinar.isLive && webinar.mode === 'room' && webinar.roomName ? (
+          roomUrl ? (
+            <iframe
+              src={roomUrl}
+              title={webinar.title || 'Live room'}
+              className="w-full h-full border-0"
+              allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"
+              allowFullScreen
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-center p-6">
+              <Loader2 className="w-8 h-8 text-yellow-500/60 mb-3 animate-spin" />
+              <p className="text-sm text-ink2">Connecting to the live room…</p>
+            </div>
+          )
+        ) : webinar.isLive && webinar.mode === 'webinar' && webinar.embedUrl ? (
           <iframe
             src={toEmbed(webinar.embedUrl)}
             title={webinar.title || 'Live webinar'}
@@ -73,7 +105,7 @@ export default function LivePage() {
           <div className="w-full h-full flex flex-col items-center justify-center text-center p-6">
             <WifiOff className="w-12 h-12 text-yellow-500/50 mb-3" />
             <p className="text-lg font-semibold text-ink2">We&apos;re offline right now.</p>
-            <p className="text-sm text-ink3 mt-1">The live webinar isn&apos;t streaming at the moment — check back soon.</p>
+            <p className="text-sm text-ink3 mt-1">No live session at the moment — check back soon.</p>
           </div>
         )}
       </div>
@@ -94,6 +126,7 @@ export default function LivePage() {
 
 /* ---- staff: manage live stream ---- */
 function WebinarSettings({ initial, onClose, onSaved }: { initial: Webinar; onClose: () => void; onSaved: (w: Webinar) => void }) {
+  const [mode, setMode] = useState<LiveMode>(initial.mode ?? 'webinar')
   const [title, setTitle] = useState(initial.title ?? '')
   const [embedUrl, setEmbedUrl] = useState(initial.embedUrl ?? '')
   const [isLive, setIsLive] = useState(initial.isLive)
@@ -105,7 +138,7 @@ function WebinarSettings({ initial, onClose, onSaved }: { initial: Webinar; onCl
       const res = await fetch('/api/live/webinar', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, embedUrl, isLive }),
+        body: JSON.stringify({ title, embedUrl, isLive, mode }),
       })
       if (res.ok) onSaved(await res.json())
     } finally {
@@ -114,18 +147,36 @@ function WebinarSettings({ initial, onClose, onSaved }: { initial: Webinar; onCl
   }
 
   const inputCls = 'w-full bg-sunken border border-line rounded-lg px-3 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-ink3'
+  const tabCls = (active: boolean) =>
+    `flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold border transition ${
+      active ? 'bg-yellow-500/10 border-yellow-500/40 text-ink' : 'bg-sunken border-line text-ink3 hover:text-ink2'
+    }`
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
       <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-line" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-line">
-          <h2 className="font-bold text-ink">Manage live stream</h2>
+          <h2 className="font-bold text-ink">Manage live session</h2>
           <button onClick={onClose} className="text-ink3 hover:text-ink"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-3">
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Webinar title" className={inputCls} />
-          <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Stream URL (YouTube, Facebook Live, Vimeo…)" className={inputCls} />
-          <p className="text-[10px] text-ink3">Paste a YouTube, Facebook Live, or Vimeo link. Facebook videos must be set to <span className="text-ink2 font-semibold">Public</span> to embed. Toggle live when you start.</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setMode('webinar')} className={tabCls(mode === 'webinar')}>
+              <Radio className="w-3.5 h-3.5" /> Webinar
+            </button>
+            <button type="button" onClick={() => setMode('room')} className={tabCls(mode === 'room')}>
+              <Video className="w-3.5 h-3.5" /> Live room
+            </button>
+          </div>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Session title" className={inputCls} />
+          {mode === 'webinar' ? (
+            <>
+              <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Stream URL (YouTube, Facebook Live, Vimeo…)" className={inputCls} />
+              <p className="text-[10px] text-ink3">Paste a YouTube, Facebook Live, or Vimeo link. Facebook videos must be set to <span className="text-ink2 font-semibold">Public</span> to embed. Toggle live when you start.</p>
+            </>
+          ) : (
+            <p className="text-[10px] text-ink3">A free <span className="text-ink2 font-semibold">Jitsi</span> video room where <span className="text-ink2 font-semibold">coaches present</span> and members watch + chat (members can&apos;t speak). Toggle live to open it — a private room is created automatically.</p>
+          )}
           <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={isLive} onChange={e => setIsLive(e.target.checked)} className="accent-yellow-500 w-4 h-4" />
             Currently live

@@ -9,6 +9,6 @@ export async function GET() {
 
   const webinar = await db.liveWebinar.findUnique({ where: { id: 'default' } })
   return NextResponse.json({
-    webinar: webinar ?? { isLive: false, embedUrl: null, title: null },
+    webinar: webinar ?? { isLive: false, mode: 'webinar', embedUrl: null, title: null, roomName: null },
   })
 }
