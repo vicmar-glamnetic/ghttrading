@@ -36,8 +36,18 @@ export async function GET() {
       avatar: session.user.image,
       moderator: true,
     })
-    const [h, p] = jwt.split('.')
+    const [h, p, s] = jwt.split('.')
+    // Self-verify: does the signature validate against our own public key?
+    // true ⇒ our token is a valid RS256 JWT; any rejection is JaaS-side.
+    let selfVerify: boolean | string = false
+    try {
+      const pub = crypto.createPublicKey(crypto.createPrivateKey((process.env.JAAS_PRIVATE_KEY ?? '').replace(/\\n/g, '\n')))
+      selfVerify = crypto.verify('RSA-SHA256', Buffer.from(`${h}.${p}`), pub, Buffer.from(s, 'base64url'))
+    } catch (e) {
+      selfVerify = (e as Error).message
+    }
     out.token = {
+      selfVerify,
       header: JSON.parse(Buffer.from(h, 'base64url').toString()),
       payload: JSON.parse(Buffer.from(p, 'base64url').toString()),
     }
