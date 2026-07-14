@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2 } from 'lucide-react'
 import { toEmbed } from '@/lib/video'
+import { LiveRoom, type LiveRoomProps } from '@/components/LiveRoom'
 
 type LiveMode = 'webinar' | 'room'
 interface Webinar { title: string | null; embedUrl: string | null; isLive: boolean; mode: LiveMode; roomName: string | null }
@@ -15,7 +16,7 @@ export default function LivePage() {
   const [webinar, setWebinar] = useState<Webinar>({ title: null, embedUrl: null, isLive: false, mode: 'webinar', roomName: null })
   const [showSettings, setShowSettings] = useState(false)
   const [removing, setRemoving] = useState(false)
-  const [roomUrl, setRoomUrl] = useState<string | null>(null)
+  const [room, setRoom] = useState<LiveRoomProps | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -26,17 +27,17 @@ export default function LivePage() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  // For an interactive room, fetch a per-user room URL (signed w/ moderator
-  // rights for staff when JaaS is configured).
+  // For an interactive room, fetch the per-user room config (signed with
+  // moderator rights for staff when JaaS is configured).
   useEffect(() => {
     let alive = true
     if (webinar.isLive && webinar.mode === 'room' && webinar.roomName) {
       fetch('/api/live/token')
         .then(r => (r.ok ? r.json() : null))
-        .then(d => { if (alive) setRoomUrl(d?.url ?? null) })
-        .catch(() => { if (alive) setRoomUrl(null) })
+        .then(d => { if (alive) setRoom(d?.roomName ? (d as LiveRoomProps) : null) })
+        .catch(() => { if (alive) setRoom(null) })
     } else {
-      setRoomUrl(null)
+      setRoom(null)
     }
     return () => { alive = false }
   }, [webinar.isLive, webinar.mode, webinar.roomName])
@@ -79,14 +80,8 @@ export default function LivePage() {
 
       <div className="rounded-2xl border border-line bg-surface overflow-hidden aspect-video">
         {webinar.isLive && webinar.mode === 'room' && webinar.roomName ? (
-          roomUrl ? (
-            <iframe
-              src={roomUrl}
-              title={webinar.title || 'Live room'}
-              className="w-full h-full border-0"
-              allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"
-              allowFullScreen
-            />
+          room ? (
+            <LiveRoom {...room} />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-center p-6">
               <Loader2 className="w-8 h-8 text-yellow-500/60 mb-3 animate-spin" />

@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { jitsiUrl } from '@/lib/jitsi'
-import { jaasConfigured, signJaasToken, jaasRoomUrl } from '@/lib/jaas'
+import { jaasConfigured, signJaasToken, jaasRoomName } from '@/lib/jaas'
 
-// Returns the embeddable room URL for the current live room.
-// - JaaS configured  → a signed URL; staff (coach/admin) join as moderator,
-//   everyone else as a guest. Moderator status is enforced by 8x8.
-// - Not configured   → free public meet.jit.si (moderator = whoever joins first).
+// Everything the client needs to mount the live room via Jitsi's external_api.js.
+// - JaaS configured → 8x8.vc domain + signed JWT; staff join as moderator,
+//   everyone else as a guest (enforced by 8x8).
+// - Not configured  → free public meet.jit.si (moderator = whoever joins first).
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -18,19 +17,30 @@ export async function GET() {
   }
 
   const isStaff = session.user.role === 'admin' || session.user.role === 'coach'
-  const opts = { moderator: isStaff, displayName: session.user.name }
+  const displayName = session.user.name ?? 'Member'
 
   if (jaasConfigured()) {
-    const token = signJaasToken({
+    const jwt = signJaasToken({
       userId: session.user.id,
       name: session.user.name,
       avatar: session.user.image,
       moderator: isStaff,
     })
-    return NextResponse.json({ url: jaasRoomUrl(webinar.roomName, token, opts), moderator: isStaff })
+    return NextResponse.json({
+      domain: '8x8.vc',
+      roomName: jaasRoomName(webinar.roomName),
+      jwt,
+      moderator: isStaff,
+      displayName,
+    })
   }
 
-  // Fallback: free public meet.jit.si. Moderator isn't enforced here (join-first),
-  // but members still get the receive-only, watch-and-chat config.
-  return NextResponse.json({ url: jitsiUrl(webinar.roomName, opts), moderator: false })
+  // Fallback: free public meet.jit.si (moderator not enforced — join-first).
+  return NextResponse.json({
+    domain: 'meet.jit.si',
+    roomName: webinar.roomName,
+    jwt: null,
+    moderator: false,
+    displayName,
+  })
 }

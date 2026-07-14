@@ -1,7 +1,6 @@
 // Server-only: imported exclusively by API routes. Uses node:crypto, which
 // cannot bundle into client code — a natural guard against leaking the key.
 import crypto from 'node:crypto'
-import { roomHashConfig, type RoomOpts } from '@/lib/jitsi'
 
 // JaaS = 8x8's hosted Jitsi. A signed RS256 token stamps each participant as a
 // moderator or a guest, so coaches/admins are ALWAYS moderator regardless of
@@ -61,9 +60,8 @@ export function signJaasToken(opts: {
   return `${signingInput}.${signature}`
 }
 
-// Full embeddable JaaS room URL for the given room + signed token. Members
-// (non-moderators) get the same receive-only config as the public instance.
-export function jaasRoomUrl(roomName: string, token: string, opts: RoomOpts): string {
-  const appId = process.env.JAAS_APP_ID!
-  return `https://8x8.vc/${appId}/${encodeURIComponent(roomName)}?jwt=${token}#${roomHashConfig(opts)}`
+// JaaS fully-qualified room name: the tenant App ID + our room slug. This is
+// what external_api.js expects as `roomName` for the 8x8.vc domain.
+export function jaasRoomName(roomName: string): string {
+  return `${process.env.JAAS_APP_ID}/${roomName}`
 }
