@@ -37,7 +37,7 @@ export default function FriendsPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/users/friends')
+      const res = await fetch('/api/users/friends', { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to load')
       const d = await res.json()
       setData(d)
