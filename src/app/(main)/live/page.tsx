@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
-import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2 } from 'lucide-react'
+import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2, Maximize2, Minimize2 } from 'lucide-react'
 import { toEmbed } from '@/lib/video'
 import { LiveRoom, type LiveRoomProps } from '@/components/LiveRoom'
 
@@ -17,6 +17,7 @@ export default function LivePage() {
   const [showSettings, setShowSettings] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [room, setRoom] = useState<LiveRoomProps | null>(null)
+  const [expanded, setExpanded] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -41,6 +42,19 @@ export default function LivePage() {
     }
     return () => { alive = false }
   }, [webinar.isLive, webinar.mode, webinar.roomName])
+
+  // While expanded, the live area fills the viewport — lock page scroll and let Escape close it.
+  useEffect(() => {
+    if (!expanded) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false) }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [expanded])
 
   const removeLive = useCallback(async () => {
     if (!confirm('Remove the live stream? This takes it offline for everyone.')) return
@@ -78,7 +92,13 @@ export default function LivePage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-line bg-surface overflow-hidden aspect-video">
+      <div
+        className={
+          expanded
+            ? 'fixed inset-0 z-90 bg-black'
+            : 'relative rounded-2xl border border-line bg-surface overflow-hidden aspect-video'
+        }
+      >
         {webinar.isLive && webinar.mode === 'room' && webinar.roomName ? (
           room ? (
             <LiveRoom {...room} />
@@ -102,6 +122,20 @@ export default function LivePage() {
             <p className="text-lg font-semibold text-ink2">We&apos;re offline right now.</p>
             <p className="text-sm text-ink3 mt-1">No live session at the moment — check back soon.</p>
           </div>
+        )}
+
+        {/* Expand to fill the screen — lets mobile members watch large in portrait or rotate to landscape. */}
+        {webinar.isLive && (webinar.embedUrl || webinar.roomName) && (
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            aria-label={expanded ? 'Exit full screen' : 'Full screen'}
+            className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg bg-black/55 backdrop-blur px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-black/75 transition"
+            style={expanded ? { top: 'max(0.5rem, env(safe-area-inset-top))', right: 'max(0.5rem, env(safe-area-inset-right))' } : undefined}
+          >
+            {expanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{expanded ? 'Exit' : 'Full screen'}</span>
+          </button>
         )}
       </div>
       {webinar.isLive && webinar.title && (
