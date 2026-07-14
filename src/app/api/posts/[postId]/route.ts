@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { summarizeReactions } from '@/lib/postReactions'
 
 export async function GET(
   _req: Request,
@@ -17,7 +18,7 @@ export async function GET(
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
         _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true } },
+        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
         comments: {
           take: 20,
           orderBy: { createdAt: 'desc' },
@@ -31,7 +32,9 @@ export async function GET(
     })
 
     if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json(post)
+
+    const summaries = await summarizeReactions([post.id])
+    return NextResponse.json({ ...post, reactions: summaries[post.id] ?? [] })
   } catch (error) {
     console.error('[POST_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

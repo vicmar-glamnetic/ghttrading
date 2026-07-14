@@ -5,13 +5,26 @@ import Image from 'next/image'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
+import { ReactorsModal } from '@/components/posts/ReactorsModal'
 import { timeAgo, formatNumber, cn } from '@/lib/utils'
+import { REACTIONS, getReaction } from '@/lib/reactions'
 import {
   ThumbsUp, MessageCircle, MoreHorizontal,
   TrendingUp, TrendingDown, BarChart2, BookOpen,
   Globe, Lock, Users, Play, Trash2, Flag, BadgeCheck,
 } from 'lucide-react'
-import type { PostWithDetails } from '@/types'
+import type { PostWithDetails, ReactionSummary } from '@/types'
+
+// Optimistically apply a reaction change to a per-type count summary.
+function mutateSummary(list: ReactionSummary[], prev: string | null, next: string | null): ReactionSummary[] {
+  const map = new Map(list.map(r => [r.type, r.count]))
+  if (prev) map.set(prev, (map.get(prev) ?? 1) - 1)
+  if (next) map.set(next, (map.get(next) ?? 0) + 1)
+  return [...map.entries()]
+    .filter(([, c]) => c > 0)
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count)
+}
 
 interface PostCardProps {
   post: PostWithDetails
@@ -139,8 +152,12 @@ function CommentRow({
 
 // ---------- Main PostCard ----------
 export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
-  const [liked, setLiked] = useState((post.likes ?? []).some(l => l.userId === currentUserId))
-  const [likeCount, setLikeCount] = useState(post._count?.likes ?? 0)
+  const [myReaction, setMyReaction] = useState<string | null>((post.likes ?? [])[0]?.type ?? null)
+  const [reactions, setReactions] = useState<ReactionSummary[]>(post.reactions ?? [])
+  const [totalReactions, setTotalReactions] = useState(post._count?.likes ?? 0)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [showReactors, setShowReactors] = useState(false)
+  const pickerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
@@ -161,16 +178,39 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
     onDelete?.(id)
   }
 
-  async function handleLike() {
-    const prev = liked
-    setLiked(!liked)
-    setLikeCount(c => liked ? c - 1 : c + 1)
+  // `sent` is the reaction type we POST. The server toggles it off when it
+  // matches the current reaction, so mirror that here for optimistic state.
+  async function sendReaction(sent: string) {
+    const prev = myReaction
+    const next = prev === sent ? null : sent
+    const delta = next ? (prev ? 0 : 1) : -1
+
+    setMyReaction(next)
+    setReactions(list => mutateSummary(list, prev, next))
+    setTotalReactions(c => c + delta)
+    setPickerOpen(false)
+
     try {
-      await fetch(`/api/posts/${post.id}/like`, { method: 'POST' })
+      const res = await fetch(`/api/posts/${post.id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: sent }),
+      })
+      if (!res.ok) throw new Error('reaction failed')
     } catch {
-      setLiked(prev)
-      setLikeCount(c => !liked ? c - 1 : c + 1)
+      setMyReaction(prev)
+      setReactions(list => mutateSummary(list, next, prev))
+      setTotalReactions(c => c - delta)
     }
+  }
+
+  function openPicker() {
+    if (pickerTimer.current) clearTimeout(pickerTimer.current)
+    setPickerOpen(true)
+  }
+  function closePickerSoon() {
+    if (pickerTimer.current) clearTimeout(pickerTimer.current)
+    pickerTimer.current = setTimeout(() => setPickerOpen(false), 250)
   }
 
   async function handleComment(e: React.FormEvent) {
@@ -341,15 +381,27 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
       )}
 
       {/* Stats */}
-      {(likeCount > 0 || commentCount > 0) && (
+      {(totalReactions > 0 || commentCount > 0) && (
         <div className="flex items-center justify-between px-4 py-2 border-t border-line">
-          {likeCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs text-ink3">
-              <span className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-                <ThumbsUp className="w-2.5 h-2.5 text-black" fill="currentColor" />
+          {totalReactions > 0 && (
+            <button
+              onClick={() => setShowReactors(true)}
+              className="flex items-center gap-1.5 text-xs text-ink3 hover:text-yellow-500 transition-colors"
+            >
+              <span className="flex -space-x-1">
+                {(reactions.length ? reactions : [{ type: 'like', count: totalReactions }])
+                  .slice(0, 3)
+                  .map(r => (
+                    <span
+                      key={r.type}
+                      className="w-4 h-4 rounded-full bg-elevated border border-line flex items-center justify-center text-[10px] leading-none"
+                    >
+                      {getReaction(r.type).emoji}
+                    </span>
+                  ))}
               </span>
-              {formatNumber(likeCount)}
-            </span>
+              {formatNumber(totalReactions)}
+            </button>
           )}
           {commentCount > 0 && (
             <button onClick={() => setShowComments(!showComments)} className="text-xs text-ink3 hover:text-yellow-500 transition-colors ml-auto">
@@ -361,20 +413,71 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
 
       {/* Action buttons */}
       <div className="flex border-t border-line">
-        {[
-          { icon: ThumbsUp, label: liked ? 'Liked' : 'Like', active: liked, onClick: handleLike, filled: liked },
-          { icon: MessageCircle, label: 'Comment', active: showComments, onClick: () => setShowComments(!showComments), filled: false },
-        ].map(({ icon: Icon, label, active, onClick, filled }) => (
-          <button key={label} onClick={onClick}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold transition-colors',
-              active ? 'text-yellow-500' : 'text-ink3 hover:text-ink2 hover:bg-elevated'
-            )}>
-            <Icon className="w-4 h-4" fill={filled ? 'currentColor' : 'none'} />
-            {label}
-          </button>
-        ))}
+        {/* Like / reaction — hover (or tap the caret) reveals the reaction picker */}
+        <div
+          className="relative flex-1"
+          onMouseEnter={openPicker}
+          onMouseLeave={closePickerSoon}
+        >
+          {pickerOpen && (
+            <div
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
+              onMouseEnter={openPicker}
+              onMouseLeave={closePickerSoon}
+            >
+              {REACTIONS.map(r => (
+                <button
+                  key={r.type}
+                  onClick={() => sendReaction(r.type)}
+                  title={r.label}
+                  className={cn(
+                    'text-2xl leading-none transition-transform hover:scale-125 hover:-translate-y-0.5',
+                    myReaction === r.type && 'scale-110',
+                  )}
+                >
+                  {r.emoji}
+                </button>
+              ))}
+            </div>
+          )}
+          {(() => {
+            const current = myReaction ? getReaction(myReaction) : null
+            return (
+              <button
+                onClick={() => sendReaction(myReaction ?? 'like')}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold transition-colors',
+                  current ? 'text-yellow-500' : 'text-ink3 hover:text-ink2 hover:bg-elevated',
+                )}
+              >
+                {current ? (
+                  <span className="text-base leading-none">{current.emoji}</span>
+                ) : (
+                  <ThumbsUp className="w-4 h-4" fill="none" />
+                )}
+                {current ? current.label : 'Like'}
+              </button>
+            )
+          })()}
+        </div>
+
+        {/* Comment */}
+        <button
+          onClick={() => setShowComments(!showComments)}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold transition-colors',
+            showComments ? 'text-yellow-500' : 'text-ink3 hover:text-ink2 hover:bg-elevated',
+          )}
+        >
+          <MessageCircle className="w-4 h-4" />
+          Comment
+        </button>
       </div>
+
+      {/* Who reacted modal */}
+      {showReactors && (
+        <ReactorsModal postId={post.id} onClose={() => setShowReactors(false)} />
+      )}
 
       {/* Comments section */}
       {showComments && (

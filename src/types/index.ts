@@ -8,10 +8,13 @@ export type UserWithCounts = User & {
   }
 }
 
+export type ReactionSummary = { type: string; count: number }
+
 export type PostWithDetails = Post & {
   author: Pick<User, 'id' | 'name' | 'image' | 'username'>
   _count: { likes: number; comments: number }
-  likes: Pick<Like, 'userId'>[]
+  likes: Pick<Like, 'userId' | 'type'>[]
+  reactions?: ReactionSummary[]
   comments: (Comment & {
     author: Pick<User, 'id' | 'name' | 'image' | 'username'>
     _count: { likes: number }
@@ -19,6 +22,11 @@ export type PostWithDetails = Post & {
   })[]
   group?: { id: string; name: string; image: string | null } | null
   page?: { id: string; name: string; image: string | null; verified: boolean } | null
+}
+
+export type Reactor = {
+  type: string
+  user: Pick<User, 'id' | 'name' | 'image' | 'username'>
 }
 
 export type NotificationWithSender = Notification & {

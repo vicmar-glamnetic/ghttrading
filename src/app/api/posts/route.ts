@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { withReactionSummaries } from '@/lib/postReactions'
 
 export async function GET(req: Request) {
   try {
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
         author: { select: { id: true, name: true, image: true, username: true } },
         page: { select: { id: true, name: true, image: true, verified: true } },
         _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true } },
+        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
         comments: {
           take: 3,
           orderBy: { createdAt: 'desc' },
@@ -70,7 +71,9 @@ export async function GET(req: Request) {
       nextCursor = next?.id
     }
 
-    return NextResponse.json({ posts, nextCursor }, {
+    const postsWithReactions = await withReactionSummaries(posts)
+
+    return NextResponse.json({ posts: postsWithReactions, nextCursor }, {
       headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
     })
   } catch (error) {
@@ -104,7 +107,7 @@ export async function POST(req: Request) {
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
         _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true } },
+        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
         comments: {
           take: 3,
           orderBy: { createdAt: 'desc' },
@@ -117,7 +120,7 @@ export async function POST(req: Request) {
       },
     })
 
-    return NextResponse.json(post, { status: 201 })
+    return NextResponse.json({ ...post, reactions: [] }, { status: 201 })
   } catch (error) {
     console.error('[POSTS_POST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

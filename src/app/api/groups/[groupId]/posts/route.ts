@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { withReactionSummaries } from '@/lib/postReactions'
 
 export async function GET(
   req: Request,
@@ -24,7 +25,7 @@ export async function GET(
         author: { select: { id: true, name: true, image: true, username: true } },
         group: { select: { id: true, name: true, image: true } },
         _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true } },
+        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
         comments: {
           take: 3,
           orderBy: { createdAt: 'desc' },
@@ -46,7 +47,9 @@ export async function GET(
       nextCursor = next?.id
     }
 
-    return NextResponse.json({ posts, nextCursor })
+    const postsWithReactions = await withReactionSummaries(posts)
+
+    return NextResponse.json({ posts: postsWithReactions, nextCursor })
   } catch (error) {
     console.error('[GROUP_POSTS_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -89,7 +92,7 @@ export async function POST(
         author: { select: { id: true, name: true, image: true, username: true } },
         group: { select: { id: true, name: true, image: true } },
         _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: uid }, select: { userId: true } },
+        likes: { where: { userId: uid }, select: { userId: true, type: true } },
         comments: { take: 3, orderBy: { createdAt: 'desc' }, include: { author: { select: { id: true, name: true, image: true, username: true } }, _count: { select: { likes: true } }, likes: { where: { userId: uid }, select: { userId: true } } } },
       },
     })
@@ -97,7 +100,7 @@ export async function POST(
     // Touch group updatedAt for ordering
     await db.group.update({ where: { id: groupId }, data: { updatedAt: new Date() } })
 
-    return NextResponse.json(post, { status: 201 })
+    return NextResponse.json({ ...post, reactions: [] }, { status: 201 })
   } catch (error) {
     console.error('[GROUP_POSTS_POST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { FeedClient } from '@/components/feed/FeedClient'
+import { withReactionSummaries } from '@/lib/postReactions'
 import type { PostWithDetails } from '@/types'
 
 export default async function FeedPage() {
@@ -32,7 +33,7 @@ export default async function FeedPage() {
     include: {
       author: { select: { id: true, name: true, image: true, username: true } },
       _count: { select: { likes: true, comments: true } },
-      likes: { where: { userId: uid }, select: { userId: true } },
+      likes: { where: { userId: uid }, select: { userId: true, type: true } },
       comments: {
         take: 3,
         orderBy: { createdAt: 'desc' },
@@ -53,9 +54,11 @@ export default async function FeedPage() {
     nextCursor = next?.id
   }
 
+  const posts = await withReactionSummaries(postsRaw)
+
   return (
     <FeedClient
-      initialPosts={postsRaw as unknown as PostWithDetails[]}
+      initialPosts={posts as unknown as PostWithDetails[]}
       initialNextCursor={nextCursor}
       currentUserId={uid}
     />
