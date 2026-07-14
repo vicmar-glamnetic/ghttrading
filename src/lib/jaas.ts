@@ -43,14 +43,14 @@ export function signJaasToken(opts: {
         id: opts.userId,
         name: opts.name || 'Member',
         avatar: opts.avatar || '',
-        moderator: opts.moderator ? 'true' : 'false',
+        moderator: opts.moderator, // JaaS expects a boolean here
       },
       features: {
         // Only moderators (staff) may livestream/record; guests cannot.
-        livestreaming: opts.moderator ? 'true' : 'false',
-        recording: opts.moderator ? 'true' : 'false',
-        transcription: 'false',
-        'outbound-call': 'false',
+        livestreaming: opts.moderator,
+        recording: opts.moderator,
+        transcription: false,
+        'outbound-call': false,
       },
     },
   }
