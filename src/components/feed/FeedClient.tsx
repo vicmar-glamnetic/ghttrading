@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { CreatePost } from '@/components/posts/CreatePost'
 import { PostCard } from '@/components/posts/PostCard'
 import { TrendingUp, Zap } from 'lucide-react'
@@ -36,6 +36,7 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor ?? null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return
@@ -49,6 +50,23 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
       setLoadingMore(false)
     }
   }, [nextCursor, loadingMore])
+
+  // Infinite scroll: auto-load the next page when the sentinel nears the viewport.
+  // Only for the unfiltered feed — Signals/Analysis filter client-side, so their
+  // pagination isn't server-cursor-aware.
+  const canLoadMore = Boolean(nextCursor) && filter === 'all'
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !canLoadMore) return
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) loadMore()
+      },
+      { rootMargin: '400px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [canLoadMore, loadMore])
 
   const filtered = posts.filter(p => {
     if (filter === 'signals') return p.feeling === 'signal-buy' || p.feeling === 'signal-sell'
@@ -109,14 +127,12 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
         ))
       )}
 
-      {nextCursor && filter === 'all' && (
-        <button
-          onClick={loadMore}
-          disabled={loadingMore}
-          className="w-full py-3 bg-surface rounded-xl border border-line hover:border-yellow-500/30 text-sm text-yellow-500 font-medium transition-all disabled:opacity-50"
-        >
-          {loadingMore ? <PostSkeleton /> : 'Load more posts'}
-        </button>
+      {canLoadMore && (
+        <>
+          {loadingMore && <PostSkeleton />}
+          {/* Sentinel: when it scrolls into view, the next page loads automatically */}
+          <div ref={sentinelRef} aria-hidden className="h-px" />
+        </>
       )}
     </div>
   )
