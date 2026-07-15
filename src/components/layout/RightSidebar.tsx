@@ -48,33 +48,42 @@ interface LatestIdeaT {
   symbol: string; direction: 'buy' | 'sell'; status: string
   entryLow: number | null; entryHigh: number | null
 }
+function entryLabel(idea: LatestIdeaT) {
+  return idea.entryLow != null && idea.entryHigh != null && idea.entryLow !== idea.entryHigh
+    ? `${idea.entryLow} – ${idea.entryHigh}` : `${idea.entryLow ?? idea.entryHigh ?? ''}`
+}
 function LatestIdea() {
-  const [idea, setIdea] = useState<LatestIdeaT | null>(null)
+  const [ideas, setIdeas] = useState<LatestIdeaT[]>([])
   useEffect(() => {
     fetch('/api/ideas?scope=community').then(r => r.json()).then(d => {
-      if (Array.isArray(d) && d.length) setIdea(d[0])
+      if (Array.isArray(d)) setIdeas(d.slice(0, 3))
     }).catch(() => {})
   }, [])
-  if (!idea) return null
-  const isBuy = idea.direction === 'buy'
-  const entry = idea.entryLow != null && idea.entryHigh != null && idea.entryLow !== idea.entryHigh
-    ? `${idea.entryLow} – ${idea.entryHigh}` : `${idea.entryLow ?? idea.entryHigh ?? ''}`
+  if (!ideas.length) return null
   return (
     <Link href="/ideas" className={`flex flex-col bg-surface rounded-xl border border-line overflow-hidden hover:border-yellow-500/30 transition-colors ${CARD_H}`}>
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line shrink-0">
         <Lightbulb className="w-4 h-4 text-yellow-500" />
-        <span className="text-sm font-bold text-ink">Latest Signal</span>
+        <span className="text-sm font-bold text-ink">Latest Signals</span>
       </div>
-      <div className="flex-1 min-h-0 p-3 flex flex-col justify-center">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-ink">{idea.symbol}</span>
-          <span className={`text-xs font-black rounded px-2 py-0.5 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'}`}>{isBuy ? 'BUY' : 'SELL'}</span>
-        </div>
-        <div className="mt-1.5 flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
-          <span className="text-xs font-bold text-blue-400">{idea.status === 'pending' ? 'LIVE' : 'Closed'}</span>
-          {entry && <span className="text-xs text-ink2 ml-1">Entry {entry}</span>}
-        </div>
+      <div className="flex-1 min-h-0 divide-y divide-line overflow-y-auto scrollbar-none">
+        {ideas.map((idea, i) => {
+          const isBuy = idea.direction === 'buy'
+          const entry = entryLabel(idea)
+          return (
+            <div key={i} className="px-3 py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-ink">{idea.symbol}</span>
+                <span className={`text-[10px] font-black rounded px-1.5 py-0.5 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'}`}>{isBuy ? 'BUY' : 'SELL'}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${idea.status === 'pending' ? 'bg-blue-400 animate-pulse' : 'bg-ink3'}`} />
+                <span className="text-[11px] font-bold text-blue-400">{idea.status === 'pending' ? 'LIVE' : 'Closed'}</span>
+                {entry && <span className="text-[11px] text-ink2 ml-1 truncate">Entry {entry}</span>}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </Link>
   )
