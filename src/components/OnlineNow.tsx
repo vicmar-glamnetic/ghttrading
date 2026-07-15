@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Users } from 'lucide-react'
 import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { HEARTBEAT_MS } from '@/lib/presence'
+import { CARD_H } from '@/components/layout/RightSidebar'
 
 interface OnlineUser {
   id: string
@@ -48,15 +49,15 @@ export function OnlineNow() {
   if (!loaded || total === 0) return null
 
   return (
-    <div className="bg-surface rounded-xl border border-line overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
+    <div className={`bg-surface rounded-xl border border-line overflow-hidden flex flex-col ${CARD_H}`}>
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line shrink-0">
         <Users className="w-4 h-4 text-green-400" />
         <span className="text-sm font-bold text-ink">Online now</span>
         <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-green-400">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> {total}
         </span>
       </div>
-      <div className="p-2 space-y-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-none p-2 space-y-0.5">
         {users.map(u => (
           <Link
             key={u.id}

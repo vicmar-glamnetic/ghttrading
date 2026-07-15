@@ -2,8 +2,10 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Activity, Lightbulb, Globe, Smartphone } from 'lucide-react'
-import { SessionsClock } from '@/components/SessionsClock'
 import { OnlineNow } from '@/components/OnlineNow'
+
+// Shared height so every widget card in the sidebar lines up uniformly.
+export const CARD_H = 'h-60'
 
 // Inject a TradingView external-embedding widget into a container.
 // Market widgets are always dark to match the trading-terminal aesthetic.
@@ -26,18 +28,18 @@ function useTvWidget(src: string, config: Record<string, unknown>) {
 function LiveGoldWidget() {
   const ref = useTvWidget(
     'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js',
-    { symbol: 'OANDA:XAUUSD', width: '100%', height: 180, locale: 'en', dateRange: '1D', autosize: false },
+    { symbol: 'OANDA:XAUUSD', width: '100%', height: '100%', locale: 'en', dateRange: '1D', autosize: true },
   )
   return (
-    <div className="bg-surface rounded-xl border border-line overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
+    <div className={`bg-surface rounded-xl border border-line overflow-hidden flex flex-col ${CARD_H}`}>
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line shrink-0">
         <Activity className="w-4 h-4 text-yellow-500" />
         <span className="text-sm font-bold text-ink">XAUUSD · Gold</span>
         <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-green-400">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
         </span>
       </div>
-      <div ref={ref} className="p-1 bg-[#0d0d14]" />
+      <div ref={ref} className="flex-1 min-h-0 p-1 bg-[#0d0d14]" />
     </div>
   )
 }
@@ -58,12 +60,12 @@ function LatestIdea() {
   const entry = idea.entryLow != null && idea.entryHigh != null && idea.entryLow !== idea.entryHigh
     ? `${idea.entryLow} – ${idea.entryHigh}` : `${idea.entryLow ?? idea.entryHigh ?? ''}`
   return (
-    <Link href="/ideas" className="block bg-surface rounded-xl border border-line overflow-hidden hover:border-yellow-500/30 transition-colors">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
+    <Link href="/ideas" className={`flex flex-col bg-surface rounded-xl border border-line overflow-hidden hover:border-yellow-500/30 transition-colors ${CARD_H}`}>
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line shrink-0">
         <Lightbulb className="w-4 h-4 text-yellow-500" />
         <span className="text-sm font-bold text-ink">Latest Signal</span>
       </div>
-      <div className="p-3">
+      <div className="flex-1 min-h-0 p-3 flex flex-col justify-center">
         <div className="flex items-center justify-between">
           <span className="font-bold text-ink">{idea.symbol}</span>
           <span className={`text-xs font-black rounded px-2 py-0.5 ${isBuy ? 'bg-green-500 text-black' : 'bg-red-500 text-white'}`}>{isBuy ? 'BUY' : 'SELL'}</span>
@@ -84,7 +86,6 @@ export function RightSidebar() {
       <LiveGoldWidget />
       <LatestIdea />
       <OnlineNow />
-      <SessionsClock />
 
       {/* Join Discord */}
       <div className="p-3 rounded-xl bg-linear-to-br from-yellow-500/10 to-yellow-600/5 border border-yellow-500/20">
