@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { Button } from '@/components/ui/Button'
 import {
-  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi,
+  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail,
 } from 'lucide-react'
 
 import { format } from 'date-fns'
@@ -73,6 +73,33 @@ export default function AdminPage() {
   // Weekly recap
   const [recapBusy, setRecapBusy] = useState(false)
   const [recapMsg, setRecapMsg] = useState('')
+
+  // Win-back email to expired non-ACCM ($5) members
+  const [winbackBusy, setWinbackBusy] = useState(false)
+  const [winbackMsg, setWinbackMsg] = useState('')
+  const [winbackCount, setWinbackCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/winback')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setWinbackCount(d.count) })
+      .catch(() => {})
+  }, [])
+
+  async function sendWinback() {
+    if (!winbackCount) return
+    if (!confirm(`Send the $5 win-back email to ${winbackCount} expired non-ACCM member${winbackCount === 1 ? '' : 's'}?`)) return
+    setWinbackBusy(true); setWinbackMsg('')
+    try {
+      const res = await fetch('/api/admin/winback', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) setWinbackMsg(d.error || 'Failed to send')
+      else if (d.total === 0) setWinbackMsg('No expired non-ACCM members to email right now.')
+      else setWinbackMsg(`✓ Sent to ${d.sent} of ${d.total}${d.failed ? ` · ${d.failed} failed` : ''}`)
+    } catch {
+      setWinbackMsg('Failed to send')
+    } finally { setWinbackBusy(false) }
+  }
 
   async function postRecap() {
     setRecapBusy(true); setRecapMsg('')
@@ -311,6 +338,31 @@ export default function AdminPage() {
           </Button>
         </div>
         {recapMsg && <p className="text-xs text-ink2 mt-2">{recapMsg}</p>}
+      </div>
+
+      {/* Win-back expired non-ACCM members */}
+      <div className="rounded-xl border border-line bg-surface p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-ink flex items-center gap-1.5">
+              <Mail className="w-4 h-4 text-yellow-500" /> Win-back email · $5 offer
+            </p>
+            <p className="text-xs text-ink3">
+              Email expired non-ACCM (Standard) members whose access has lapsed, inviting them back for $5/mo with the full perks list.
+              {winbackCount !== null && (
+                <> <span className="font-semibold text-ink2">{winbackCount}</span> eligible right now.</>
+              )}
+            </p>
+          </div>
+          <Button
+            variant="secondary" size="sm" onClick={sendWinback} loading={winbackBusy}
+            disabled={winbackCount === 0}
+            className="text-xs shrink-0"
+          >
+            {winbackCount === 0 ? 'No one to email' : 'Send win-back email'}
+          </Button>
+        </div>
+        {winbackMsg && <p className="text-xs text-ink2 mt-2">{winbackMsg}</p>}
       </div>
 
       {/* search + filter */}
