@@ -155,8 +155,12 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
         </div>
       )}
 
+      {/* Opaque, no backdrop-filter: a fixed element with backdrop-filter gets its
+          own compositing layer that iOS Safari intermittently fails to reposition
+          while scrolling, leaving the bar painted mid-screen. The bar was already
+          95% opaque, so there was nothing to blur through it anyway. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-[#0d0d14]/95 backdrop-blur-md border-t border-line"
+        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-app border-t border-line"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-around h-16 px-1">
@@ -190,7 +194,7 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
               <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
             )}
             {pending === 0 && isLive && (
-              <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-red-500 animate-pulse ring-2 ring-[#0d0d14]" />
+              <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-red-500 animate-pulse ring-2 ring-app" />
             )}
             <Menu className="w-6 h-6 shrink-0" />
             <span className="text-[10px] font-semibold tracking-wide">More</span>

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { normalizePnl } from '@/lib/journal'
+import { deriveTrade } from '@/lib/journal'
+import { isKnownSetup } from '@/lib/setups'
 
 export async function GET() {
   try {
@@ -25,8 +26,11 @@ export async function POST(req: Request) {
     const session = await auth()
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { title, content, mood, symbol, direction, result, pnl, tradedAt } = await req.json()
+    const body = await req.json()
+    const { title, content, mood, symbol, direction, result, tradedAt, setup, chartUrl } = body
     if (!content?.trim()) return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+
+    const trade = deriveTrade({ ...body, symbol, direction, result })
 
     const entry = await db.journalEntry.create({
       data: {
@@ -36,8 +40,16 @@ export async function POST(req: Request) {
         symbol: symbol || null,
         direction: direction || null,
         result: result || null,
-        pnl: normalizePnl(pnl, result),
         tradedAt: tradedAt ? new Date(tradedAt) : null,
+        setup: isKnownSetup(setup) ? setup : null,
+        chartUrl: chartUrl || null,
+        entryPrice: trade.entryPrice,
+        exitPrice: trade.exitPrice,
+        stopPrice: trade.stopPrice,
+        targetPrice: trade.targetPrice,
+        lots: trade.lots,
+        pnl: trade.pnl,
+        rMultiple: trade.rMultiple,
         authorId: session.user.id,
       },
     })

@@ -1,16 +1,20 @@
 'use client'
 import { useMemo } from 'react'
-import { TrendingUp, Target, Scale, BarChart3 } from 'lucide-react'
+import { TrendingUp, Target, Scale, BarChart3, Ruler, Layers } from 'lucide-react'
+import { setupLabel } from '@/lib/setups'
 
 export interface Entry {
   symbol: string | null
   result: string | null // win | loss | breakeven
   pnl: number | null
+  rMultiple: number | null
+  setup: string | null
   tradedAt: string | null
   createdAt?: string
 }
 
 const money = (n: number) => `${n >= 0 ? '' : '-'}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+const rStr = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}R`
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export function JournalAnalytics({ entries }: { entries: Entry[] }) {
@@ -53,6 +57,35 @@ export function JournalAnalytics({ entries }: { entries: Entry[] }) {
     const pairs = [...pairMap.entries()].map(([sym, v]) => ({ sym, ...v, winRate: v.wins + v.losses ? Math.round((v.wins / (v.wins + v.losses)) * 100) : 0 }))
       .sort((x, y) => y.pnl - x.pnl).slice(0, 8)
 
+    // R stats. Expectancy (avg R per trade) is the number that says whether the
+    // edge is real: positive means the strategy pays over time, regardless of
+    // how the dollar sizes happened to land.
+    const withR = entries.filter(e => e.rMultiple != null)
+    const totalR = withR.reduce((s, e) => s + (e.rMultiple ?? 0), 0)
+    const avgR = withR.length ? totalR / withR.length : null
+
+    // By setup — the "which of my setups actually works" table.
+    const setupMap = new Map<string, { trades: number; wins: number; losses: number; pnl: number; r: number; rCount: number }>()
+    for (const e of entries) {
+      if (!e.setup) continue
+      const c = setupMap.get(e.setup) ?? { trades: 0, wins: 0, losses: 0, pnl: 0, r: 0, rCount: 0 }
+      c.trades++
+      if (e.result === 'win') c.wins++
+      if (e.result === 'loss') c.losses++
+      c.pnl += e.pnl ?? 0
+      if (e.rMultiple != null) { c.r += e.rMultiple; c.rCount++ }
+      setupMap.set(e.setup, c)
+    }
+    const setups = [...setupMap.entries()]
+      .map(([value, v]) => ({
+        value,
+        label: setupLabel(value) ?? value,
+        ...v,
+        winRate: v.wins + v.losses ? Math.round((v.wins / (v.wins + v.losses)) * 100) : 0,
+        avgR: v.rCount ? v.r / v.rCount : null,
+      }))
+      .sort((x, y) => y.pnl - x.pnl)
+
     // By day of week (win rate)
     const dow = Array.from({ length: 7 }, () => ({ wins: 0, losses: 0 }))
     for (const e of entries) {
@@ -62,14 +95,14 @@ export function JournalAnalytics({ entries }: { entries: Entry[] }) {
       if (e.result === 'win') dow[d.getDay()].wins++; else dow[d.getDay()].losses++
     }
 
-    return { wins, losses, decided, winRate, netPnl, avgWin, avgLoss, profitFactor, curve, pairs, dow, tradeCount: withPnl.length }
+    return { wins, losses, decided, winRate, netPnl, avgWin, avgLoss, profitFactor, curve, pairs, dow, setups, totalR, avgR, rCount: withR.length, tradeCount: withPnl.length }
   }, [entries])
 
   if (a.tradeCount === 0 && a.decided === 0) {
     return (
       <div className="bg-surface rounded-xl border border-line p-12 text-center">
         <BarChart3 className="w-12 h-12 text-yellow-500/30 mx-auto mb-3" />
-        <p className="text-ink3">Log trades with a result and P&amp;L to see your analytics — win rate, equity curve, and stats by pair.</p>
+        <p className="text-ink3">Log trades with a result and P&amp;L to see your analytics — win rate, equity curve, and stats by pair. Add entry, exit, stop and lots to a trade and it&apos;ll score itself in R, so you can see which setups actually pay.</p>
       </div>
     )
   }
@@ -77,12 +110,49 @@ export function JournalAnalytics({ entries }: { entries: Entry[] }) {
   return (
     <div className="space-y-4 overflow-y-auto">
       {/* Stat tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Tile icon={TrendingUp} label="Net P&L" value={money(a.netPnl)} tone={a.netPnl >= 0 ? 'green' : 'red'} />
+        <Tile
+          icon={Ruler}
+          label="Expectancy"
+          value={a.avgR != null ? rStr(a.avgR) : '—'}
+          sub={a.avgR != null ? `per trade · ${a.rCount} with R` : 'add entry, exit, stop & lots'}
+          tone={a.avgR == null ? undefined : a.avgR >= 0 ? 'green' : 'red'}
+        />
+        <Tile
+          icon={Scale}
+          label="Total R"
+          value={a.rCount ? rStr(a.totalR) : '—'}
+          sub={a.rCount ? `${a.rCount} trade${a.rCount !== 1 ? 's' : ''}` : undefined}
+          tone={!a.rCount ? undefined : a.totalR >= 0 ? 'green' : 'red'}
+        />
         <Tile icon={Target} label="Win rate" value={a.winRate != null ? `${a.winRate}%` : '—'} sub={`${a.wins}W · ${a.losses}L`} />
         <Tile icon={Scale} label="Avg win / loss" value={`${money(a.avgWin)}`} sub={`vs ${money(a.avgLoss)}`} />
         <Tile icon={BarChart3} label="Profit factor" value={a.profitFactor === Infinity ? '∞' : a.profitFactor.toFixed(2)} />
       </div>
+
+      {/* By setup — which of my setups actually makes money */}
+      {a.setups.length > 0 && (
+        <div className="bg-surface rounded-xl border border-line p-4">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Layers className="w-3.5 h-3.5 text-yellow-500" />
+            <p className="text-xs font-semibold text-ink2">By setup</p>
+          </div>
+          <div className="space-y-2">
+            {a.setups.map(s => (
+              <div key={s.value} className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-ink flex-1 min-w-0 truncate">{s.label}</span>
+                <span className="text-xs text-ink3 w-24 shrink-0 text-right">{s.winRate}% · {s.trades} trade{s.trades !== 1 ? 's' : ''}</span>
+                <span className={`text-xs font-bold tabular-nums w-16 shrink-0 text-right ${s.avgR == null ? 'text-ink3' : s.avgR >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {s.avgR == null ? '—' : rStr(s.avgR)}
+                </span>
+                <span className={`text-sm font-bold tabular-nums w-24 shrink-0 text-right ${s.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{money(s.pnl)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-ink3 mt-3">Avg R is the middle column — a setup can win often and still lose money.</p>
+        </div>
+      )}
 
       {/* Equity curve */}
       {a.curve.length > 1 && (

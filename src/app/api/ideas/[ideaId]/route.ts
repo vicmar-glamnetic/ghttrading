@@ -48,6 +48,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
         currentPrice: numOrNull(body.currentPrice),
         status: ['pending', 'running', 'tp_hit', 'sl_hit', 'breakeven', 'closed', 'cancelled'].includes(body.status) ? body.status : 'pending',
         notes: body.notes?.toString().trim() || null,
+        chartUrl: body.chartUrl?.toString().trim() || null,
         isPublic: Boolean(body.isPublic),
       },
       include: { author: AUTHOR },

@@ -101,7 +101,7 @@ export function Navbar() {
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-50 border-b border-line bg-sunken/95 backdrop-blur-md"
+      className="fixed top-0 left-0 right-0 z-50 border-b border-line bg-sunken"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-12 h-14 flex items-center gap-3">

@@ -8,7 +8,10 @@ import {
   Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
   GraduationCap, SlidersHorizontal, ChevronDown, Activity,
 } from 'lucide-react'
+import Image from 'next/image'
 import { PerformancePanel } from './PerformancePanel'
+import { ChartUpload } from '@/components/trading/ChartUpload'
+import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { liveSignalStatus, signalPips, positionSize, pipConfig, mid } from '@/lib/trading'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
@@ -26,6 +29,7 @@ interface TradeIdea {
   currentPrice: number | null
   status: 'pending' | 'running' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
   notes: string | null
+  chartUrl: string | null
   isPublic: boolean
   authorId: string
   author: Author
@@ -113,6 +117,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   const [votes, setVotes] = useState<Votes>(idea.votes ?? { take: 0, skip: 0, mine: null })
   const [closing, setClosing] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
+  const [chartOpen, setChartOpen] = useState(false)
 
   const isGold = idea.symbol.toUpperCase().startsWith('XAU')
   const live = liveSignalStatus(idea, isGold ? price : null)
@@ -245,6 +250,28 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       )}
 
       {idea.notes && <p className="text-xs text-ink2 mt-3 whitespace-pre-wrap">{idea.notes}</p>}
+
+      {/* the setup itself — tap to zoom, since the levels are the whole point */}
+      {idea.chartUrl && (
+        <>
+          <button
+            onClick={() => setChartOpen(true)}
+            className="mt-3 block w-full rounded-lg overflow-hidden border border-line bg-sunken cursor-zoom-in"
+          >
+            <Image
+              src={idea.chartUrl}
+              alt={`${idea.symbol} chart`}
+              width={1200}
+              height={675}
+              className="w-full max-h-72 object-contain"
+              unoptimized
+            />
+          </button>
+          {chartOpen && (
+            <ImageLightbox images={[idea.chartUrl]} startIndex={0} onClose={() => setChartOpen(false)} />
+          )}
+        </>
+      )}
 
       {/* community sentiment (open signals) */}
       {isOpen && (
@@ -443,7 +470,7 @@ function parseSignal(text: string) {
 const EMPTY = {
   symbol: 'XAUUSD', direction: 'buy' as 'buy' | 'sell', entryLow: '', entryHigh: '',
   slLow: '', slHigh: '', currentPrice: '', status: 'pending' as TradeIdea['status'],
-  notes: '', isPublic: true,
+  notes: '', chartUrl: '', isPublic: true,
   takeProfits: [{ price: '', pips: '', hit: false }] as { price: string; pips: string; hit: boolean }[],
 }
 
@@ -464,6 +491,7 @@ function IdeaEditor({ initial, onClose, onSaved }: {
       currentPrice: initial.currentPrice?.toString() ?? '',
       status: initial.status,
       notes: initial.notes ?? '',
+      chartUrl: initial.chartUrl ?? '',
       isPublic: initial.isPublic,
       takeProfits: initial.takeProfits.length
         ? initial.takeProfits.map(t => ({ price: t.price?.toString() ?? '', pips: t.pips?.toString() ?? '', hit: !!t.hit }))
@@ -735,6 +763,9 @@ function IdeaEditor({ initial, onClose, onSaved }: {
           </div>
 
           <textarea value={f.notes} onChange={e => set('notes', e.target.value)} placeholder="Notes / rationale (optional)" rows={2} className={`${inputCls} resize-none`} />
+
+          {/* the marked-up chart behind the numbers */}
+          <ChartUpload value={f.chartUrl || null} onChange={url => set('chartUrl', url ?? '')} label="Add chart screenshot (optional)" />
 
           {/* visibility */}
           <div className="flex items-center gap-2">

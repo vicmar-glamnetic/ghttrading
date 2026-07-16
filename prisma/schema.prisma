@@ -239,13 +239,25 @@ model JournalEntry {
   symbol    String?     // e.g. XAUUSD
   direction String?     // buy | sell
   result    String?     // win | loss | breakeven
-  pnl       Float?      // realised profit/loss for the day/trade
+  pnl       Float?      // realised profit/loss; derived from the prices below when they're all present, else hand-typed
+
+  // Trade prices. When entry + exit + lots are all set, pnl and rMultiple are
+  // computed from them (see lib/journal.ts deriveTrade) and the P&L field locks.
+  entryPrice  Float?
+  exitPrice   Float?
+  stopPrice   Float?    // needed for rMultiple — no stop, no R
+  targetPrice Float?    // planned target; exit vs target shows winners cut early
+  lots        Float?
+  rMultiple   Float?    // result in units of risk; null unless derived with a stop
+  setup       String?   // value from lib/setups.ts SETUPS
+  chartUrl    String?   // Vercel Blob URL of the trade's chart screenshot
 
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId, createdAt])
   @@index([authorId, tradedAt])
+  @@index([authorId, setup])
   @@map("journal_entries")
 }
 
@@ -401,6 +413,7 @@ model TradeIdea {
   status       String   @default("pending")  // pending | tp_hit | sl_hit
   entered      Boolean  @default(false)      // true once price has traded into the entry zone (gates TP auto-close)
   notes        String?
+  chartUrl     String?                       // Vercel Blob URL of the marked-up chart behind the setup
   isPublic     Boolean  @default(false)      // shared to the community board vs. private
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

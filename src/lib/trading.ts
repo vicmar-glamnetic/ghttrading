@@ -51,6 +51,49 @@ export function positionSize(opts: {
   return { lots, stopPips, riskAmount }
 }
 
+export interface TradeMath {
+  pips: number
+  pnl: number
+  /** Cash at risk between entry and stop. Null when no stop was recorded. */
+  riskAmount: number | null
+  /** Result in units of risk. Null when no stop was recorded (nothing to divide by). */
+  r: number | null
+}
+
+/**
+ * Realised P&L and R-multiple for a closed trade.
+ *
+ * R is the only unit that makes two trades comparable — a $100 win risking $20
+ * (+5R) and a $100 win risking $200 (+0.5R) are the same number of dollars and
+ * completely different trades. It needs a stop, so R is null without one.
+ */
+export function tradeMath(opts: {
+  symbol: string
+  direction: string
+  entry: number
+  exit: number
+  stop?: number | null
+  lots: number
+}): TradeMath | null {
+  const { symbol, direction, entry, exit, stop, lots } = opts
+  if (![entry, exit, lots].every(Number.isFinite) || !(lots > 0)) return null
+
+  const { pipSize, pipValue } = pipConfig(symbol)
+  // A sell profits when price falls, so the move is measured entry→exit for a
+  // buy and exit→entry for a sell.
+  const move = direction === 'sell' ? entry - exit : exit - entry
+  const pips = move / pipSize
+  const pnl = pips * pipValue * lots
+
+  if (stop == null || !Number.isFinite(stop)) {
+    return { pips, pnl, riskAmount: null, r: null }
+  }
+  const riskAmount = (Math.abs(entry - stop) / pipSize) * pipValue * lots
+  // A stop at the entry price risks nothing on paper — R is undefined, not ∞.
+  if (!(riskAmount > 0)) return { pips, pnl, riskAmount: null, r: null }
+  return { pips, pnl, riskAmount, r: pnl / riskAmount }
+}
+
 export interface Idea {
   symbol: string
   direction: 'buy' | 'sell'
