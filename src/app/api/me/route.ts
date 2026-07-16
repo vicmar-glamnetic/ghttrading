@@ -11,7 +11,7 @@ export async function GET() {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, username: true, image: true, acctBalance: true, acctRiskPct: true, shareStats: true, accmMember: true, accmNumber: true },
+    select: { id: true, name: true, username: true, image: true, acctBalance: true, acctRiskPct: true, shareStats: true, accmMember: true, accmNumber: true, dailyLossLimit: true, maxTradesPerDay: true },
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(user)
@@ -25,10 +25,23 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const data: { acctBalance?: number | null; acctRiskPct?: number | null; shareStats?: boolean; accmNumber?: string } = {}
+  const data: {
+    acctBalance?: number | null; acctRiskPct?: number | null; shareStats?: boolean; accmNumber?: string
+    dailyLossLimit?: number | null; maxTradesPerDay?: number | null
+  } = {}
   if ('acctBalance' in body) data.acctBalance = numOrNull(body.acctBalance)
   if ('acctRiskPct' in body) data.acctRiskPct = numOrNull(body.acctRiskPct)
   if ('shareStats' in body) data.shareStats = Boolean(body.shareStats)
+  // Guardrails are magnitudes — a member typing "-200" means a $200 loss limit,
+  // and a negative limit would never trigger.
+  if ('dailyLossLimit' in body) {
+    const n = numOrNull(body.dailyLossLimit)
+    data.dailyLossLimit = n == null ? null : Math.abs(n)
+  }
+  if ('maxTradesPerDay' in body) {
+    const n = numOrNull(body.maxTradesPerDay)
+    data.maxTradesPerDay = n == null ? null : Math.max(1, Math.round(Math.abs(n)))
+  }
   if ('accmNumber' in body) {
     const raw = typeof body.accmNumber === 'string' ? body.accmNumber.trim() : ''
     if (!raw) return NextResponse.json({ error: 'ACCM number is required' }, { status: 400 })
@@ -46,7 +59,7 @@ export async function PATCH(req: Request) {
     user = await db.user.update({
       where: { id: session.user.id },
       data,
-      select: { acctBalance: true, acctRiskPct: true, shareStats: true, accmNumber: true },
+      select: { acctBalance: true, acctRiskPct: true, shareStats: true, accmNumber: true, dailyLossLimit: true, maxTradesPerDay: true },
     })
   } catch (err) {
     // Unique-index race: two members submitting the same number at once.

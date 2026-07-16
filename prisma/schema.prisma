@@ -75,6 +75,12 @@ model User {
   acctRiskPct       Float?    // saved risk % per trade
   shareStats        Boolean   @default(false) // opt in to the member leaderboard
 
+  // Risk guardrails. Risk-per-trade (above) is the easy half; what actually
+  // empties accounts is the revenge-trading spiral after two losses.
+  // Both null = no guardrail. Opt-in, and advisory — never blocks the app.
+  dailyLossLimit    Float?    // warn once today's realised P&L is <= -this (USD)
+  maxTradesPerDay   Int?      // warn once this many trades are journalled today
+
   @@index([lastSeenAt])
   @@map("users")
 }
@@ -378,11 +384,20 @@ model PriceAlert {
   id          String   @id @default(cuid())
   userId      String
   symbol      String   // e.g. XAUUSD
-  targetPrice Float
-  direction   String   // 'above' | 'below'
+  targetPrice Float    // for kind='zone' this is the zone midpoint, shown for reference only
+  direction   String   // 'above' | 'below' (ignored for kind='zone')
   triggered   Boolean  @default(false)
   createdAt   DateTime @default(now())
+
+  // 'price' = fire when price crosses targetPrice.
+  // 'zone'  = fire when price trades into idea's entry zone (read live off the
+  //           idea, so a coach editing the zone keeps the alert honest).
+  kind        String   @default("price")
+  ideaId      String?
+  idea        TradeIdea? @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, ideaId], name: "one_zone_alert_per_signal")
   @@index([userId])
   @@index([symbol, triggered])
   @@map("price_alerts")
@@ -420,6 +435,7 @@ model TradeIdea {
 
   authorId     String
   author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  alerts       PriceAlert[]
 
   @@index([authorId, createdAt])
   @@index([isPublic, createdAt])

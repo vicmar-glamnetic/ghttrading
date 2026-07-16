@@ -2,7 +2,27 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Bell, Plus, X, Check } from 'lucide-react'
 
-interface Alert { id: string; symbol: string; targetPrice: number; direction: 'above' | 'below'; triggered: boolean }
+interface Idea { id: string; symbol: string; direction: string; entryLow: number | null; entryHigh: number | null; status: string }
+interface Alert {
+  id: string
+  symbol: string
+  targetPrice: number
+  direction: 'above' | 'below'
+  triggered: boolean
+  kind: 'price' | 'zone'
+  idea: Idea | null
+}
+
+/** How an alert reads in the list. Zone alerts watch a coach's entry zone, so
+ *  showing them as "XAUUSD above 4108" would be a lie — name the signal instead. */
+function alertLabel(a: Alert) {
+  if (a.kind === 'zone' && a.idea) {
+    const { entryLow: lo, entryHigh: hi } = a.idea
+    const zone = lo != null && hi != null && lo !== hi ? `${lo}–${hi}` : `${lo ?? hi}`
+    return `${a.idea.symbol} ${a.idea.direction.toUpperCase()} zone ${zone}`
+  }
+  return `${a.symbol} ${a.direction} ${a.targetPrice}`
+}
 
 export function PriceAlerts() {
   const [alerts, setAlerts] = useState<Alert[]>([])
@@ -70,14 +90,18 @@ export function PriceAlerts() {
                 {a.triggered
                   ? <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
                   : <span className="w-2 h-2 rounded-full bg-yellow-500 shrink-0" />}
-                <span className="text-sm text-ink tabular-nums">{a.symbol} {a.direction} <b>{a.targetPrice}</b></span>
+                <span className="text-sm text-ink tabular-nums">{alertLabel(a)}</span>
+                {a.kind === 'zone' && <span className="text-[10px] text-yellow-500 shrink-0">signal</span>}
                 {a.triggered && <span className="text-[10px] text-green-400">triggered</span>}
                 <button onClick={() => remove(a.id)} className="ml-auto text-ink3 hover:text-red-400"><X className="w-4 h-4" /></button>
               </div>
             ))}
           </div>
         )}
-        <p className="text-[10px] text-ink3">Enable push in Settings → Alerts to receive these. Gold (XAUUSD) only for now.</p>
+        <p className="text-[10px] text-ink3">
+          Enable push in Settings → Alerts to receive these. Set a level above for gold, or tap
+          &ldquo;Alert me&rdquo; on any signal to watch its entry zone.
+        </p>
       </div>
     </div>
   )

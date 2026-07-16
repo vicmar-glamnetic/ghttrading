@@ -1,18 +1,20 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
   Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
-  GraduationCap, SlidersHorizontal, ChevronDown, Activity,
+  GraduationCap, SlidersHorizontal, ChevronDown, Activity, Bell,
 } from 'lucide-react'
 import Image from 'next/image'
 import { PerformancePanel } from './PerformancePanel'
 import { ChartUpload } from '@/components/trading/ChartUpload'
+import { RiskGuard } from '@/components/trading/RiskGuard'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { liveSignalStatus, signalPips, positionSize, pipConfig, mid } from '@/lib/trading'
+import { normalizeSymbol, isPriceable } from '@/lib/symbols'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
@@ -30,6 +32,7 @@ interface TradeIdea {
   status: 'pending' | 'running' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
   notes: string | null
   chartUrl: string | null
+  zoneAlert?: boolean   // am I watching this signal's entry zone?
   isPublic: boolean
   authorId: string
   author: Author
@@ -118,9 +121,13 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   const [closing, setClosing] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
   const [chartOpen, setChartOpen] = useState(false)
+  const [zoneAlert, setZoneAlert] = useState(!!idea.zoneAlert)
+  const [alertBusy, setAlertBusy] = useState(false)
 
-  const isGold = idea.symbol.toUpperCase().startsWith('XAU')
-  const live = liveSignalStatus(idea, isGold ? price : null)
+  // We can price metals + BTC/ETH; anything else (forex) has no live feed, and
+  // the card says so instead of just quietly omitting the status.
+  const priceable = isPriceable(idea.symbol)
+  const live = liveSignalStatus(idea, priceable ? price : null)
   const pips = signalPips(idea)
 
   // "Open" = not yet closed. Pending (waiting for entry) and running (entry hit) both count.
@@ -155,6 +162,30 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   }
   const totalVotes = votes.take + votes.skip
   const takePct = totalVotes ? Math.round((votes.take / totalVotes) * 100) : 0
+
+  const hasZone = idea.entryLow != null || idea.entryHigh != null
+
+  async function toggleZoneAlert() {
+    const next = !zoneAlert
+    setZoneAlert(next) // optimistic
+    setAlertBusy(true)
+    try {
+      const res = next
+        ? await fetch('/api/alerts', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ideaId: idea.id }),
+          })
+        : await fetch('/api/alerts', {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ideaId: idea.id }),
+          })
+      if (!res.ok) setZoneAlert(!next)
+    } catch {
+      setZoneAlert(!next)
+    } finally {
+      setAlertBusy(false)
+    }
+  }
 
   return (
     <div className="bg-surface rounded-xl border border-line p-4 flex flex-col">
@@ -200,6 +231,10 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
           ) : live ? (
             <span className={`text-xs font-semibold rounded-full px-2 py-0.5 border ${TONE[live.tone]}`}>
               {live.dot} {live.label}
+            </span>
+          ) : !priceable ? (
+            <span className="text-xs text-ink3 bg-sunken rounded px-2 py-0.5" title={`No live price feed for ${idea.symbol} yet — status can't be tracked automatically.`}>
+              No live price
             </span>
           ) : idea.status === 'pending' ? (
             <span className="text-xs text-ink3 bg-sunken rounded px-2 py-0.5">Pending</span>
@@ -285,6 +320,14 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
               className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors ${votes.mine === 'skip' ? 'text-red-400 bg-red-400/10 border-red-400/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
               <ThumbsDown className="w-3.5 h-3.5" /> Skipping {votes.skip > 0 && votes.skip}
             </button>
+            {/* Watch the coach's own zone rather than making the member pick a
+                number out of the signal and set a price alert for it. */}
+            {priceable && hasZone && (
+              <button onClick={toggleZoneAlert} disabled={alertBusy} title={zoneAlert ? 'Stop watching this zone' : 'Get a push when price enters the entry zone'}
+                className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors disabled:opacity-50 ${zoneAlert ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
+                <Bell className="w-3.5 h-3.5" /> {zoneAlert ? 'Watching' : 'Alert me'}
+              </button>
+            )}
             {totalVotes > 0 && (
               <span className="ml-auto text-[11px] text-ink3">{takePct}% taking · {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
             )}
@@ -968,7 +1011,7 @@ export default function IdeasPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('community')
   const [editor, setEditor] = useState<{ open: boolean; idea: TradeIdea | null }>({ open: false, idea: null })
-  const [price, setPrice] = useState<number | null>(null)
+  const [prices, setPrices] = useState<Record<string, number | null>>({})
   const [acct, setAcct] = useState<Acct | null>(null)
   const [showAcct, setShowAcct] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
@@ -1001,18 +1044,30 @@ export default function IdeasPage() {
     }).catch(() => {})
   }, [])
 
-  // Live gold price for the "still enterable?" status — polled every 2s so it
-  // ticks near-live, paused when the tab is hidden to save requests/battery.
+  // Every distinct instrument on the board that we can actually price. Joined to
+  // a string so the poll effect re-runs when the set changes, not on every load.
+  const symbolKey = useMemo(
+    () => [...new Set(ideas.map(i => normalizeSymbol(i.symbol)).filter(isPriceable))].sort().join(','),
+    [ideas],
+  )
+
+  // Live prices for the "still enterable?" status — polled every 2s so they tick
+  // near-live, paused when the tab is hidden to save requests/battery. One batched
+  // request covers every symbol on the board.
   useEffect(() => {
+    if (!symbolKey) return
     const poll = () => {
       if (document.hidden) return
-      fetch('/api/price?symbol=XAUUSD').then(r => r.json()).then(d => { if (typeof d.price === 'number') setPrice(d.price) }).catch(() => {})
+      fetch(`/api/price?symbols=${symbolKey}`)
+        .then(r => r.json())
+        .then(d => { if (d?.prices) setPrices(d.prices) })
+        .catch(() => {})
     }
     poll()
     const id = setInterval(poll, 2000)
     document.addEventListener('visibilitychange', poll) // refresh immediately when tab refocuses
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', poll) }
-  }, [])
+  }, [symbolKey])
 
   const load = useCallback(async (t: Tab) => {
     if (t === 'stats') return
@@ -1095,6 +1150,10 @@ export default function IdeasPage() {
 
   return (
     <div className="space-y-4">
+      {/* Above the signals on purpose: the moment that matters is right before
+          the next trade, not buried in the journal after the damage is done. */}
+      <RiskGuard />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Lightbulb className="w-5 h-5 text-yellow-500" />
@@ -1229,7 +1288,7 @@ export default function IdeasPage() {
               onEdit={i => setEditor({ open: true, idea: i })}
               onDelete={handleDelete}
               onClose={handleClose}
-              price={price}
+              price={prices[normalizeSymbol(idea.symbol)] ?? null}
               acct={acct}
             />
           ))}

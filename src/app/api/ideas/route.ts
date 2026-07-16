@@ -44,12 +44,18 @@ export async function GET(req: Request) {
       include: { author: AUTHOR },
     })
 
-    // Attach community sentiment (take/skip counts + my vote) in two batched queries.
+    // Attach community sentiment (take/skip counts + my vote) and my zone alerts
+    // in batched queries — one per concern, not one per card.
     const ids = ideas.map(i => i.id)
-    const [grouped, myVotes] = await Promise.all([
+    const [grouped, myVotes, myAlerts] = await Promise.all([
       db.signalVote.groupBy({ by: ['ideaId', 'vote'], where: { ideaId: { in: ids } }, _count: true }),
       db.signalVote.findMany({ where: { ideaId: { in: ids }, userId: session.user.id }, select: { ideaId: true, vote: true } }),
+      db.priceAlert.findMany({
+        where: { ideaId: { in: ids }, userId: session.user.id, kind: 'zone', triggered: false },
+        select: { ideaId: true },
+      }),
     ])
+    const watching = new Set(myAlerts.map(a => a.ideaId))
     const counts = new Map<string, { take: number; skip: number }>()
     for (const g of grouped) {
       const c = counts.get(g.ideaId) ?? { take: 0, skip: 0 }
@@ -60,6 +66,7 @@ export async function GET(req: Request) {
     const withVotes = ideas.map(i => ({
       ...i,
       votes: { take: counts.get(i.id)?.take ?? 0, skip: counts.get(i.id)?.skip ?? 0, mine: mine.get(i.id) ?? null },
+      zoneAlert: watching.has(i.id),
     }))
 
     return NextResponse.json(withVotes)

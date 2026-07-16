@@ -5,7 +5,7 @@ import { updateMyProfile } from '@/lib/useMyProfile'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
-import { Settings, Shield, User, Camera, Bell } from 'lucide-react'
+import { Settings, Shield, User, Camera, Bell, ShieldAlert } from 'lucide-react'
 import { pushSupported, getPushState, enablePush, disablePush } from '@/lib/pushClient'
 
 export default function SettingsPage() {
@@ -24,6 +24,12 @@ export default function SettingsPage() {
   const [shareStats, setShareStats] = useState(false)
   const [statsBusy, setStatsBusy] = useState(false)
 
+  // Risk guardrails ('' = no limit).
+  const [lossLimit, setLossLimit] = useState('')
+  const [maxTrades, setMaxTrades] = useState('')
+  const [riskBusy, setRiskBusy] = useState(false)
+  const [riskSaved, setRiskSaved] = useState(false)
+
   // Seed from the live profile — the session strips large avatars, so pull the
   // real image/name from /api/me.
   useEffect(() => {
@@ -32,8 +38,31 @@ export default function SettingsPage() {
       if (d?.name) setName(d.name)
       if (d?.username) setUsername(d.username)
       setShareStats(!!d?.shareStats)
+      setLossLimit(d?.dailyLossLimit == null ? '' : String(d.dailyLossLimit))
+      setMaxTrades(d?.maxTradesPerDay == null ? '' : String(d.maxTradesPerDay))
     }).catch(() => {})
   }, [])
+
+  async function saveRisk() {
+    setRiskBusy(true)
+    setRiskSaved(false)
+    try {
+      const res = await fetch('/api/me', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dailyLossLimit: lossLimit.trim() === '' ? null : lossLimit,
+          maxTradesPerDay: maxTrades.trim() === '' ? null : maxTrades,
+        }),
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setLossLimit(d?.dailyLossLimit == null ? '' : String(d.dailyLossLimit))
+        setMaxTrades(d?.maxTradesPerDay == null ? '' : String(d.maxTradesPerDay))
+        setRiskSaved(true)
+        setTimeout(() => setRiskSaved(false), 2500)
+      }
+    } finally { setRiskBusy(false) }
+  }
 
   async function toggleShareStats() {
     const next = !shareStats
@@ -46,6 +75,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'alerts', label: 'Alerts', icon: Bell },
+    { id: 'risk', label: 'Risk', icon: ShieldAlert },
     { id: 'privacy', label: 'Privacy', icon: Shield },
   ]
 
@@ -268,6 +298,61 @@ export default function SettingsPage() {
                 <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${shareStats ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'risk' && (
+          <div className="max-w-md space-y-4">
+            <div className="rounded-xl border border-line bg-elevated p-4 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-yellow-500" /> Daily limits
+                </p>
+                <p className="text-xs text-ink3 mt-1 leading-relaxed">
+                  Risk per trade is the easy half. What empties accounts is the third and fourth
+                  trade after two losses. Set the line now, while you&rsquo;re calm — we&rsquo;ll show it
+                  on the Signals page when today crosses it. Leave blank for no limit.
+                </p>
+              </div>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-ink2">Daily loss limit ($)</span>
+                <input
+                  type="number" step="any" inputMode="decimal" min="0"
+                  value={lossLimit} onChange={e => setLossLimit(e.target.value)}
+                  placeholder="e.g. 200"
+                  className="mt-1 w-full bg-sunken border border-line rounded-lg px-3 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2 tabular-nums"
+                />
+                <span className="text-[11px] text-ink3 mt-1 block">
+                  Warn once today&rsquo;s journalled P&amp;L is down this much.
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-ink2">Max trades per day</span>
+                <input
+                  type="number" step="1" inputMode="numeric" min="1"
+                  value={maxTrades} onChange={e => setMaxTrades(e.target.value)}
+                  placeholder="e.g. 3"
+                  className="mt-1 w-full bg-sunken border border-line rounded-lg px-3 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2 tabular-nums"
+                />
+                <span className="text-[11px] text-ink3 mt-1 block">
+                  Warn once you&rsquo;ve journalled this many trades today.
+                </span>
+              </label>
+
+              <div className="flex items-center gap-3">
+                <Button variant="gold" size="sm" onClick={saveRisk} loading={riskBusy} className="text-xs">
+                  Save limits
+                </Button>
+                {riskSaved && <span className="text-xs text-green-400">Saved</span>}
+              </div>
+            </div>
+
+            <p className="text-xs text-ink3 leading-relaxed">
+              These are counted from trades you journal with a date of today, so they only work as
+              well as your journalling. They warn — they never lock you out.
+            </p>
           </div>
         )}
 

@@ -1,6 +1,8 @@
 // Shared trading math: pip config, position sizing, pips, and live signal status.
 // Pure functions (no window/DOM) so both server routes and client can use them.
 
+import { normalizeSymbol } from './symbols'
+
 export interface PipConfig { pipSize: number; pipValue: number }
 
 const CRYPTO_BASES = ['BTC', 'ETH', 'XRP', 'SOL', 'DOGE', 'ADA', 'BNB', 'LTC']
@@ -10,12 +12,18 @@ const CRYPTO_BASES = ['BTC', 'ETH', 'XRP', 'SOL', 'DOGE', 'ADA', 'BNB', 'LTC']
  * class, so aggregate "pips banked" totals are restricted to gold.
  */
 export function isGold(symbol: string) {
-  return (symbol || '').toUpperCase().startsWith('XAU')
+  return normalizeSymbol(symbol).startsWith('XAU')
 }
 
-/** Pip size + USD value per standard lot, inferred from the symbol. */
+/**
+ * Pip size + USD value per standard lot, inferred from the symbol.
+ *
+ * Normalises first: members type "GOLD" as often as "XAUUSD", and an
+ * unrecognised symbol falls through to the points fallback below, which would
+ * price gold at 1/100th of its real pip value.
+ */
 export function pipConfig(symbol: string): PipConfig {
-  const s = (symbol || '').toUpperCase()
+  const s = normalizeSymbol(symbol)
   if (s.startsWith('XAU')) return { pipSize: 0.1, pipValue: 10 }   // gold
   if (s.startsWith('XAG')) return { pipSize: 0.01, pipValue: 50 }  // silver
   if (s.includes('JPY')) return { pipSize: 0.01, pipValue: 9.1 }   // JPY pairs
