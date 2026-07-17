@@ -89,7 +89,7 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const menu: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [...allNav]
   if (session?.user?.id) menu.push({ href: `/profile/${session.user.id}`, label: 'Profile', icon: User })
   if (role === 'admin' || role === 'coach') menu.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
-  if (role === 'admin') menu.push({ href: '/admin', label: 'Admin', icon: Shield })
+  if (role === 'admin' || role === 'coach') menu.push({ href: '/admin', label: 'Admin', icon: Shield })
 
   return (
     <>

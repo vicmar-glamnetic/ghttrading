@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { Button } from '@/components/ui/Button'
 import {
-  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail,
+  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail, UserX,
 } from 'lucide-react'
 
 import { format } from 'date-fns'
@@ -32,6 +32,9 @@ interface AdminUser {
 interface Stats { total: number; admin: number; coach: number; member: number; onlineNow: number }
 
 const ROLE_OPTIONS = ['admin', 'coach', 'member'] as const
+// Coaches run user management but can never hand out admin — mirrors
+// COACH_ASSIGNABLE_ROLES in lib/admin.ts, which is what actually enforces it.
+const COACH_ROLE_OPTIONS = ['coach', 'member'] as const
 const PAGE_SIZE = 20
 
 const roleBadge: Record<string, string> = {
@@ -51,6 +54,12 @@ function subBadge(status: string) {
 export default function AdminPage() {
   const { data: session } = useSession()
   const meId = session?.user?.id
+  // Coaches share this screen for user management only; the billing, migration
+  // and bulk-email tools below stay admin-only.
+  const isAdmin = session?.user?.role === 'admin'
+  const roleOptions = isAdmin ? ROLE_OPTIONS : COACH_ROLE_OPTIONS
+  // Admin rows are read-only for coaches — the API rejects these edits too.
+  const canEdit = (u: AdminUser) => isAdmin || u.role !== 'admin'
   const [users, setUsers] = useState<AdminUser[]>([])
   const [stats, setStats] = useState<Stats>({ total: 0, admin: 0, coach: 0, member: 0, onlineNow: 0 })
   const [loading, setLoading] = useState(true)
@@ -80,11 +89,12 @@ export default function AdminPage() {
   const [winbackCount, setWinbackCount] = useState<number | null>(null)
 
   useEffect(() => {
+    if (!isAdmin) return // coaches never see the win-back card
     fetch('/api/admin/winback')
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setWinbackCount(d.count) })
       .catch(() => {})
-  }, [])
+  }, [isAdmin])
 
   async function sendWinback() {
     if (!winbackCount) return
@@ -201,13 +211,17 @@ export default function AdminPage() {
     load()
   }
 
-  async function approveUser(u: AdminUser) {
-    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, approved: true } : x))
-    await fetch(`/api/admin/users/${u.id}`, {
+  // Approval doubles as the account switch: off sends the user to /pending on
+  // their next navigation, without touching their data or history.
+  async function setApproved(u: AdminUser, approved: boolean) {
+    if (!approved && !confirm(`Deactivate ${u.name || u.email}? They'll be locked out until reactivated.`)) return
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, approved } : x))
+    const res = await fetch(`/api/admin/users/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ approved: true }),
+      body: JSON.stringify({ approved }),
     })
+    if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Update failed'); load() }
   }
 
   async function toggleAccm(u: AdminUser) {
@@ -245,12 +259,14 @@ export default function AdminPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-yellow-500" />
-          <h1 className="font-bold text-ink text-lg">Admin · Users</h1>
+          <h1 className="font-bold text-ink text-lg">{isAdmin ? 'Admin · Users' : 'Users'}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/admin/courses" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
-            <GraduationCap className="w-3.5 h-3.5" /> Courses
-          </Link>
+          {isAdmin && (
+            <Link href="/admin/courses" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
+              <GraduationCap className="w-3.5 h-3.5" /> Courses
+            </Link>
+          )}
           <Button variant="gold" size="sm" onClick={() => setShowAdd(true)} className="gap-1.5 text-xs">
             <Plus className="w-3.5 h-3.5" /> Add User
           </Button>
@@ -281,6 +297,9 @@ export default function AdminPage() {
         ))}
       </div>
 
+      {/* Billing, migration and bulk-email tools — admin-only, hidden from coaches */}
+      {isAdmin && (
+      <>
       {/* PayPal plan setup */}
       <div className="rounded-xl border border-line bg-surface p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -364,6 +383,8 @@ export default function AdminPage() {
         </div>
         {winbackMsg && <p className="text-xs text-ink2 mt-2">{winbackMsg}</p>}
       </div>
+      </>
+      )}
 
       {/* search + filter */}
       <div className="flex flex-col sm:flex-row gap-2">
@@ -439,10 +460,16 @@ export default function AdminPage() {
                     <select
                       value={u.role}
                       onChange={e => changeRole(u, e.target.value)}
-                      disabled={u.id === meId}
+                      disabled={u.id === meId || !canEdit(u)}
+                      title={!canEdit(u) ? "Coaches can't change an admin's role" : undefined}
                       className={`text-xs font-semibold capitalize rounded-full border px-2 py-1 outline-none scheme-dark disabled:opacity-60 ${roleBadge[u.role]}`}
                     >
-                      {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                      {/* The current role always stays listed so a coach viewing
+                          an admin row still sees "admin" rather than a blank. */}
+                      {(roleOptions as readonly string[]).includes(u.role)
+                        ? null
+                        : <option value={u.role}>{u.role}</option>}
+                      {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </td>
                   <td className="p-3">
@@ -480,8 +507,9 @@ export default function AdminPage() {
                   <td className="p-3">
                     <button
                       onClick={() => toggleAccm(u)}
-                      title="Toggle ACCM (free) vs Standard ($5)"
-                      className={`text-xs font-semibold rounded-full px-2 py-1 border transition-colors ${
+                      disabled={!canEdit(u)}
+                      title={canEdit(u) ? 'Toggle ACCM (free) vs Standard ($5)' : "Coaches can't edit an admin account"}
+                      className={`text-xs font-semibold rounded-full px-2 py-1 border transition-colors disabled:opacity-40 ${
                         u.accmMember
                           ? 'bg-green-400/10 text-green-400 border-green-400/30'
                           : 'bg-elevated text-ink2 border-line'
@@ -498,26 +526,44 @@ export default function AdminPage() {
                         No ACCM #
                       </p>
                     )}
-                    {!u.accmMember && <TrialControl user={u} onSet={days => setTrial(u, days)} />}
+                    {!u.accmMember && canEdit(u) && <TrialControl user={u} onSet={days => setTrial(u, days)} />}
                   </td>
                   <td className="p-3 hidden md:table-cell text-ink3 text-xs">
                     {format(new Date(u.createdAt), 'MMM d, yyyy')}
                   </td>
                   <td className="p-3">
                     <div className="flex items-center justify-end gap-1.5">
-                      {!u.approved && (
+                      {!u.approved ? (
                         <button
-                          onClick={() => approveUser(u)}
-                          className="text-[11px] font-bold bg-green-500 hover:bg-green-400 text-black rounded-lg px-2.5 py-1 transition-colors whitespace-nowrap"
+                          onClick={() => setApproved(u, true)}
+                          disabled={!canEdit(u)}
+                          className="text-[11px] font-bold bg-green-500 hover:bg-green-400 text-black rounded-lg px-2.5 py-1 transition-colors whitespace-nowrap disabled:opacity-30"
                         >
                           Approve
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setApproved(u, false)}
+                          disabled={u.id === meId || !canEdit(u)}
+                          title={
+                            u.id === meId ? "You can't deactivate yourself"
+                              : !canEdit(u) ? "Coaches can't deactivate an admin"
+                              : 'Deactivate — locks the account out until reactivated'
+                          }
+                          className="text-[11px] font-semibold border border-line text-ink3 hover:text-red-400 hover:border-red-400/30 rounded-lg px-2.5 py-1 transition-colors whitespace-nowrap disabled:opacity-30 disabled:hover:text-ink3 disabled:hover:border-line"
+                        >
+                          <UserX className="w-3 h-3 inline -mt-0.5 mr-1" />Deactivate
                         </button>
                       )}
                       <button
                         onClick={() => remove(u)}
-                        disabled={u.id === meId}
+                        disabled={u.id === meId || !canEdit(u)}
                         className="p-1.5 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors disabled:opacity-30 disabled:hover:text-ink3"
-                        title={u.id === meId ? "You can't delete yourself" : 'Delete user'}
+                        title={
+                          u.id === meId ? "You can't delete yourself"
+                            : !canEdit(u) ? "Coaches can't delete an admin"
+                            : 'Delete user'
+                        }
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -559,7 +605,7 @@ export default function AdminPage() {
         Coaches and admins get free access. Members will require a $5/mo subscription once billing is enabled.
       </p>
 
-      {showAdd && <AddUserModal onClose={() => setShowAdd(false)} onCreated={() => { setShowAdd(false); load() }} />}
+      {showAdd && <AddUserModal roleOptions={roleOptions} onClose={() => setShowAdd(false)} onCreated={() => { setShowAdd(false); load() }} />}
       {showOnline && <OnlineUsersModal onClose={() => setShowOnline(false)} />}
     </div>
   )
@@ -726,11 +772,15 @@ function OnlineUsersModal({ onClose }: { onClose: () => void }) {
 }
 
 /* ---------- add user modal ---------- */
-function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function AddUserModal({ roleOptions, onClose, onCreated }: {
+  roleOptions: readonly AdminUser['role'][]
+  onClose: () => void
+  onCreated: () => void
+}) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'admin' | 'coach' | 'member'>('member')
+  const [role, setRole] = useState<AdminUser['role']>('member')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -770,7 +820,7 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           <div>
             <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Role</label>
             <div className="flex gap-2 mt-1">
-              {ROLE_OPTIONS.map(r => (
+              {roleOptions.map(r => (
                 <button key={r} onClick={() => setRole(r)}
                   className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize transition-colors ${role === r ? 'bg-yellow-500 text-black' : 'bg-sunken border border-line text-ink3'}`}>
                   {r}

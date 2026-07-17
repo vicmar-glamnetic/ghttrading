@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
-import { requireAdmin, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
+import { requireStaff, COACH_ASSIGNABLE_ROLES, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 import { ONLINE_WINDOW_MS } from '@/lib/presence'
 
 const USER_SELECT = {
@@ -11,7 +11,7 @@ const USER_SELECT = {
 }
 
 export async function GET(req: Request) {
-  const session = await requireAdmin()
+  const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const params = new URL(req.url).searchParams
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await requireAdmin()
+  const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { name, email, password, role } = await req.json()
@@ -66,6 +66,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
   }
   const chosenRole: Role = (ROLES as readonly string[]).includes(role) ? role : 'member'
+  if (session.user.role === 'coach' && !COACH_ASSIGNABLE_ROLES.includes(chosenRole)) {
+    return NextResponse.json({ error: 'Coaches cannot create admin accounts' }, { status: 403 })
+  }
 
   const existing = await db.user.findUnique({ where: { email } })
   if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 400 })

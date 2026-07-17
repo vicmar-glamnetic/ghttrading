@@ -12,7 +12,7 @@ const ADMIN_LIST_LIMIT = 200
  * Who is on the site right now.
  *
  * Any signed-in member sees the public roster (approved accounts, no emails).
- * `?scope=admin` widens it for admins only: unapproved accounts included, plus
+ * `?scope=admin` widens it for staff only: unapproved accounts included, plus
  * the email and approval flag they need to act on what they see.
  */
 export async function GET(req: Request) {
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   const wantsAdmin = new URL(req.url).searchParams.get('scope') === 'admin'
   // Ask for the admin scope without the role and you get a 403, not a quiet
   // downgrade — a silent fallback would hide a broken caller.
-  if (wantsAdmin && session.user.role !== 'admin') {
+  if (wantsAdmin && session.user.role !== 'admin' && session.user.role !== 'coach') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

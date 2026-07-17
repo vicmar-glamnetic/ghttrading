@@ -94,7 +94,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   const role = session?.user?.role
   const utility = [...utilityNav]
   if (role === 'admin' || role === 'coach') utility.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
-  if (role === 'admin') utility.push({ href: '/admin', label: 'Admin', icon: Shield })
+  if (role === 'admin' || role === 'coach') utility.push({ href: '/admin', label: 'Admin', icon: Shield })
 
   const NavLink = ({ href, label, icon: Icon, premium }: { href: string; label: string; icon: typeof Home; premium?: boolean }) => (
     <Link key={href} href={href}

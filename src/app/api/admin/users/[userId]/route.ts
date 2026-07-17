@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireAdmin, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
+import { requireStaff, canManageRole, COACH_ASSIGNABLE_ROLES, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 import { sendApprovalEmail } from '@/lib/email'
 
 const USER_SELECT = {
@@ -14,12 +14,17 @@ const DAY = 24 * 60 * 60 * 1000
 const MAX_TRIAL_DAYS = 365
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ userId: string }> }) {
-  const session = await requireAdmin()
+  const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId } = await params
   const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true, approved: true } })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // Coaches manage members and coaches; admin accounts stay out of their reach.
+  if (!canManageRole(session.user.role, target.role)) {
+    return NextResponse.json({ error: 'Coaches cannot modify admin accounts' }, { status: 403 })
+  }
 
   const body = await req.json()
   const data: Record<string, unknown> = {}
@@ -28,9 +33,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
     if (!(ROLES as readonly string[]).includes(body.role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
-    // Prevent an admin from removing their own admin access (avoid lockout).
-    if (userId === session.user.id && body.role !== 'admin') {
-      return NextResponse.json({ error: 'You cannot change your own admin role' }, { status: 400 })
+    // Nobody demotes themselves — an admin would lock themselves out, and a
+    // coach could otherwise drop their own staff access by accident.
+    if (userId === session.user.id && body.role !== session.user.role) {
+      return NextResponse.json({ error: 'You cannot change your own role' }, { status: 400 })
+    }
+    if (session.user.role === 'coach' && !COACH_ASSIGNABLE_ROLES.includes(body.role)) {
+      return NextResponse.json({ error: 'Coaches cannot grant the admin role' }, { status: 403 })
     }
     const role: Role = body.role
     data.role = role
@@ -81,7 +90,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ userId: string }> }) {
-  const session = await requireAdmin()
+  const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId } = await params
@@ -89,8 +98,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ user
     return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 })
   }
 
-  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true } })
+  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true } })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!canManageRole(session.user.role, target.role)) {
+    return NextResponse.json({ error: 'Coaches cannot delete admin accounts' }, { status: 403 })
+  }
 
   await db.user.delete({ where: { id: userId } })
   return NextResponse.json({ success: true })
