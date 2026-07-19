@@ -97,19 +97,173 @@ function PostMenu({ postId, isOwner, onDelete }: { postId: string; isOwner: bool
 
 // ---------- Comment row ----------
 type CommentType = PostWithDetails['comments'][number]
+type ReplyType = CommentType['replies'][number]
+
+// Inline reaction control for a single comment/reply — a hover picker plus a
+// running count, mirroring the post reaction behaviour on a smaller scale.
+function CommentReactions({
+  postId,
+  commentId,
+  likes,
+  count,
+}: {
+  postId: string
+  commentId: string
+  likes: { type: string | null }[]
+  count: number
+}) {
+  const [myReaction, setMyReaction] = useState<string | null>((likes ?? [])[0]?.type ?? null)
+  const [total, setTotal] = useState(count)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  async function react(sent: string) {
+    const prev = myReaction
+    const next = prev === sent ? null : sent
+    const delta = next ? (prev ? 0 : 1) : -1
+
+    setMyReaction(next)
+    setTotal(c => c + delta)
+    setPickerOpen(false)
+
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments/${commentId}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: sent }),
+      })
+      if (!res.ok) throw new Error('reaction failed')
+    } catch {
+      setMyReaction(prev)
+      setTotal(c => c - delta)
+    }
+  }
+
+  const open = () => {
+    if (timer.current) clearTimeout(timer.current)
+    setPickerOpen(true)
+  }
+  const closeSoon = () => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => setPickerOpen(false), 250)
+  }
+
+  const current = myReaction ? getReaction(myReaction) : null
+
+  return (
+    <div className="relative inline-flex items-center gap-1" onMouseEnter={open} onMouseLeave={closeSoon}>
+      {pickerOpen && (
+        <div
+          className="absolute bottom-full left-0 mb-1 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
+          onMouseEnter={open}
+          onMouseLeave={closeSoon}
+        >
+          {REACTIONS.map(r => (
+            <button
+              key={r.type}
+              onClick={() => react(r.type)}
+              title={r.label}
+              className={cn(
+                'text-xl leading-none transition-transform hover:scale-125 hover:-translate-y-0.5',
+                myReaction === r.type && 'scale-110',
+              )}
+            >
+              {r.emoji}
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        onClick={() => react(myReaction ?? 'like')}
+        className={cn('font-semibold transition-colors', current ? 'text-yellow-500' : 'text-ink3 hover:text-ink2')}
+      >
+        {current ? current.label : 'Like'}
+      </button>
+      {total > 0 && (
+        <span className="flex items-center gap-0.5 text-ink3">
+          <span className="text-[11px] leading-none">{getReaction(myReaction ?? 'like').emoji}</span>
+          {formatNumber(total)}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ---------- Reply row (one level deep, no further nesting) ----------
+function ReplyRow({
+  reply,
+  postId,
+  currentUserId,
+  onDelete,
+}: {
+  reply: ReplyType
+  postId: string
+  currentUserId: string
+  onDelete: (id: string) => void
+}) {
+  const [deleting, setDeleting] = useState(false)
+  const isOwner = reply.author.id === currentUserId
+
+  async function handleDelete() {
+    if (!confirm('Delete this reply?')) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments/${reply.id}`, { method: 'DELETE' })
+      if (res.ok) onDelete(reply.id)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="flex gap-2 group">
+      <Link href={`/profile/${reply.author.id}`}>
+        <Avatar src={reply.author.image} name={reply.author.name} size="xs" />
+      </Link>
+      <div className="flex-1 min-w-0">
+        <div className="bg-elevated rounded-2xl px-3 py-2 border border-line">
+          <Link href={`/profile/${reply.author.id}`} className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
+            {reply.author.name}
+          </Link>
+          <p className="text-sm text-ink mt-0.5 wrap-break-word">{reply.content}</p>
+        </div>
+        <div className="flex items-center gap-3 mt-1 pl-3 text-[11px]">
+          <CommentReactions postId={postId} commentId={reply.id} likes={reply.likes} count={reply._count.likes} />
+          <span className="text-ink3">{timeAgo(reply.createdAt)}</span>
+        </div>
+      </div>
+      {isOwner && (
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="opacity-0 group-hover:opacity-100 self-center p-1.5 hover:bg-red-500/10 rounded-lg transition-all text-ink3 hover:text-red-400 disabled:opacity-50"
+          title="Delete reply"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  )
+}
 
 function CommentRow({
   comment,
   postId,
   currentUserId,
   onDelete,
+  onCountChange,
 }: {
   comment: CommentType
   postId: string
   currentUserId: string
   onDelete: (id: string) => void
+  onCountChange: (delta: number) => void
 }) {
   const [deleting, setDeleting] = useState(false)
+  const [showReplyBox, setShowReplyBox] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [replies, setReplies] = useState<ReplyType[]>(comment.replies ?? [])
   const isOwner = comment.author.id === currentUserId
 
   async function handleDelete() {
@@ -121,6 +275,31 @@ function CommentRow({
     } finally {
       setDeleting(false)
     }
+  }
+
+  async function handleReply(e: React.FormEvent) {
+    e.preventDefault()
+    if (!replyText.trim() || submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: replyText, parentId: comment.id }),
+      })
+      const newReply = await res.json()
+      setReplies(prev => [...prev, newReply])
+      setReplyText('')
+      setShowReplyBox(false)
+      onCountChange(1)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function handleReplyDelete(replyId: string) {
+    setReplies(prev => prev.filter(r => r.id !== replyId))
+    onCountChange(-1)
   }
 
   return (
@@ -135,12 +314,55 @@ function CommentRow({
           </Link>
           <p className="text-sm text-ink mt-0.5 wrap-break-word">{comment.content}</p>
         </div>
+
+        {/* Meta actions: react · reply · timestamp */}
+        <div className="flex items-center gap-3 mt-1 pl-3 text-[11px]">
+          <CommentReactions postId={postId} commentId={comment.id} likes={comment.likes} count={comment._count.likes} />
+          <button
+            onClick={() => setShowReplyBox(v => !v)}
+            className="font-semibold text-ink3 hover:text-ink2 transition-colors"
+          >
+            Reply
+          </button>
+          <span className="text-ink3">{timeAgo(comment.createdAt)}</span>
+        </div>
+
+        {/* Reply composer */}
+        {showReplyBox && (
+          <form onSubmit={handleReply} className="flex gap-2 mt-2">
+            <input
+              value={replyText}
+              onChange={e => setReplyText(e.target.value)}
+              placeholder={`Reply to ${comment.author.name}…`}
+              autoFocus
+              className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-1.5 text-sm outline-none text-ink placeholder-ink3 transition-colors"
+            />
+            <Button type="submit" variant="gold" size="sm" loading={submitting} disabled={!replyText.trim()}>
+              Reply
+            </Button>
+          </form>
+        )}
+
+        {/* Replies */}
+        {replies.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {replies.map(reply => (
+              <ReplyRow
+                key={reply.id}
+                reply={reply}
+                postId={postId}
+                currentUserId={currentUserId}
+                onDelete={handleReplyDelete}
+              />
+            ))}
+          </div>
+        )}
       </div>
       {isOwner && (
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 self-center p-1.5 hover:bg-red-500/10 rounded-lg transition-all text-ink3 hover:text-red-400 disabled:opacity-50"
+          className="opacity-0 group-hover:opacity-100 self-start p-1.5 hover:bg-red-500/10 rounded-lg transition-all text-ink3 hover:text-red-400 disabled:opacity-50"
           title="Delete comment"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -500,6 +722,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
               postId={post.id}
               currentUserId={currentUserId}
               onDelete={handleCommentDelete}
+              onCountChange={(delta) => setCommentCount(c => Math.max(0, c + delta))}
             />
           ))}
         </div>

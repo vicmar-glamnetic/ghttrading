@@ -13,12 +13,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ postId: 
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
         _count: { select: { likes: true, replies: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true } },
+        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
         replies: {
           include: {
             author: { select: { id: true, name: true, image: true, username: true } },
             _count: { select: { likes: true } },
-            likes: { where: { userId: session.user.id }, select: { userId: true } },
+            likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -53,23 +53,45 @@ export async function POST(req: Request, { params }: { params: Promise<{ postId:
       include: {
         author: { select: { id: true, name: true, image: true, username: true } },
         _count: { select: { likes: true, replies: true } },
-        likes: false,
-        replies: false,
+        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
+        replies: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            author: { select: { id: true, name: true, image: true, username: true } },
+            _count: { select: { likes: true } },
+            likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
+          },
+        },
       },
     })
 
-    // Notify post author
-    const post = await db.post.findUnique({ where: { id: postId }, select: { authorId: true } })
-    if (post && post.authorId !== session.user.id) {
-      await db.notification.create({
-        data: {
-          type: 'comment',
-          message: `${session.user.name} commented on your post`,
-          receiverId: post.authorId,
-          senderId: session.user.id,
-          link: `/posts/${postId}`,
-        },
-      })
+    // Notify the parent comment's author on a reply, else the post author.
+    if (comment.parentId) {
+      const parent = await db.comment.findUnique({ where: { id: comment.parentId }, select: { authorId: true } })
+      if (parent && parent.authorId !== session.user.id) {
+        await db.notification.create({
+          data: {
+            type: 'comment',
+            message: `${session.user.name} replied to your comment`,
+            receiverId: parent.authorId,
+            senderId: session.user.id,
+            link: `/posts/${postId}`,
+          },
+        })
+      }
+    } else {
+      const post = await db.post.findUnique({ where: { id: postId }, select: { authorId: true } })
+      if (post && post.authorId !== session.user.id) {
+        await db.notification.create({
+          data: {
+            type: 'comment',
+            message: `${session.user.name} commented on your post`,
+            receiverId: post.authorId,
+            senderId: session.user.id,
+            link: `/posts/${postId}`,
+          },
+        })
+      }
     }
 
     return NextResponse.json(comment, { status: 201 })

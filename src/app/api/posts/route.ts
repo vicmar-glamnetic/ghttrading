@@ -51,12 +51,21 @@ export async function GET(req: Request) {
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
         comments: {
+          where: { parentId: null },
           take: 3,
           orderBy: { createdAt: 'desc' },
           include: {
             author: { select: { id: true, name: true, image: true, username: true } },
-            _count: { select: { likes: true } },
-            likes: { where: { userId: session.user.id }, select: { userId: true } },
+            _count: { select: { likes: true, replies: true } },
+            likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
+            replies: {
+              orderBy: { createdAt: 'asc' },
+              include: {
+                author: { select: { id: true, name: true, image: true, username: true } },
+                _count: { select: { likes: true } },
+                likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
+              },
+            },
           },
         },
       },
@@ -109,12 +118,21 @@ export async function POST(req: Request) {
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
         comments: {
+          where: { parentId: null },
           take: 3,
           orderBy: { createdAt: 'desc' },
           include: {
             author: { select: { id: true, name: true, image: true, username: true } },
-            _count: { select: { likes: true } },
-            likes: { where: { userId: session.user.id }, select: { userId: true } },
+            _count: { select: { likes: true, replies: true } },
+            likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
+            replies: {
+              orderBy: { createdAt: 'asc' },
+              include: {
+                author: { select: { id: true, name: true, image: true, username: true } },
+                _count: { select: { likes: true } },
+                likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
+              },
+            },
           },
         },
       },

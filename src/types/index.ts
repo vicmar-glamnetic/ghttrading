@@ -10,16 +10,27 @@ export type UserWithCounts = User & {
 
 export type ReactionSummary = { type: string; count: number }
 
+type CommentAuthor = Pick<User, 'id' | 'name' | 'image' | 'username'>
+
+export type CommentReply = Comment & {
+  author: CommentAuthor
+  _count: { likes: number }
+  likes: Pick<Like, 'userId' | 'type'>[]
+}
+
+export type CommentWithReplies = Comment & {
+  author: CommentAuthor
+  _count: { likes: number; replies: number }
+  likes: Pick<Like, 'userId' | 'type'>[]
+  replies: CommentReply[]
+}
+
 export type PostWithDetails = Post & {
   author: Pick<User, 'id' | 'name' | 'image' | 'username'>
   _count: { likes: number; comments: number }
   likes: Pick<Like, 'userId' | 'type'>[]
   reactions?: ReactionSummary[]
-  comments: (Comment & {
-    author: Pick<User, 'id' | 'name' | 'image' | 'username'>
-    _count: { likes: number }
-    likes: Pick<Like, 'userId'>[]
-  })[]
+  comments: CommentWithReplies[]
   group?: { id: string; name: string; image: string | null } | null
   page?: { id: string; name: string; image: string | null; verified: boolean } | null
 }
