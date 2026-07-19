@@ -130,6 +130,15 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   const live = liveSignalStatus(idea, priceable ? price : null)
   const pips = signalPips(idea)
 
+  // Derive each TP's pip distance from entry rather than trusting the stored
+  // `tp.pips` — that field can hold stale/garbage values (e.g. a raw price)
+  // from older signals or hand-edits, which would render as nonsense.
+  const entryPipRef = mid(idea.entryLow, idea.entryHigh)
+  const tpPips = (price: number): number | null => {
+    if (entryPipRef == null || !Number.isFinite(price)) return null
+    return Math.round(Math.abs(price - entryPipRef) / pipConfig(idea.symbol).pipSize)
+  }
+
   // "Open" = not yet closed. Pending (waiting for entry) and running (entry hit) both count.
   const isOpen = idea.status === 'pending' || idea.status === 'running'
   // Partial progress: TPs already hit while the signal is still running.
@@ -259,7 +268,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
               : <Circle className="w-4 h-4 text-line2 shrink-0" />}
             <span className="text-sm font-semibold text-ink w-14 shrink-0">TP{i + 1}</span>
             <span className="text-sm text-green-400 flex-1 tabular-nums">
-              {fmtNum(tp.price)}{tp.pips != null ? <span className="text-ink3"> / {tp.pips} pips</span> : null}
+              {fmtNum(tp.price)}{(() => { const p = tpPips(tp.price); return p != null ? <span className="text-ink3"> / {p} pips</span> : null })()}
             </span>
             <CopyBtn text={fmtNum(tp.price)} />
           </div>
