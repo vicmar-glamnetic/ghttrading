@@ -11,7 +11,7 @@ export async function GET() {
 
     const entries = await db.journalEntry.findMany({
       where: { authorId: session.user.id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
     })
 
     return NextResponse.json(entries)

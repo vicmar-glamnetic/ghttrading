@@ -72,6 +72,36 @@ export async function PUT(
   }
 }
 
+// Lightweight partial update for flags that don't touch the trade math — today
+// just the pin toggle, so we don't have to round-trip the whole entry.
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ entryId: string }> }
+) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { entryId } = await params
+    const entry = await db.journalEntry.findUnique({ where: { id: entryId }, select: { authorId: true } })
+    if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (entry.authorId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const body = await req.json()
+    if (typeof body.pinned !== 'boolean') return NextResponse.json({ error: 'pinned must be a boolean' }, { status: 400 })
+
+    const updated = await db.journalEntry.update({
+      where: { id: entryId },
+      data: { pinned: body.pinned },
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('[JOURNAL_ENTRY_PATCH]', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ entryId: string }> }

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3 } from 'lucide-react'
+import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3, Pin, PinOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { formatDistanceToNow } from 'date-fns'
 import { JournalAnalytics } from './JournalAnalytics'
@@ -16,6 +16,7 @@ interface JournalEntry {
   title: string | null
   content: string
   mood: string | null
+  pinned: boolean
   symbol: string | null
   direction: string | null
   result: string | null
@@ -31,6 +32,15 @@ interface JournalEntry {
   chartUrl: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** Same order the API returns: pinned entries first, then newest-first. Applied
+ *  locally after a pin toggle so a re-pinned entry jumps without a refetch. */
+function sortEntries(list: JournalEntry[]) {
+  return [...list].sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+    return b.createdAt.localeCompare(a.createdAt)
+  })
 }
 
 /** How an R-multiple reads at a glance: green above breakeven, red below. */
@@ -252,6 +262,28 @@ export default function JournalPage() {
     }
   }
 
+  async function togglePin(entry: JournalEntry) {
+    const pinned = !entry.pinned
+    // Optimistic: flip and re-sort now, reconcile with the server's row after.
+    setEntries(e => sortEntries(e.map(x => x.id === entry.id ? { ...x, pinned } : x)))
+    if (selected?.id === entry.id) setSelected(s => s && { ...s, pinned })
+    try {
+      const res = await fetch(`/api/journal/${entry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned }),
+      })
+      if (!res.ok) throw new Error('pin failed')
+      const updated = await res.json()
+      setEntries(e => sortEntries(e.map(x => x.id === updated.id ? updated : x)))
+      setSelected(s => s?.id === updated.id ? updated : s)
+    } catch {
+      // Roll back on failure.
+      setEntries(e => sortEntries(e.map(x => x.id === entry.id ? { ...x, pinned: entry.pinned } : x)))
+      if (selected?.id === entry.id) setSelected(s => s && { ...s, pinned: entry.pinned })
+    }
+  }
+
   function cancelEdit() {
     if (mode === 'new') {
       setMode('view')
@@ -324,8 +356,9 @@ export default function JournalPage() {
                   className={`w-full text-left p-3 border-b border-line hover:bg-elevated transition-colors ${selected?.id === entry.id ? 'bg-elevated border-l-2 border-l-yellow-500' : ''}`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-ink truncate">
-                      {entry.title || 'Untitled'}
+                    <p className="flex items-center gap-1 text-sm font-semibold text-ink truncate">
+                      {entry.pinned && <Pin className="w-3 h-3 text-yellow-500 shrink-0 fill-yellow-500" />}
+                      <span className="truncate">{entry.title || 'Untitled'}</span>
                     </p>
                     {entry.pnl != null && (
                       <span className={`text-xs font-bold shrink-0 ${entry.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(entry.pnl)}</span>
@@ -547,6 +580,13 @@ export default function JournalPage() {
                   )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
+                  <button
+                    onClick={() => togglePin(selected)}
+                    title={selected.pinned ? 'Unpin entry' : 'Pin to top'}
+                    className={`p-1.5 rounded-lg transition-colors hover:bg-line ${selected.pinned ? 'text-yellow-500' : 'text-ink3 hover:text-yellow-500'}`}
+                  >
+                    {selected.pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                  </button>
                   <button onClick={() => startEdit(selected)} className="p-1.5 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-line transition-colors">
                     <Edit3 className="w-4 h-4" />
                   </button>
