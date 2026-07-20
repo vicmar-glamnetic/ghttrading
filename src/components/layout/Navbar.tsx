@@ -202,7 +202,7 @@ export function Navbar() {
               {showUserMenu && (
                 <div className="absolute right-0 top-full mt-1 w-52 bg-surface rounded-xl shadow-2xl border border-line overflow-hidden z-50">
                   <div className="p-3 border-b border-line">
-                    <p className="font-semibold text-sm text-ink truncate">{session.user.name}</p>
+                    <p className="font-semibold text-sm text-ink truncate">{me.name || session.user.name}</p>
                     <p className="text-xs text-ink3 truncate">{session.user.email}</p>
                   </div>
                   <Link href={`/profile/${session.user.id}`} onClick={() => setShowUserMenu(false)}

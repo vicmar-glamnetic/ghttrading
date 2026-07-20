@@ -9,6 +9,7 @@ import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil
 import { timeAgo } from '@/lib/utils'
 import { isOnline, lastSeenLabel } from '@/lib/presence'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
+import { updateMyProfile } from '@/lib/useMyProfile'
 import type { PostWithDetails } from '@/types'
 
 interface ProfileData {
@@ -175,22 +176,36 @@ function EditBioModal({ profile, onSave, onClose }: {
 
   async function handleSave() {
     const num = accmNumber.trim()
-    if (!num) { setError('ACCM number is required.'); return }
+    const payload: Record<string, string> = {
+      name: name.trim(),
+      bio: bio.trim(),
+      location: location.trim(),
+      website: website.trim(),
+    }
+    // The ACCM number is captured at onboarding. Only touch it here when the
+    // member actually changed it — an empty field must never block saving the
+    // rest of the profile (which was silently failing for members with no
+    // number on file) nor wipe an existing number.
+    if (num && num !== (profile.accmNumber || '')) payload.accmNumber = num
     setSaving(true)
     setError(null)
     try {
       const res = await fetch(`/api/users/${profile.id}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, bio, location, website, accmNumber: num }),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
-        onSave({ name, bio, location, website, accmNumber: num })
+        // Prefer the server's saved row so what shows matches what's stored.
+        const saved = await res.json().catch(() => null)
+        onSave(saved ?? payload)
         onClose()
       } else {
         const d = await res.json().catch(() => null)
         setError(d?.error || 'Could not save your changes. Please try again.')
       }
+    } catch {
+      setError('Could not reach the server. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -325,6 +340,10 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
 
   function handleEditSaved(updated: Partial<ProfileData>) {
     setProfile(prev => prev ? { ...prev, ...updated } : prev)
+    // The session JWT never re-reads `name`, so refresh the shared client cache
+    // that the nav/sidebar/composers read from — otherwise the new name only
+    // shows after a full reload.
+    if (updated.name != null) updateMyProfile({ name: updated.name })
   }
 
   function handlePostDeleted(postId: string) {

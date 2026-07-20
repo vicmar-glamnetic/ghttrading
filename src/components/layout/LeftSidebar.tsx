@@ -134,7 +134,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         >
           <Avatar src={me.image} name={me.name || session.user.name} size="sm" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink truncate">{session.user.name}</p>
+            <p className="text-sm font-semibold text-ink truncate">{me.name || session.user.name}</p>
             <p className="text-xs text-yellow-500 truncate">@{(session.user as { username?: string }).username || 'trader'}</p>
           </div>
         </Link>
