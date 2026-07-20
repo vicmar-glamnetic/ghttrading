@@ -40,7 +40,7 @@ export async function GET() {
       }
     })
     .filter(r => r.trades > 0 || r.winRate != null)
-    .sort((x, y) => y.pnl - x.pnl)
+    .sort((x, y) => (y.winRate ?? -1) - (x.winRate ?? -1) || y.trades - x.trades)
     .slice(0, 50)
 
   return NextResponse.json(rows)

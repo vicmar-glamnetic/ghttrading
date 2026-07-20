@@ -6,7 +6,6 @@ import { Trophy, Medal } from 'lucide-react'
 
 interface Row { id: string; name: string | null; username: string | null; image: string | null; pnl: number; trades: number; winRate: number | null }
 
-const money = (n: number) => `${n >= 0 ? '+' : '-'}$${Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}`
 const medal = ['🥇', '🥈', '🥉']
 
 export default function LeaderboardPage() {
@@ -41,15 +40,15 @@ export default function LeaderboardPage() {
               <Avatar src={r.image} name={r.name} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-ink truncate">{r.name || 'Trader'}</p>
-                <p className="text-[11px] text-ink3">{r.winRate != null ? `${r.winRate}% win` : '—'} · {r.trades} trade{r.trades !== 1 ? 's' : ''}</p>
+                <p className="text-[11px] text-ink3">{r.trades} trade{r.trades !== 1 ? 's' : ''}</p>
               </div>
-              <span className={`text-sm font-bold tabular-nums shrink-0 ${r.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{money(r.pnl)}</span>
+              <span className="text-sm font-bold tabular-nums shrink-0 text-green-400">{r.winRate != null ? `${r.winRate}%` : '—'}</span>
             </Link>
           ))}
         </div>
       )}
 
-      <p className="text-[10px] text-ink3 text-center">Ranked by journaled net P&amp;L. Only members who opted in appear. Self-reported — for fun &amp; motivation.</p>
+      <p className="text-[10px] text-ink3 text-center">Ranked by journaled win rate. Only members who opted in appear. Self-reported — for fun &amp; motivation.</p>
     </div>
   )
 }
