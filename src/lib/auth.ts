@@ -1,21 +1,39 @@
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { encode } from 'next-auth/jwt'
 import bcrypt from 'bcryptjs'
 import { randomUUID } from 'crypto'
 import { db } from './db'
 import { authConfig, stripLargePicture } from './auth.config'
 
+// "Remember me" session lengths. When the box is checked the session lasts the
+// full 30 days; when it's unchecked we mint a short-lived token so the login
+// doesn't outlive the day (useful on shared/public machines).
+const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60 // 30 days
+const SHORT_MAX_AGE = 24 * 60 * 60 // 1 day
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(db),
-  session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 }, // 30 days
+  session: { strategy: 'jwt', maxAge: REMEMBER_MAX_AGE }, // 30 days (cookie lifetime)
+  jwt: {
+    // The cookie's own expiry is fixed at session.maxAge, but the token's `exp`
+    // claim is what actually decides whether a session is still valid. Shorten
+    // it for non-"remember me" logins so those sessions expire early even though
+    // the cookie lingers. token.rememberMe is set in the jwt() callback below.
+    async encode(params) {
+      const maxAge = params.token?.rememberMe ? REMEMBER_MAX_AGE : SHORT_MAX_AGE
+      return encode({ ...params, maxAge })
+    },
+  },
   providers: [
     CredentialsProvider({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        rememberMe: { label: 'Remember me', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
@@ -58,6 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           trialEndsAt: user.trialEndsAt,
           approved: user.approved,
           sessionToken,
+          rememberMe: credentials.rememberMe !== 'false',
         }
       },
     }),
@@ -74,6 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.trialEndsAt = (user as { trialEndsAt?: Date | null }).trialEndsAt?.toISOString?.() ?? null
         token.approved = (user as { approved?: boolean }).approved
         token.sessionToken = (user as { sessionToken?: string }).sessionToken
+        token.rememberMe = (user as { rememberMe?: boolean }).rememberMe
         token.lastVerified = Date.now()
       } else if (token.id) {
         // Only hit the DB once every 5 minutes — SessionGuard calls update()

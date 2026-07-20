@@ -13,6 +13,7 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -29,7 +30,7 @@ function LoginForm() {
         setTimeout(() => reject(new Error('timeout')), 20000)
       )
       const result = await Promise.race([
-        signIn('credentials', { email, password, redirect: false }),
+        signIn('credentials', { email, password, rememberMe: String(rememberMe), redirect: false }),
         timeout,
       ])
       if (result?.error) {
@@ -95,6 +96,13 @@ function LoginForm() {
             </button>
           </div>
         </div>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded border-line bg-elevated accent-yellow-500 cursor-pointer"
+          />
+          <span className="text-sm text-ink2">Remember me for 30 days</span>
+        </label>
         <Button type="submit" variant="gold" loading={loading} className="w-full py-3 text-base">
           Sign In to Trade
         </Button>

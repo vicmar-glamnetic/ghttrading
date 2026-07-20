@@ -25,6 +25,7 @@ declare module 'next-auth' {
     trialEndsAt?: Date | string | null
     approved?: boolean | null
     sessionToken?: string | null
+    rememberMe?: boolean
   }
 }
 
@@ -38,6 +39,7 @@ declare module 'next-auth/jwt' {
     trialEndsAt?: string | null
     approved?: boolean | null
     sessionToken?: string | null
+    rememberMe?: boolean
     error?: string
   }
 }
