@@ -1,7 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 import { TrendingUp, Target, Scale, BarChart3, Ruler, Layers } from 'lucide-react'
-import { setupLabel } from '@/lib/setups'
+import { setupLabel, parseSetups } from '@/lib/setups'
 
 export interface Entry {
   symbol: string | null
@@ -64,17 +64,20 @@ export function JournalAnalytics({ entries }: { entries: Entry[] }) {
     const totalR = withR.reduce((s, e) => s + (e.rMultiple ?? 0), 0)
     const avgR = withR.length ? totalR / withR.length : null
 
-    // By setup — the "which of my setups actually works" table.
+    // By setup — the "which of my setups actually works" table. An entry can
+    // carry several setups (a confluence), and each one is credited with the
+    // trade, so the same trade shows up under every setup it was tagged with.
     const setupMap = new Map<string, { trades: number; wins: number; losses: number; pnl: number; r: number; rCount: number }>()
     for (const e of entries) {
-      if (!e.setup) continue
-      const c = setupMap.get(e.setup) ?? { trades: 0, wins: 0, losses: 0, pnl: 0, r: 0, rCount: 0 }
-      c.trades++
-      if (e.result === 'win') c.wins++
-      if (e.result === 'loss') c.losses++
-      c.pnl += e.pnl ?? 0
-      if (e.rMultiple != null) { c.r += e.rMultiple; c.rCount++ }
-      setupMap.set(e.setup, c)
+      for (const value of parseSetups(e.setup)) {
+        const c = setupMap.get(value) ?? { trades: 0, wins: 0, losses: 0, pnl: 0, r: 0, rCount: 0 }
+        c.trades++
+        if (e.result === 'win') c.wins++
+        if (e.result === 'loss') c.losses++
+        c.pnl += e.pnl ?? 0
+        if (e.rMultiple != null) { c.r += e.rMultiple; c.rCount++ }
+        setupMap.set(value, c)
+      }
     }
     const setups = [...setupMap.entries()]
       .map(([value, v]) => ({

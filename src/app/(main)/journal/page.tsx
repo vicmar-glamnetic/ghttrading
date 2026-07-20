@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { JournalAnalytics } from './JournalAnalytics'
 import { ChartUpload } from '@/components/trading/ChartUpload'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
-import { SETUPS, setupLabel } from '@/lib/setups'
+import { SETUPS, setupLabels, parseSetups } from '@/lib/setups'
 import { deriveTrade } from '@/lib/journal'
 
 interface JournalEntry {
@@ -126,7 +126,7 @@ export default function JournalPage() {
   const [stopPrice, setStopPrice] = useState('')
   const [targetPrice, setTargetPrice] = useState('')
   const [lots, setLots] = useState('')
-  const [setup, setSetup] = useState('')
+  const [setups, setSetups] = useState<string[]>([])
   const [chartUrl, setChartUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -166,8 +166,12 @@ export default function JournalPage() {
     setStopPrice('')
     setTargetPrice('')
     setLots('')
-    setSetup('')
+    setSetups([])
     setChartUrl(null)
+  }
+
+  function toggleSetup(value: string) {
+    setSetups(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value])
   }
 
   function openNew() {
@@ -200,7 +204,7 @@ export default function JournalPage() {
     setStopPrice(entry.stopPrice == null ? '' : String(entry.stopPrice))
     setTargetPrice(entry.targetPrice == null ? '' : String(entry.targetPrice))
     setLots(entry.lots == null ? '' : String(entry.lots))
-    setSetup(entry.setup ?? '')
+    setSetups(parseSetups(entry.setup))
     setChartUrl(entry.chartUrl)
     setMode('edit')
   }
@@ -218,7 +222,7 @@ export default function JournalPage() {
       stopPrice: stopPrice.trim() || null,
       targetPrice: targetPrice.trim() || null,
       lots: lots.trim() || null,
-      setup: setup || null,
+      setup: setups,
       chartUrl,
     }
     setSaving(true)
@@ -377,7 +381,7 @@ export default function JournalPage() {
                       </span>
                     )}
                     {entry.setup && (
-                      <span className="text-[10px] text-ink3 truncate">{setupLabel(entry.setup)}</span>
+                      <span className="text-[10px] text-ink3 truncate">{setupLabels(entry.setup).join(' · ')}</span>
                     )}
                     {entry.mood && (
                       <span className="text-[10px] text-ink3 shrink-0">{moodLabel(entry.mood)}</span>
@@ -464,18 +468,32 @@ export default function JournalPage() {
                     ))}
                   </div>
 
-                  {/* Setup — the shared vocabulary that makes the analytics comparable */}
-                  <label className="block">
-                    <span className="text-[10px] font-semibold text-ink3">Setup</span>
-                    <select
-                      value={setup}
-                      onChange={e => setSetup(e.target.value)}
-                      className={`${fieldCls} mt-1 w-full scheme-dark`}
-                    >
-                      <option value="">No setup tagged</option>
-                      {SETUPS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </select>
-                  </label>
+                  {/* Setups — the shared vocabulary that makes the analytics
+                      comparable. Tag as many as applied; a real trade is often a
+                      confluence, and each one is scored on its own. */}
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[10px] font-semibold text-ink3">Setups</span>
+                      <span className="text-[10px] text-line2">
+                        {setups.length ? `${setups.length} tagged` : 'tap all that apply'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {SETUPS.map(s => {
+                        const active = setups.includes(s.value)
+                        return (
+                          <button
+                            key={s.value}
+                            type="button"
+                            onClick={() => toggleSetup(s.value)}
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${active ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
+                          >
+                            {s.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
 
                   {/* Prices — fill entry, exit and lots and the P&L computes itself */}
                   <div>
@@ -562,11 +580,11 @@ export default function JournalPage() {
                           {selected.direction === 'buy' ? '▲ BUY' : '▼ SELL'}
                         </span>
                       )}
-                      {selected.setup && (
-                        <span className="text-xs text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5">
-                          {setupLabel(selected.setup)}
+                      {setupLabels(selected.setup).map(label => (
+                        <span key={label} className="text-xs text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded px-1.5 py-0.5">
+                          {label}
                         </span>
-                      )}
+                      ))}
                       {selected.result && <span className="text-xs text-ink2">{results.find(r => r.value === selected.result)?.label}</span>}
                       {selected.pnl != null && (
                         <span className={`text-xs font-bold ${selected.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(selected.pnl)}</span>

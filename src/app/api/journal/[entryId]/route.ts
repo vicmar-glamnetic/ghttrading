@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { deriveTrade } from '@/lib/journal'
-import { isKnownSetup } from '@/lib/setups'
+import { sanitizeSetups } from '@/lib/setups'
 
 export async function GET(
   _req: Request,
@@ -53,7 +53,7 @@ export async function PUT(
         direction: direction || null,
         result: result || null,
         tradedAt: tradedAt ? new Date(tradedAt) : null,
-        setup: isKnownSetup(setup) ? setup : null,
+        setup: sanitizeSetups(setup),
         chartUrl: chartUrl || null,
         entryPrice: trade.entryPrice,
         exitPrice: trade.exitPrice,
