@@ -41,6 +41,36 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ postId: string }> }
+) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { postId } = await params
+
+    const post = await db.post.findUnique({ where: { id: postId }, select: { authorId: true } })
+    if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (post.authorId !== session.user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const body = await req.json()
+    const content = typeof body.content === 'string' ? body.content.trim() : ''
+    if (!content) return NextResponse.json({ error: 'Content required' }, { status: 400 })
+
+    const updated = await db.post.update({
+      where: { id: postId },
+      data: { content },
+      select: { id: true, content: true, updatedAt: true },
+    })
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('[POST_PATCH]', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ postId: string }> }

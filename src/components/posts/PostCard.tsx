@@ -8,10 +8,11 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { ReactorsModal } from '@/components/posts/ReactorsModal'
 import { timeAgo, formatNumber, cn } from '@/lib/utils'
 import { REACTIONS, getReaction } from '@/lib/reactions'
+import { useReactionPicker } from '@/lib/useReactionPicker'
 import {
   ThumbsUp, MessageCircle, MoreHorizontal,
   TrendingUp, TrendingDown, BarChart2, BookOpen,
-  Globe, Lock, Users, Play, Trash2, Flag, BadgeCheck,
+  Globe, Lock, Users, Play, Trash2, Flag, BadgeCheck, Pencil,
 } from 'lucide-react'
 import type { PostWithDetails, ReactionSummary } from '@/types'
 
@@ -44,7 +45,7 @@ function isVideo(url: string) {
 }
 
 // ---------- Post menu (three-dot) ----------
-function PostMenu({ postId, isOwner, onDelete }: { postId: string; isOwner: boolean; onDelete?: (id: string) => void }) {
+function PostMenu({ postId, isOwner, onEdit, onDelete }: { postId: string; isOwner: boolean; onEdit?: () => void; onDelete?: (id: string) => void }) {
   const [open, setOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -82,6 +83,13 @@ function PostMenu({ postId, isOwner, onDelete }: { postId: string; isOwner: bool
       {open && (
         <div className="absolute right-0 top-8 z-50 w-40 bg-elevated border border-line rounded-xl shadow-2xl overflow-hidden">
           <button
+            onClick={() => { setOpen(false); onEdit?.() }}
+            className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-ink2 hover:bg-elevated hover:text-ink transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            Edit Post
+          </button>
+          <button
             onClick={handleDelete}
             disabled={deleting}
             className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
@@ -114,8 +122,7 @@ function CommentReactions({
 }) {
   const [myReaction, setMyReaction] = useState<string | null>((likes ?? [])[0]?.type ?? null)
   const [total, setTotal] = useState(count)
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { open, ref, close, triggerProps, pickerProps, consumeLongPress } = useReactionPicker()
 
   async function react(sent: string) {
     const prev = myReaction
@@ -124,7 +131,7 @@ function CommentReactions({
 
     setMyReaction(next)
     setTotal(c => c + delta)
-    setPickerOpen(false)
+    close()
 
     try {
       const res = await fetch(`/api/posts/${postId}/comments/${commentId}/like`, {
@@ -139,24 +146,14 @@ function CommentReactions({
     }
   }
 
-  const open = () => {
-    if (timer.current) clearTimeout(timer.current)
-    setPickerOpen(true)
-  }
-  const closeSoon = () => {
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setPickerOpen(false), 250)
-  }
-
   const current = myReaction ? getReaction(myReaction) : null
 
   return (
-    <div className="relative inline-flex items-center gap-1" onMouseEnter={open} onMouseLeave={closeSoon}>
-      {pickerOpen && (
+    <div ref={ref} className="relative inline-flex items-center gap-1 select-none" {...triggerProps}>
+      {open && (
         <div
           className="absolute bottom-full left-0 mb-1 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
-          onMouseEnter={open}
-          onMouseLeave={closeSoon}
+          {...pickerProps}
         >
           {REACTIONS.map(r => (
             <button
@@ -174,7 +171,7 @@ function CommentReactions({
         </div>
       )}
       <button
-        onClick={() => react(myReaction ?? 'like')}
+        onClick={() => { if (consumeLongPress()) return; react(myReaction ?? 'like') }}
         className={cn('font-semibold transition-colors', current ? 'text-yellow-500' : 'text-ink3 hover:text-ink2')}
       >
         {current ? current.label : 'Like'}
@@ -377,9 +374,15 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
   const [myReaction, setMyReaction] = useState<string | null>((post.likes ?? [])[0]?.type ?? null)
   const [reactions, setReactions] = useState<ReactionSummary[]>(post.reactions ?? [])
   const [totalReactions, setTotalReactions] = useState(post._count?.likes ?? 0)
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const {
+    open: pickerOpen,
+    ref: pickerRef,
+    close: closePicker,
+    triggerProps: pickerTriggerProps,
+    pickerProps,
+    consumeLongPress,
+  } = useReactionPicker()
   const [showReactors, setShowReactors] = useState(false)
-  const pickerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
@@ -387,6 +390,10 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
   const [commentCount, setCommentCount] = useState(post._count?.comments ?? 0)
   const [visible, setVisible] = useState(true)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [content, setContent] = useState(post.content)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(post.content)
+  const [savingEdit, setSavingEdit] = useState(false)
 
   // Only images go into the lightbox; videos stay inline
   const imageUrls = (post.images ?? []).filter(m => !isVideo(m))
@@ -400,6 +407,31 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
     onDelete?.(id)
   }
 
+  function startEdit() {
+    setDraft(content)
+    setEditing(true)
+  }
+
+  async function handleEditSave() {
+    const trimmed = draft.trim()
+    if (!trimmed || savingEdit) return
+    if (trimmed === content) { setEditing(false); return }
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: trimmed }),
+      })
+      if (res.ok) {
+        setContent(trimmed)
+        setEditing(false)
+      }
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   // `sent` is the reaction type we POST. The server toggles it off when it
   // matches the current reaction, so mirror that here for optimistic state.
   async function sendReaction(sent: string) {
@@ -410,7 +442,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
     setMyReaction(next)
     setReactions(list => mutateSummary(list, prev, next))
     setTotalReactions(c => c + delta)
-    setPickerOpen(false)
+    closePicker()
 
     try {
       const res = await fetch(`/api/posts/${post.id}/like`, {
@@ -424,15 +456,6 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
       setReactions(list => mutateSummary(list, next, prev))
       setTotalReactions(c => c - delta)
     }
-  }
-
-  function openPicker() {
-    if (pickerTimer.current) clearTimeout(pickerTimer.current)
-    setPickerOpen(true)
-  }
-  function closePickerSoon() {
-    if (pickerTimer.current) clearTimeout(pickerTimer.current)
-    pickerTimer.current = setTimeout(() => setPickerOpen(false), 250)
   }
 
   async function handleComment(e: React.FormEvent) {
@@ -533,12 +556,32 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
             </div>
           </div>
         </div>
-        <PostMenu postId={post.id} isOwner={isOwner} onDelete={handlePostDelete} />
+        <PostMenu postId={post.id} isOwner={isOwner} onEdit={startEdit} onDelete={handlePostDelete} />
       </div>
 
       {/* Content */}
       <div className="px-4 pb-3">
-        <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">{post.content}</p>
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              rows={3}
+              autoFocus
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={savingEdit}>
+                Cancel
+              </Button>
+              <Button variant="gold" size="sm" onClick={handleEditSave} loading={savingEdit} disabled={!draft.trim()}>
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">{content}</p>
+        )}
       </div>
 
       {/* Media */}
@@ -635,17 +678,16 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
 
       {/* Action buttons */}
       <div className="flex border-t border-line">
-        {/* Like / reaction — hover (or tap the caret) reveals the reaction picker */}
+        {/* Like / reaction — hover (desktop) or long-press (mobile) reveals the picker; a tap likes */}
         <div
-          className="relative flex-1"
-          onMouseEnter={openPicker}
-          onMouseLeave={closePickerSoon}
+          ref={pickerRef}
+          className="relative flex-1 select-none"
+          {...pickerTriggerProps}
         >
           {pickerOpen && (
             <div
               className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
-              onMouseEnter={openPicker}
-              onMouseLeave={closePickerSoon}
+              {...pickerProps}
             >
               {REACTIONS.map(r => (
                 <button
@@ -666,7 +708,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
             const current = myReaction ? getReaction(myReaction) : null
             return (
               <button
-                onClick={() => sendReaction(myReaction ?? 'like')}
+                onClick={() => { if (consumeLongPress()) return; sendReaction(myReaction ?? 'like') }}
                 className={cn(
                   'w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold transition-colors',
                   current ? 'text-yellow-500' : 'text-ink3 hover:text-ink2 hover:bg-elevated',
