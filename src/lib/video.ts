@@ -20,7 +20,12 @@ export function toEmbed(url: string): string {
 
     // Facebook / fb.watch — wrap in the Video plugin (video must be Public).
     if ((host.includes('facebook.com') || host === 'fb.watch') && !u.pathname.includes('/plugins/video.php')) {
-      const canonical = raw.replace('://m.facebook.com', '://www.facebook.com')
+      // The plugin rejects the /watch/?v=<id> form ("content isn't available"),
+      // so rewrite a bare video id to the accepted /video.php?v=<id> form.
+      const id = (u.pathname === '/watch/' || u.pathname === '/watch') ? u.searchParams.get('v') : null
+      const canonical = id
+        ? `https://www.facebook.com/video.php?v=${id}`
+        : raw.replace('://m.facebook.com', '://www.facebook.com')
       return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(canonical)}&show_text=false&autoplay=true`
     }
 
