@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button'
 import {
   Lightbulb, Plus, Copy, Check, ArrowRight, Circle, CheckCircle2, XCircle,
   Globe, Lock, Pencil, Trash2, X, AlertTriangle, ThumbsUp, ThumbsDown, RotateCcw,
-  GraduationCap, SlidersHorizontal, ChevronDown, Activity, Bell,
+  GraduationCap, SlidersHorizontal, ChevronDown, Activity, Bell, NotebookPen,
 } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { PerformancePanel } from './PerformancePanel'
 import { ChartUpload } from '@/components/trading/ChartUpload'
 import { RiskGuard } from '@/components/trading/RiskGuard'
@@ -51,6 +52,16 @@ type StatusFilter = 'all' | 'live' | 'win' | 'loss'
 type MetalFilter = 'all' | 'gold' | 'other'
 
 const isGoldSymbol = (symbol: string) => symbol.toUpperCase().startsWith('XAU')
+
+/** Deep-link to the journal composer, pre-filled from a signal (#1). A closed
+ *  signal carries its outcome so the entry opens as a win/loss template. */
+function journalHrefFor(idea: { symbol: string; direction: string; status: string }) {
+  const params = new URLSearchParams({ symbol: idea.symbol, direction: idea.direction })
+  if (idea.status === 'tp_hit') params.set('compose', 'win')
+  else if (idea.status === 'sl_hit') params.set('compose', 'loss')
+  else params.set('compose', 'blank')
+  return `/journal?${params.toString()}`
+}
 
 const PAGE_SIZE = 5
 
@@ -424,6 +435,21 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
           </button>
           <button onClick={() => onDelete(idea)} title="Delete signal" className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
         </div>
+      )}
+
+      {/* Catch the trade at the moment it matters: log it while it's fresh (#1).
+          Closed signals prompt more strongly, since the outcome is known. */}
+      {idea.status !== 'cancelled' && (
+        <Link
+          href={journalHrefFor(idea)}
+          className={`mt-3 flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${
+            isOpen
+              ? 'text-ink2 border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated'
+              : 'text-yellow-500 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10'
+          }`}
+        >
+          <NotebookPen className="w-3.5 h-3.5" /> {isOpen ? 'Log to your journal' : 'Log this trade to your journal'}
+        </Link>
       )}
 
       <div className="mt-3 pt-3 border-t border-line flex items-start gap-1.5">

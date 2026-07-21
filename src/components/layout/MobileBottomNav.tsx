@@ -136,6 +136,14 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
                   </Link>
                 )
               })}
+              <Link
+                href="/journal?compose=blank"
+                onClick={() => setOpen(false)}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-500 active:bg-yellow-500/15 p-3"
+              >
+                <NotebookPen className="w-5 h-5" />
+                <span className="text-[11px] font-medium">Log Trade</span>
+              </Link>
               <button
                 onClick={() => { setOpen(false); openTour() }}
                 className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-ink2 active:bg-elevated p-3"

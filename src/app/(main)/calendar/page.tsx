@@ -1,11 +1,12 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { CalendarDays, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, NotebookPen } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, NotebookPen, Flame } from 'lucide-react'
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
-  addMonths, subMonths, format, isSameMonth, isSameDay, isToday,
+  addMonths, subMonths, format, isSameMonth, isSameDay, isToday, isFuture,
 } from 'date-fns'
+import { journalingStreak } from '@/lib/journalTemplates'
 
 interface JournalEntry {
   id: string
@@ -81,6 +82,35 @@ export default function CalendarPage() {
     return { net, wins, losses, winRate, trades, count: monthEntries.length }
   }, [entries, month])
 
+  // Journaling-consistency heatmap (#8): the last ~17 weeks as a GitHub-style
+  // grid — filled squares are days journaled, empty ones nag you to fill them.
+  const WEEKS = 17
+  const heatmap = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const e of entries) {
+      const k = format(entryDate(e), 'yyyy-MM-dd')
+      counts.set(k, (counts.get(k) ?? 0) + 1)
+    }
+    const end = endOfWeek(new Date())
+    const start = startOfWeek(new Date(end.getTime() - (WEEKS * 7 - 1) * 86400000))
+    const allDays = eachDayOfInterval({ start, end })
+    const weeks: { date: Date; count: number }[][] = []
+    for (let i = 0; i < allDays.length; i += 7) {
+      weeks.push(allDays.slice(i, i + 7).map(date => ({ date, count: counts.get(format(date, 'yyyy-MM-dd')) ?? 0 })))
+    }
+    return weeks
+  }, [entries])
+
+  const streak = useMemo(() => journalingStreak(entries.map(entryDate)), [entries])
+  const journaledDays = useMemo(() => new Set(entries.map(e => format(entryDate(e), 'yyyy-MM-dd'))).size, [entries])
+
+  function heatCell(count: number) {
+    if (count <= 0) return 'bg-elevated border border-line'
+    if (count === 1) return 'bg-orange-500/30'
+    if (count === 2) return 'bg-orange-500/60'
+    return 'bg-orange-500'
+  }
+
   function dayPnl(date: Date) {
     const list = byDay.get(format(date, 'yyyy-MM-dd'))
     if (!list) return null
@@ -119,6 +149,43 @@ export default function CalendarPage() {
             <p className={`text-xl font-black ${color}`}>{value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Journaling consistency heatmap */}
+      <div className="bg-surface rounded-xl border border-line p-4">
+        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+          <h2 className="font-bold text-ink text-sm flex items-center gap-1.5">
+            <Flame className={`w-4 h-4 ${streak > 0 ? 'text-orange-400 fill-orange-400' : 'text-ink3'}`} />
+            Journaling consistency
+          </h2>
+          <div className="flex items-center gap-3 text-[11px] text-ink3">
+            {streak > 0 && <span className="text-orange-400 font-bold">{streak}-day streak</span>}
+            <span>{journaledDays} days journaled</span>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <div className="flex gap-1 min-w-max">
+            {heatmap.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-1">
+                {week.map(({ date, count }) => (
+                  <div
+                    key={date.toISOString()}
+                    title={`${format(date, 'EEE, MMM d')} — ${count ? `${count} ${count === 1 ? 'entry' : 'entries'}` : 'no entry'}`}
+                    className={`w-3 h-3 rounded-sm ${isFuture(date) ? 'opacity-0' : heatCell(count)} ${isToday(date) ? 'ring-1 ring-yellow-500' : ''}`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 mt-2 text-[10px] text-ink3">
+          <span>Less</span>
+          <span className="w-3 h-3 rounded-sm bg-elevated border border-line" />
+          <span className="w-3 h-3 rounded-sm bg-orange-500/30" />
+          <span className="w-3 h-3 rounded-sm bg-orange-500/60" />
+          <span className="w-3 h-3 rounded-sm bg-orange-500" />
+          <span>More</span>
+        </div>
       </div>
 
       {/* Calendar card */}

@@ -1,5 +1,7 @@
 {
   "crons": [
-    { "path": "/api/cron/weekly-recap", "schedule": "0 9 * * 1" }
+    { "path": "/api/cron/weekly-recap", "schedule": "0 9 * * 1" },
+    { "path": "/api/cron/journal-nudge", "schedule": "0 17 * * 0" },
+    { "path": "/api/cron/journal-monthly-recap", "schedule": "0 14 1 * *" }
   ]
 }

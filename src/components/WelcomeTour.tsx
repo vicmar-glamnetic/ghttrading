@@ -97,6 +97,13 @@ const STEPS: Step[] = [
     cta: 'Open Journal',
   },
   {
+    icon: NotebookPen,
+    title: 'Write your first entry ✍️',
+    body: 'The habit starts with one line. Log your last trade — or just how the market feels today. Pick a template and it opens half-written, so you only fill in the blanks.',
+    href: '/journal?compose=blank',
+    cta: 'Write my first entry',
+  },
+  {
     icon: CalendarDays,
     title: 'P&L Calendar',
     body: 'Your journaled profit/loss laid out day by day, so you can see your green and red days at a glance and spot patterns.',

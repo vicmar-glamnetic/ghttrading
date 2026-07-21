@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3, Pin, PinOff } from 'lucide-react'
+import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3, Pin, PinOff, Flame, Sparkles, TrendingUp, TrendingDown, ClipboardList, Lightbulb, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { formatDistanceToNow } from 'date-fns'
 import { JournalAnalytics } from './JournalAnalytics'
@@ -10,6 +10,12 @@ import { ChartUpload } from '@/components/trading/ChartUpload'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { SETUPS, setupLabels, parseSetups } from '@/lib/setups'
 import { deriveTrade } from '@/lib/journal'
+import { JOURNAL_TEMPLATES, getTemplate, promptForDay, journalingStreak, type JournalTemplate } from '@/lib/journalTemplates'
+
+const DRAFT_KEY = 'ght:journalDraft'
+// Analytics unlocks once there's enough logged to be meaningful — the locked
+// teaser is itself the pull to journal more (#5).
+const ANALYTICS_MIN = 3
 
 interface JournalEntry {
   id: string
@@ -70,6 +76,29 @@ const moods = [
 
 function moodLabel(value: string | null) {
   return moods.find(m => m.value === value)?.label ?? null
+}
+
+const templateIcons: Record<string, typeof BookOpen> = {
+  win: TrendingUp, loss: TrendingDown, plan: ClipboardList, lesson: Lightbulb,
+}
+
+/**
+ * Build the public feed post for a journal entry (#3). Deliberately shares only
+ * the structured trade summary — never the private free-text notes, and never
+ * the dollar P&L amount (same discretion as the leaderboard). Win/loss, R and
+ * setups are the parts worth showing the community.
+ */
+function buildShareContent(entry: JournalEntry): string {
+  const dir = entry.direction === 'buy' ? '▲ BUY' : entry.direction === 'sell' ? '▼ SELL' : ''
+  const res = entry.result === 'win' ? '✅ Win' : entry.result === 'loss' ? '❌ Loss' : entry.result === 'breakeven' ? '➖ Breakeven' : ''
+  const r = entry.rMultiple != null ? `${entry.rMultiple >= 0 ? '+' : ''}${entry.rMultiple.toFixed(2)}R` : ''
+  const setups = setupLabels(entry.setup).join(' · ')
+  const headline = [entry.symbol, dir, res, r].filter(Boolean).join('  ·  ')
+  return [
+    '📓 From my trading journal',
+    headline || null,
+    setups ? `Setup: ${setups}` : null,
+  ].filter(Boolean).join('\n')
 }
 
 const fieldCls = 'bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2'
@@ -133,6 +162,9 @@ export default function JournalPage() {
   const [mobileShowEditor, setMobileShowEditor] = useState(false)
   const [view, setView] = useState<'entries' | 'analytics'>('entries')
   const [chartOpen, setChartOpen] = useState(false)
+  const [shareEntry, setShareEntry] = useState<JournalEntry | null>(null)
+  const [sharing, setSharing] = useState(false)
+  const [shareDone, setShareDone] = useState(false)
 
   // Live preview of what the server will store. Same function the API uses, so
   // the number in the form is the number that gets saved.
@@ -140,6 +172,11 @@ export default function JournalPage() {
     () => deriveTrade({ symbol, direction, entryPrice, exitPrice, stopPrice, targetPrice, lots, pnl, result }),
     [symbol, direction, entryPrice, exitPrice, stopPrice, targetPrice, lots, pnl, result],
   )
+
+  // Consecutive days journaled, ending today/yesterday. A visible streak is a
+  // strong habit cue, so it lives in the header.
+  const streak = useMemo(() => journalingStreak(entries.map(e => e.createdAt)), [entries])
+  const todayPrompt = useMemo(() => promptForDay(), [])
 
   const load = useCallback(async () => {
     try {
@@ -154,6 +191,13 @@ export default function JournalPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Autosave the in-progress new entry so nothing is lost on an accidental close.
+  useEffect(() => {
+    if (mode !== 'new' || typeof window === 'undefined') return
+    if (!title && !content && !mood) { localStorage.removeItem(DRAFT_KEY); return }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, content, mood }))
+  }, [mode, title, content, mood])
 
   function resetTradeFields() {
     setSymbol('')
@@ -174,15 +218,84 @@ export default function JournalPage() {
     setSetups(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value])
   }
 
-  function openNew() {
+  function openNew(prefill?: { title?: string; content?: string; mood?: string; result?: string; direction?: string; symbol?: string }) {
+    // No prefill = the plain "New Entry" button: restore an unsaved draft so a
+    // half-written entry is never lost (#10).
+    if (!prefill && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY)
+        if (raw) prefill = JSON.parse(raw)
+      } catch {}
+    }
     setSelected(null)
-    setTitle('')
-    setContent('')
-    setMood('')
+    setTitle(prefill?.title ?? '')
+    setContent(prefill?.content ?? '')
+    setMood(prefill?.mood ?? '')
     resetTradeFields()
+    if (prefill?.result) setResult(prefill.result)
+    if (prefill?.direction) setDirection(prefill.direction)
+    if (prefill?.symbol) setSymbol(prefill.symbol)
     setMode('new')
     setMobileShowEditor(true)
+    setView('entries')
   }
+
+  /** Open the composer pre-filled from a starter template (#6 / quick-add). */
+  const openTemplate = useCallback((t: JournalTemplate) => {
+    openNew({ title: t.title, content: t.content, mood: t.mood, result: t.result, direction: t.direction })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /** Open the composer scaffolded with today's reflection prompt (#7). */
+  function openPrompt() {
+    openNew({ title: todayPrompt.title, content: `${todayPrompt.content}\n\n` })
+  }
+
+  /** One-tap mood log: create a minimal entry immediately (#10). */
+  async function quickLogMood(m: { value: string; label: string }) {
+    if (saving) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: null, content: `Feeling ${m.label}`, mood: m.value }),
+      })
+      if (res.ok) {
+        const created = await res.json()
+        setEntries(e => [created, ...e])
+        setSelected(created)
+        setMode('view')
+        setMobileShowEditor(true)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Deep-link into the composer from anywhere in the app: /journal?compose=<key>
+  // powers the empty-state templates, mobile quick-add, the welcome tour and the
+  // "log this trade" prompt after a signal closes. Read once on mount; the param
+  // is then stripped so a refresh doesn't reopen it.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('view') === 'analytics') { setView('analytics'); window.history.replaceState(null, '', '/journal') }
+    const key = params.get('compose')
+    if (!key) return
+    // Optional trade context carried in from a signal card (#1).
+    const symbolP = params.get('symbol')?.toUpperCase() || undefined
+    const directionP = params.get('direction') || undefined
+    if (key === 'prompt') openPrompt()
+    else {
+      const t = getTemplate(key)
+      openNew(t
+        ? { title: t.title, content: t.content, mood: t.mood, result: t.result, direction: directionP ?? t.direction, symbol: symbolP }
+        : { symbol: symbolP, direction: directionP })
+    }
+    window.history.replaceState(null, '', '/journal')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTemplate])
 
   function openEntry(entry: JournalEntry) {
     setSelected(entry)
@@ -237,6 +350,7 @@ export default function JournalPage() {
         setEntries(e => [created, ...e])
         setSelected(created)
         setMode('view')
+        if (typeof window !== 'undefined') localStorage.removeItem(DRAFT_KEY)
       } else if (mode === 'edit' && selected) {
         const res = await fetch(`/api/journal/${selected.id}`, {
           method: 'PUT',
@@ -250,6 +364,28 @@ export default function JournalPage() {
       }
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function shareToFeed(entry: JournalEntry) {
+    setSharing(true)
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: buildShareContent(entry),
+          images: entry.chartUrl ? [entry.chartUrl] : [],
+          feeling: 'journal',
+          privacy: 'public',
+        }),
+      })
+      if (res.ok) {
+        setShareDone(true)
+        setTimeout(() => { setShareEntry(null); setShareDone(false) }, 1400)
+      }
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -297,18 +433,92 @@ export default function JournalPage() {
     }
   }
 
+  // Activation block: a daily prompt, one-tap starter templates and a mood
+  // quick-log. Turns the blank page into a menu of half-written entries — the
+  // single biggest lever on getting a first entry written. Reused in the empty
+  // list and the "nothing selected" pane.
+  const quickStart = (
+    <div className="p-4 space-y-4 text-left">
+      <div>
+        <p className="text-sm font-bold text-ink">Start your journal</p>
+        <p className="text-xs text-ink3 mt-0.5">Pick a template — it opens half-written so you just fill the blanks.</p>
+      </div>
+
+      {/* Today's reflection prompt (#7) */}
+      <button
+        onClick={openPrompt}
+        className="w-full flex items-start gap-2.5 rounded-lg border border-yellow-500/25 bg-yellow-500/5 hover:bg-yellow-500/10 px-3 py-2.5 text-left transition-colors"
+      >
+        <Sparkles className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+        <span>
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-yellow-500/80">Today&apos;s prompt</span>
+          <span className="block text-sm font-semibold text-ink leading-snug">{todayPrompt.title}</span>
+        </span>
+      </button>
+
+      {/* Starter templates (#6) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {JOURNAL_TEMPLATES.map(t => {
+          const Icon = templateIcons[t.key] ?? BookOpen
+          return (
+            <button
+              key={t.key}
+              onClick={() => openTemplate(t)}
+              className="flex items-start gap-2.5 rounded-lg border border-line bg-sunken hover:border-yellow-500/40 hover:bg-elevated px-3 py-2.5 text-left transition-colors"
+            >
+              <Icon className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+              <span>
+                <span className="block text-sm font-semibold text-ink leading-tight">{t.label}</span>
+                <span className="block text-[11px] text-ink3 mt-0.5 leading-snug">{t.hint}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Mood-only quick log (#10) */}
+      <div>
+        <p className="text-[11px] text-ink3 mb-1.5">Just checking in? Log how you&apos;re feeling in one tap:</p>
+        <div className="flex flex-wrap gap-1.5">
+          {moods.map(m => (
+            <button
+              key={m.value}
+              onClick={() => quickLogMood(m)}
+              disabled={saving}
+              className="text-xs px-2.5 py-1 rounded-full border border-line text-ink2 hover:border-yellow-500/40 hover:text-ink disabled:opacity-50 transition-colors"
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={() => openNew()} className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors">
+        …or start from a blank page →
+      </button>
+    </div>
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-yellow-500" />
           <h1 className="font-bold text-ink text-lg">My Journal</h1>
+          {streak > 0 && (
+            <span
+              title={`You've journaled ${streak} day${streak === 1 ? '' : 's'} in a row — keep it going!`}
+              className="flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400 text-xs font-bold px-2 py-0.5"
+            >
+              <Flame className="w-3.5 h-3.5 fill-orange-400" /> {streak}-day streak
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Link href="/calendar" className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-1">
             <CalendarDays className="w-3.5 h-3.5" /> Calendar
           </Link>
-          <Button variant="gold" size="sm" onClick={openNew} className="gap-1.5 text-xs">
+          <Button variant="gold" size="sm" onClick={() => openNew()} className="gap-1.5 text-xs">
             <Plus className="w-3.5 h-3.5" /> New Entry
           </Button>
         </div>
@@ -326,7 +536,27 @@ export default function JournalPage() {
       </div>
 
       {view === 'analytics' ? (
-        <JournalAnalytics entries={entries} />
+        entries.length < ANALYTICS_MIN ? (
+          <div className="bg-surface rounded-xl border border-line p-8 text-center max-w-md mx-auto">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/25 grid place-items-center mb-3">
+              <BarChart3 className="w-6 h-6 text-yellow-500" />
+            </div>
+            <h2 className="font-bold text-ink">Your edge report is almost ready</h2>
+            <p className="text-sm text-ink3 mt-1.5">
+              Log {ANALYTICS_MIN - entries.length} more {ANALYTICS_MIN - entries.length === 1 ? 'trade' : 'trades'} to unlock your win rate, profit
+              factor, equity curve and best-performing setups.
+            </p>
+            <div className="mt-3 h-2 rounded-full bg-elevated overflow-hidden">
+              <div className="h-full bg-yellow-500 transition-all" style={{ width: `${Math.round((entries.length / ANALYTICS_MIN) * 100)}%` }} />
+            </div>
+            <p className="text-[11px] text-ink3 mt-1.5">{entries.length} of {ANALYTICS_MIN} entries</p>
+            <Button variant="gold" size="sm" onClick={() => openNew()} className="mt-4 gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Log a trade
+            </Button>
+          </div>
+        ) : (
+          <JournalAnalytics entries={entries} />
+        )
       ) : (
       <div className="flex gap-4 h-[calc(100vh-13rem)]">
         {/* Entry list */}
@@ -345,13 +575,7 @@ export default function JournalPage() {
                 ))}
               </div>
             ) : entries.length === 0 ? (
-              <div className="p-8 text-center">
-                <BookOpen className="w-8 h-8 text-line mx-auto mb-2" />
-                <p className="text-xs text-ink3">No entries yet</p>
-                <button onClick={openNew} className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">
-                  Write your first entry →
-                </button>
-              </div>
+              quickStart
             ) : (
               entries.map(entry => (
                 <button
@@ -599,6 +823,13 @@ export default function JournalPage() {
                 </div>
                 <div className="flex gap-1.5 shrink-0">
                   <button
+                    onClick={() => { setShareDone(false); setShareEntry(selected) }}
+                    title="Share to community feed"
+                    className="p-1.5 rounded-lg text-ink3 hover:text-yellow-500 hover:bg-line transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => togglePin(selected)}
                     title={selected.pinned ? 'Unpin entry' : 'Pin to top'}
                     className={`p-1.5 rounded-lg transition-colors hover:bg-line ${selected.pinned ? 'text-yellow-500' : 'text-ink3 hover:text-yellow-500'}`}
@@ -651,18 +882,45 @@ export default function JournalPage() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <BookOpen className="w-12 h-12 text-line mx-auto mb-3" />
-                <p className="text-ink3 text-sm">Select an entry or create a new one</p>
-                <button onClick={openNew} className="mt-3 text-xs text-yellow-500 hover:text-yellow-400 transition-colors">
-                  + New entry
-                </button>
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-lg mx-auto">
+                {quickStart}
               </div>
             </div>
           )}
         </div>
       </div>
+      )}
+
+      {/* Share-to-feed preview (#3). Confirms an outward-facing post and shows
+          exactly what the community will see — summary only, no private notes,
+          no dollar amount. */}
+      {shareEntry && (
+        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={() => !sharing && setShareEntry(null)}>
+          <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-line overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-line flex items-center justify-between">
+              <h3 className="font-bold text-ink flex items-center gap-2"><Share2 className="w-4 h-4 text-yellow-500" /> Share to feed</h3>
+              <button onClick={() => !sharing && setShareEntry(null)} className="p-1.5 rounded-lg text-ink3 hover:text-ink hover:bg-elevated"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-xs text-ink3">Only the trade summary is shared — your notes and P&amp;L amount stay private.</p>
+              <div className="rounded-lg border border-line bg-sunken p-3">
+                <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">{buildShareContent(shareEntry)}</p>
+                {shareEntry.chartUrl && (
+                  <div className="mt-2 rounded-md overflow-hidden border border-line">
+                    <Image src={shareEntry.chartUrl} alt="chart" width={800} height={450} className="w-full max-h-40 object-contain" unoptimized />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-line">
+              <Button variant="secondary" size="sm" onClick={() => setShareEntry(null)} disabled={sharing}>Cancel</Button>
+              <Button variant="gold" size="sm" onClick={() => shareToFeed(shareEntry)} loading={sharing} disabled={shareDone} className="gap-1.5">
+                {shareDone ? <><Check className="w-3.5 h-3.5" /> Shared!</> : <><Share2 className="w-3.5 h-3.5" /> Share to feed</>}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

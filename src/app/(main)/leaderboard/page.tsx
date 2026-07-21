@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/Avatar'
-import { Trophy, Medal } from 'lucide-react'
+import { Trophy, Medal, Flame } from 'lucide-react'
 
-interface Row { id: string; name: string | null; username: string | null; image: string | null; pnl: number; trades: number; winRate: number | null }
+interface Row { id: string; name: string | null; username: string | null; image: string | null; pnl: number; trades: number; winRate: number | null; entries: number; activeThisWeek: boolean }
 
 const medal = ['🥇', '🥈', '🥉']
 
@@ -39,7 +39,14 @@ export default function LeaderboardPage() {
               <span className="w-6 text-center text-sm font-black text-ink3 shrink-0">{i < 3 ? medal[i] : i + 1}</span>
               <Avatar src={r.image} name={r.name} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ink truncate">{r.name || 'Trader'}</p>
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-ink truncate">
+                  <span className="truncate">{r.name || 'Trader'}</span>
+                  {r.activeThisWeek && (
+                    <span title="Journaled this week" className="flex items-center gap-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400 text-[9px] font-bold px-1.5 py-0.5 shrink-0">
+                      <Flame className="w-2.5 h-2.5 fill-orange-400" /> Active
+                    </span>
+                  )}
+                </p>
                 <p className="text-[11px] text-ink3">{r.trades} trade{r.trades !== 1 ? 's' : ''}</p>
               </div>
               <span className="text-sm font-bold tabular-nums shrink-0 text-green-400">{r.winRate != null ? `${r.winRate}%` : '—'}</span>

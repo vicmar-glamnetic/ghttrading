@@ -223,6 +223,136 @@ export async function sendWinBackEmails(
   return { sent, failed }
 }
 
+/** Small shared shell so the newer transactional emails share the brand chrome. */
+function emailShell(inner: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="background:#16161f;border:1px solid #2a2a3a;border-radius:16px;overflow:hidden;">
+        <tr><td style="padding:32px;text-align:center;border-bottom:1px solid #2a2a3a;">
+          <h1 style="margin:0;font-size:24px;font-weight:900;color:#ffffff;">GHT <span style="color:#ad9045;">Community</span></h1>
+        </td></tr>
+        <tr><td style="padding:32px;">${inner}</td></tr>
+        <tr><td style="padding:20px 32px;border-top:1px solid #2a2a3a;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#3a3a4a;">© 2026 Gold Heist Trading · All rights reserved</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim()
+}
+
+function ctaButton(href: string, label: string): string {
+  return `<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+    <a href="${href}" style="display:inline-block;background:#ad9045;color:#000000;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:10px;">${label}</a>
+  </td></tr></table>`
+}
+
+/**
+ * Weekly nudge for members who haven't journaled in the last 7 days. Re-engages
+ * lapsed journalers — the traders most likely to come back. Sent via the batch
+ * API so each recipient can be greeted by name (see sendJournalNudgeEmails).
+ */
+function buildJournalNudgeEmail(name?: string | null): { subject: string; html: string } {
+  const url = `${APP_URL}/journal?compose=prompt`
+  const greeting = name ? `Hey ${name},` : 'Hey trader,'
+  const inner = `
+    <h2 style="margin:0 0 12px;font-size:21px;font-weight:800;color:#f0f0f8;">${greeting} how did your week trade?</h2>
+    <p style="margin:0 0 20px;font-size:14px;color:#9090a8;line-height:1.6;">
+      You haven't logged a trade this week. Traders who journal spot their own patterns faster —
+      which setups pay, which days bleed, and where discipline slips. It takes 60 seconds.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:#ad9045;font-weight:700;">This week's prompt: did you follow your plan?</p>
+    ${ctaButton(url, 'Write this week’s entry →')}
+    <p style="margin:22px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">
+      Manage email preferences anytime in Settings.
+    </p>`
+  return { subject: 'Your trades this week are worth 60 seconds 📓', html: emailShell(inner) }
+}
+
+export async function sendJournalNudgeEmails(
+  recipients: { email: string; name?: string | null }[],
+): Promise<{ sent: number; failed: number }> {
+  const resend = getResend()
+  let sent = 0, failed = 0
+  for (let i = 0; i < recipients.length; i += 100) {
+    const chunk = recipients.slice(i, i + 100)
+    const payload = chunk.map(r => {
+      const { subject, html } = buildJournalNudgeEmail(r.name)
+      return { from: FROM, to: r.email, subject, html }
+    })
+    try {
+      const { error } = await resend.batch.send(payload)
+      if (error) failed += chunk.length; else sent += chunk.length
+    } catch { failed += chunk.length }
+  }
+  return { sent, failed }
+}
+
+export interface MonthlyRecapStats {
+  name?: string | null
+  monthLabel: string
+  entries: number
+  wins: number
+  losses: number
+  winRate: number
+  net: number | null       // net P&L across entries that carried one; null if none did
+  bestSetup?: string | null
+}
+
+/** Personalised month-in-review for members who journaled last month (#8). */
+function buildMonthlyRecapEmail(s: MonthlyRecapStats): { subject: string; html: string } {
+  const url = `${APP_URL}/journal`
+  const greeting = s.name ? `Hey ${s.name},` : 'Hey trader,'
+  const money = (n: number) => `${n >= 0 ? '+' : '-'}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+  const stat = (label: string, value: string, color = '#f0f0f8') =>
+    `<td align="center" style="padding:14px 8px;background:#0a0a0f;border:1px solid #2a2a3a;border-radius:12px;">
+       <p style="margin:0;font-size:22px;font-weight:900;color:${color};">${value}</p>
+       <p style="margin:4px 0 0;font-size:11px;color:#9090a8;text-transform:uppercase;letter-spacing:1px;">${label}</p>
+     </td>`
+  const netCell = s.net == null ? '' : `<tr><td height="10"></td></tr><tr>${stat('Net P&L', money(s.net), s.net >= 0 ? '#4ade80' : '#f87171')}</tr>`
+  const inner = `
+    <h2 style="margin:0 0 4px;font-size:21px;font-weight:800;color:#f0f0f8;">${greeting}</h2>
+    <p style="margin:0 0 20px;font-size:14px;color:#9090a8;line-height:1.6;">Here's your ${s.monthLabel} in numbers 📊</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+      <tr>
+        ${stat('Entries', String(s.entries))}
+        <td width="10"></td>
+        ${stat('Win rate', `${s.winRate}%`)}
+        <td width="10"></td>
+        ${stat('W / L', `${s.wins}/${s.losses}`)}
+      </tr>
+      ${netCell}
+    </table>
+    ${s.bestSetup ? `<p style="margin:16px 0 0;font-size:14px;color:#9090a8;">Most-tagged setup: <strong style="color:#ad9045;">${s.bestSetup}</strong></p>` : ''}
+    <p style="margin:20px 0 24px;font-size:13px;color:#9090a8;line-height:1.6;">Keep the streak going — the more you log, the sharper this report gets.</p>
+    ${ctaButton(url, 'Open your journal →')}`
+  return { subject: `Your ${s.monthLabel} trading recap 📊`, html: emailShell(inner) }
+}
+
+export async function sendMonthlyRecapEmails(
+  recipients: (MonthlyRecapStats & { email: string })[],
+): Promise<{ sent: number; failed: number }> {
+  const resend = getResend()
+  let sent = 0, failed = 0
+  for (let i = 0; i < recipients.length; i += 100) {
+    const chunk = recipients.slice(i, i + 100)
+    const payload = chunk.map(r => {
+      const { subject, html } = buildMonthlyRecapEmail(r)
+      return { from: FROM, to: r.email, subject, html }
+    })
+    try {
+      const { error } = await resend.batch.send(payload)
+      if (error) failed += chunk.length; else sent += chunk.length
+    } catch { failed += chunk.length }
+  }
+  return { sent, failed }
+}
+
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`
 
