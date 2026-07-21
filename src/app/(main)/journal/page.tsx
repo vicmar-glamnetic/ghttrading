@@ -673,7 +673,15 @@ export default function JournalPage() {
                   <Button variant="secondary" size="sm" onClick={cancelEdit} className="text-xs gap-1">
                     <X className="w-3 h-3" /> Cancel
                   </Button>
-                  <Button variant="gold" size="sm" onClick={handleSave} loading={saving} className="text-xs gap-1">
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    onClick={handleSave}
+                    loading={saving}
+                    disabled={!content.trim()}
+                    title={!content.trim() ? 'Add a note before saving' : undefined}
+                    className="text-xs gap-1"
+                  >
                     <Check className="w-3 h-3" /> Save
                   </Button>
                 </div>
@@ -685,8 +693,31 @@ export default function JournalPage() {
                 </div>
               )}
               <div className="flex-1 overflow-y-auto">
-                {/* Mood picker */}
-                <div className="px-4 py-2 border-b border-line flex gap-2 flex-wrap">
+                {/* Notes — the one required field, kept at the top so it's never
+                    missed. Everything below it is optional. */}
+                <div className="px-4 py-3 border-b border-line">
+                  <label className="block">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">
+                      Notes <span className="text-red-400">*</span>
+                      <span className="ml-1 font-normal normal-case tracking-normal text-line2">· required</span>
+                    </span>
+                    <textarea
+                      value={content}
+                      onChange={e => { setContent(e.target.value); if (error) setError(null) }}
+                      placeholder="What happened? Your setup, why you took it, how it felt…"
+                      className={`mt-1.5 w-full min-h-40 bg-sunken text-ink text-sm outline-none resize-none rounded-lg p-3 placeholder-line2 leading-relaxed border ${error && !content.trim() ? 'border-red-500/50' : 'border-line focus:border-yellow-500/40'}`}
+                    />
+                  </label>
+                  {error && !content.trim() && (
+                    <p className="mt-1 text-[11px] text-red-400 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {error}
+                    </p>
+                  )}
+                </div>
+                {/* Mood picker (optional) */}
+                <div className="px-4 py-2 border-b border-line">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">How did you feel? <span className="font-normal normal-case tracking-normal text-line2">· optional</span></span>
+                  <div className="flex gap-2 flex-wrap mt-1.5">
                   {moods.map(m => (
                     <button
                       key={m.value}
@@ -696,6 +727,7 @@ export default function JournalPage() {
                       {m.label}
                     </button>
                   ))}
+                  </div>
                 </div>
                 {/* Trade details (optional) — powers the trading calendar */}
                 <div className="px-4 py-3 border-b border-line space-y-3">
@@ -817,12 +849,6 @@ export default function JournalPage() {
 
                   <ChartUpload value={chartUrl} onChange={setChartUrl} label="Add chart screenshot (optional)" />
                 </div>
-                <textarea
-                  value={content}
-                  onChange={e => { setContent(e.target.value); if (error) setError(null) }}
-                  placeholder="Write your thoughts, trade notes, reflections… (required)"
-                  className={`w-full min-h-48 bg-transparent text-ink text-sm outline-none resize-none p-4 placeholder-line2 leading-relaxed border-t-2 ${error && !content.trim() ? 'border-red-500/40' : 'border-transparent'}`}
-                />
               </div>
             </div>
           ) : selected ? (
