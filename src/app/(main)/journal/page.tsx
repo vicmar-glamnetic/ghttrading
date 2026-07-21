@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3, Pin, PinOff, Flame, Sparkles, TrendingUp, TrendingDown, ClipboardList, Lightbulb, Share2 } from 'lucide-react'
+import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3, Pin, PinOff, Flame, Sparkles, TrendingUp, TrendingDown, ClipboardList, Lightbulb, Share2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { formatDistanceToNow } from 'date-fns'
 import { JournalAnalytics } from './JournalAnalytics'
@@ -158,6 +158,7 @@ export default function JournalPage() {
   const [setups, setSetups] = useState<string[]>([])
   const [chartUrl, setChartUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [mobileShowEditor, setMobileShowEditor] = useState(false)
   const [view, setView] = useState<'entries' | 'analytics'>('entries')
@@ -228,6 +229,7 @@ export default function JournalPage() {
       } catch {}
     }
     setSelected(null)
+    setError(null)
     setTitle(prefill?.title ?? '')
     setContent(prefill?.content ?? '')
     setMood(prefill?.mood ?? '')
@@ -304,6 +306,7 @@ export default function JournalPage() {
   }
 
   function startEdit(entry: JournalEntry) {
+    setError(null)
     setTitle(entry.title ?? '')
     setContent(entry.content)
     setMood(entry.mood ?? '')
@@ -322,8 +325,26 @@ export default function JournalPage() {
     setMode('edit')
   }
 
+  /** Validate the form before saving. Returns a friendly message, or null if OK. */
+  function validate(): string | null {
+    if (!content.trim()) return 'Add a note before saving — even a line about how the trade felt.'
+    // A P&L with a result but no prices is fine (hand-typed). But a stray,
+    // non-numeric P&L should be caught before it silently becomes null.
+    if (pnl.trim() !== '' && Number.isNaN(Number(pnl))) return 'P&L must be a number, e.g. 250 or -80.'
+    const priceFields: [string, string][] = [
+      ['Entry', entryPrice], ['Exit', exitPrice], ['Stop', stopPrice], ['Target', targetPrice], ['Lots', lots],
+    ]
+    for (const [label, v] of priceFields) {
+      if (v.trim() !== '' && Number.isNaN(Number(v))) return `${label} price must be a number.`
+    }
+    return null
+  }
+
   async function handleSave() {
-    if (!content.trim()) return
+    const problem = validate()
+    if (problem) { setError(problem); return }
+    setError(null)
+
     const tradePayload = {
       symbol: symbol.trim().toUpperCase() || null,
       direction: direction || null,
@@ -346,6 +367,11 @@ export default function JournalPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: title || null, content, mood: mood || null, ...tradePayload }),
         })
+        if (!res.ok) {
+          const data = await res.json().catch(() => null)
+          setError(data?.error || "Couldn't save your entry. Please try again.")
+          return
+        }
         const created = await res.json()
         setEntries(e => [created, ...e])
         setSelected(created)
@@ -357,11 +383,18 @@ export default function JournalPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: title || null, content, mood: mood || null, ...tradePayload }),
         })
+        if (!res.ok) {
+          const data = await res.json().catch(() => null)
+          setError(data?.error || "Couldn't save your changes. Please try again.")
+          return
+        }
         const updated = await res.json()
         setEntries(e => e.map(x => x.id === updated.id ? updated : x))
         setSelected(updated)
         setMode('view')
       }
+    } catch {
+      setError('Network error — check your connection and try again.')
     } finally {
       setSaving(false)
     }
@@ -425,6 +458,7 @@ export default function JournalPage() {
   }
 
   function cancelEdit() {
+    setError(null)
     if (mode === 'new') {
       setMode('view')
       setMobileShowEditor(false)
@@ -644,6 +678,12 @@ export default function JournalPage() {
                   </Button>
                 </div>
               </div>
+              {error && (
+                <div className="px-4 py-2.5 bg-red-500/10 border-b border-red-500/20 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-px" />
+                  <span className="text-xs text-red-400 leading-snug">{error}</span>
+                </div>
+              )}
               <div className="flex-1 overflow-y-auto">
                 {/* Mood picker */}
                 <div className="px-4 py-2 border-b border-line flex gap-2 flex-wrap">
@@ -779,9 +819,9 @@ export default function JournalPage() {
                 </div>
                 <textarea
                   value={content}
-                  onChange={e => setContent(e.target.value)}
-                  placeholder="Write your thoughts, trade notes, reflections…"
-                  className="w-full min-h-48 bg-transparent text-ink text-sm outline-none resize-none p-4 placeholder-line2 leading-relaxed"
+                  onChange={e => { setContent(e.target.value); if (error) setError(null) }}
+                  placeholder="Write your thoughts, trade notes, reflections… (required)"
+                  className={`w-full min-h-48 bg-transparent text-ink text-sm outline-none resize-none p-4 placeholder-line2 leading-relaxed border-t-2 ${error && !content.trim() ? 'border-red-500/40' : 'border-transparent'}`}
                 />
               </div>
             </div>
