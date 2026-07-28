@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { format, formatDistanceToNowStrict } from 'date-fns'
 import {
@@ -34,6 +35,9 @@ const roleBadge: Record<string, string> = {
 }
 
 export default function AdminJournalsPage() {
+  // Coaches share this screen — the parent admin layout is the only gate, and
+  // the API is requireStaff. Only the heading differs.
+  const isAdmin = useSession().data?.user?.role === 'admin'
   const [users, setUsers] = useState<JournalUser[]>([])
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, withJournal: 0, withoutJournal: 0, totalEntries: 0 })
   const [loading, setLoading] = useState(true)
@@ -102,7 +106,7 @@ export default function AdminJournalsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <BookOpen className="w-5 h-5 text-yellow-500" />
-          <h1 className="font-bold text-ink text-lg truncate">Admin · Journals</h1>
+          <h1 className="font-bold text-ink text-lg truncate">{isAdmin ? 'Admin · Journals' : 'Journals'}</h1>
         </div>
         <button
           onClick={exportCsv}

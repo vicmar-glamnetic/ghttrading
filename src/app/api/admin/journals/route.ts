@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireAdmin, ROLES } from '@/lib/admin'
+import { requireStaff, ROLES } from '@/lib/admin'
 
 /**
  * Journal adoption report — who has ever written a journal entry and who
- * hasn't, all-time. Admin-only (coaches don't get this one): journal entries
- * are private trading notes, so even the counts stay with admins.
+ * hasn't, all-time. Open to coaches as well as admins: chasing the members who
+ * never started is coaching work. Entry contents are never returned, only
+ * counts and dates.
  */
 export async function GET(req: Request) {
-  const session = await requireAdmin()
+  const session = await requireStaff()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const params = new URL(req.url).searchParams
