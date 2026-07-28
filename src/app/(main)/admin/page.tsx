@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { Button } from '@/components/ui/Button'
 import {
-  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail, UserX,
+  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail, UserX, BookOpen,
 } from 'lucide-react'
 
 import { format } from 'date-fns'
@@ -263,9 +263,14 @@ export default function AdminPage() {
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && (
-            <Link href="/admin/courses" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
-              <GraduationCap className="w-3.5 h-3.5" /> Courses
-            </Link>
+            <>
+              <Link href="/admin/journals" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
+                <BookOpen className="w-3.5 h-3.5" /> Journals
+              </Link>
+              <Link href="/admin/courses" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink2 hover:text-yellow-500 hover:border-yellow-500/30 transition-colors">
+                <GraduationCap className="w-3.5 h-3.5" /> Courses
+              </Link>
+            </>
           )}
           <Button variant="gold" size="sm" onClick={() => setShowAdd(true)} className="gap-1.5 text-xs">
             <Plus className="w-3.5 h-3.5" /> Add User
