@@ -22,6 +22,7 @@ interface AdminUser {
   approved: boolean
   accmMember: boolean
   accmNumber: string | null
+  accmVerifyStatus: string
   subscriptionStatus: string
   paymentRef: string | null
   trialEndsAt: string | null
@@ -232,6 +233,21 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accmMember }),
     })
+  }
+
+  // Manual verification override — the way out for a member who can't produce
+  // a screenshot but is known to the coaches. Verifying also clears the blocking
+  // upload step for them.
+  async function toggleVerified(u: AdminUser) {
+    const next = u.accmVerifyStatus === 'verified' ? 'unverified' : 'verified'
+    if (next === 'verified' && !confirm(`Manually verify ${u.name || u.email}?\n\nOnly do this if you've confirmed their ACCM account another way — it skips the screenshot check.`)) return
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, accmVerifyStatus: next } : x))
+    const res = await fetch(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accmVerifyStatus: next }),
+    })
+    if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Update failed'); load() }
   }
 
   async function setTrial(u: AdminUser, days: number) {
@@ -529,6 +545,28 @@ export default function AdminPage() {
                       <p className="mt-1 text-[10px] text-ink3 italic" title="Member hasn't entered their ACCM number yet">
                         No ACCM #
                       </p>
+                    )}
+                    {u.accmMember && u.role === 'member' && (
+                      <button
+                        onClick={() => toggleVerified(u)}
+                        disabled={!canEdit(u)}
+                        title={
+                          u.accmVerifyStatus === 'verified' ? 'Verified — click to remove'
+                            : u.accmVerifyStatus === 'pending' ? 'Screenshot waiting in Verifications — click to verify now'
+                            : 'Not verified — click to vouch for this member manually'
+                        }
+                        className={`mt-1 block text-[10px] font-bold rounded-full px-2 py-0.5 border transition-colors disabled:opacity-40 ${
+                          u.accmVerifyStatus === 'verified' ? 'bg-green-400/10 text-green-400 border-green-400/30'
+                            : u.accmVerifyStatus === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'
+                            : u.accmVerifyStatus === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                            : 'bg-elevated text-ink3 border-line'
+                        }`}
+                      >
+                        {u.accmVerifyStatus === 'verified' ? '✓ Verified'
+                          : u.accmVerifyStatus === 'pending' ? '⏳ In review'
+                          : u.accmVerifyStatus === 'rejected' ? '✕ Rejected'
+                          : 'Unverified'}
+                      </button>
                     )}
                     {!u.accmMember && canEdit(u) && <TrialControl user={u} onSet={days => setTrial(u, days)} />}
                   </td>

@@ -412,3 +412,41 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     `.trim(),
   })
 }
+
+/**
+ * Code that re-confirms a sensitive identity change (display name, real name or
+ * ACCM number). Deliberately worded so a member who did NOT request it knows
+ * their account is being tampered with and what to do about it.
+ */
+export async function sendIdentityCodeEmail(email: string, code: string, name?: string | null) {
+  const hello = name ? `Hi ${name},` : 'Hi,'
+
+  await getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Your Gold Heist Trading security code: ${code}`,
+    html: `
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#16161f;border:1px solid #2a2a3a;border-radius:16px;overflow:hidden;">
+        <tr><td style="padding:32px;text-align:center;border-bottom:1px solid #2a2a3a;">
+          <h1 style="margin:0;font-size:24px;font-weight:900;color:#ffffff;">GHT <span style="color:#ad9045;">Community</span></h1>
+        </td></tr>
+        <tr><td style="padding:32px;text-align:center;">
+          <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#f0f0f8;">Confirm your account details</h2>
+          <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;">${hello} enter this code to save your name and ACCM number:</p>
+          <div style="display:inline-block;background:#0a0a0f;border:1px solid #2a2a3a;border-radius:12px;padding:16px 28px;font-size:32px;font-weight:900;letter-spacing:8px;color:#ad9045;">${code}</div>
+          <p style="margin:24px 0 0;font-size:13px;color:#5a5a72;line-height:1.6;">This code expires in <strong style="color:#9090a8;">10 minutes</strong>.</p>
+          <p style="margin:16px 0 0;font-size:13px;color:#5a5a72;line-height:1.6;">If you didn&rsquo;t request this, someone else may have access to your account &mdash; <strong style="color:#ff6b6b;">change your password immediately</strong> and contact an admin.</p>
+        </td></tr>
+        <tr><td style="padding:20px 32px;border-top:1px solid #2a2a3a;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#3a3a4a;">&copy; 2026 Gold Heist Trading &middot; All rights reserved</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  })
+}

@@ -5,11 +5,12 @@ import Image from 'next/image'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
-import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check, BadgeCheck } from 'lucide-react'
+import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check, BadgeCheck, Lock } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { isOnline, lastSeenLabel } from '@/lib/presence'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import { updateMyProfile } from '@/lib/useMyProfile'
+import { isGatedMember } from '@/lib/identity'
 import type { PostWithDetails } from '@/types'
 
 interface ProfileData {
@@ -21,9 +22,14 @@ interface ProfileData {
   bio: string | null
   location: string | null
   website: string | null
+  role?: string
   createdAt: string
   lastSeenAt: string | null
   accmNumber?: string | null
+  accmMember?: boolean
+  accmVerifyStatus?: string
+  // Sent only to the owner and to staff — see canSeeRealName() on the API side.
+  realName?: string | null
   _count: { followers: number; following: number; posts: number }
   isFollowing: boolean
   friendRequest: { status: string; senderId: string } | null
@@ -170,23 +176,20 @@ function EditBioModal({ profile, onSave, onClose }: {
   const [bio, setBio] = useState(profile.bio || '')
   const [location, setLocation] = useState(profile.location || '')
   const [website, setWebsite] = useState(profile.website || '')
-  const [accmNumber, setAccmNumber] = useState(profile.accmNumber || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // An ACCM member's display name and number live behind the step-up-protected
+  // identity form in Settings; this modal never touches them.
+  const gated = isGatedMember({ role: profile.role, accmMember: profile.accmMember })
+
   async function handleSave() {
-    const num = accmNumber.trim()
     const payload: Record<string, string> = {
-      name: name.trim(),
       bio: bio.trim(),
       location: location.trim(),
       website: website.trim(),
+      ...(gated ? {} : { name: name.trim() }),
     }
-    // The ACCM number is captured at onboarding. Only touch it here when the
-    // member actually changed it — an empty field must never block saving the
-    // rest of the profile (which was silently failing for members with no
-    // number on file) nor wipe an existing number.
-    if (num && num !== (profile.accmNumber || '')) payload.accmNumber = num
     setSaving(true)
     setError(null)
     try {
@@ -222,7 +225,7 @@ function EditBioModal({ profile, onSave, onClose }: {
         </div>
         <div className="space-y-3">
           {[
-            { label: 'Name', value: name, setter: setName, placeholder: 'Your name' },
+            ...(gated ? [] : [{ label: 'Name', value: name, setter: setName, placeholder: 'Your name' }]),
             { label: 'Location', value: location, setter: setLocation, placeholder: 'City, Country' },
             { label: 'Website', value: website, setter: setWebsite, placeholder: 'https://...' },
           ].map(f => (
@@ -246,16 +249,17 @@ function EditBioModal({ profile, onSave, onClose }: {
               className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 resize-none transition-colors"
             />
           </div>
-          <div>
-            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1">ACCM Number</label>
-            <input
-              value={accmNumber}
-              onChange={e => { setAccmNumber(e.target.value); setError(null) }}
-              placeholder="e.g. 1234567"
-              inputMode="numeric"
-              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink placeholder-ink3 transition-colors"
-            />
-          </div>
+          {gated && (
+            <div className="rounded-lg border border-line bg-elevated px-3 py-2.5">
+              <p className="text-xs text-ink2 leading-relaxed">
+                Your display name, real name and ACCM number are managed in{' '}
+                <a href="/settings" className="font-semibold text-yellow-500 hover:underline">
+                  Settings → Account identity
+                </a>{' '}
+                — changing them needs a code from your e-mail.
+              </p>
+            </div>
+          )}
         </div>
         {error && <p className="mt-3 text-xs font-semibold text-red-400">{error}</p>}
         <div className="flex gap-2 mt-5">
@@ -478,6 +482,14 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
           {/* Name & bio */}
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold text-ink">{profile.name}</h1>
+            {profile.accmVerifyStatus === 'verified' && (
+              <span
+                title="ACCM account verified by the team"
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-400/10 border border-green-400/25 rounded-full px-2 py-0.5"
+              >
+                <BadgeCheck className="w-3 h-3" /> Verified
+              </span>
+            )}
             {isOnline(profile.lastSeenAt) ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-400/10 rounded-full px-2 py-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Online
@@ -508,13 +520,25 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
             </span>
           </div>
 
-          {/* ACCM account number — shown to the owner only (private identifier) */}
-          {isOwn && profile.accmNumber && (
-            <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold bg-yellow-500/10 border border-yellow-500/25 text-yellow-500 rounded-lg px-2.5 py-1">
-              <BadgeCheck className="w-3.5 h-3.5" />
-              ACCM #{profile.accmNumber}
-            </div>
-          )}
+          {/* Private details. The API only sends accmNumber to the owner and
+              realName to the owner + staff, so rendering them here can't leak. */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {isOwn && profile.accmNumber && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-yellow-500/10 border border-yellow-500/25 text-yellow-500 rounded-lg px-2.5 py-1">
+                <BadgeCheck className="w-3.5 h-3.5" />
+                ACCM #{profile.accmNumber}
+              </span>
+            )}
+            {profile.realName && (
+              <span
+                title={isOwn ? 'Only you, the coaches and the admins can see this' : 'Visible to staff only'}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-elevated border border-line text-ink2 rounded-lg px-2.5 py-1"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                {profile.realName}
+              </span>
+            )}
+          </div>
 
           {/* Stats */}
           <div className="flex gap-6 mt-4 pt-4 border-t border-line">

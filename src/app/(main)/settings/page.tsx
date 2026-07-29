@@ -5,8 +5,11 @@ import { updateMyProfile } from '@/lib/useMyProfile'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar'
-import { Settings, Shield, User, Camera, Bell, ShieldAlert } from 'lucide-react'
+import { Settings, Shield, User, Camera, Bell, ShieldAlert, BadgeCheck, Lock, Fingerprint } from 'lucide-react'
 import { pushSupported, getPushState, enablePush, disablePush } from '@/lib/pushClient'
+import { IdentityForm, type IdentityState } from '@/components/identity/IdentityForm'
+import { ProofUpload } from '@/components/identity/ProofUpload'
+import { PasskeyManager } from '@/components/identity/PasskeyManager'
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession()
@@ -24,6 +27,11 @@ export default function SettingsPage() {
   const [shareStats, setShareStats] = useState(false)
   const [statsBusy, setStatsBusy] = useState(false)
 
+  // ACCM identity (display name / real name / ACCM number). `gated` members edit
+  // it through IdentityForm only — the plain Name field below is read-only for them.
+  const [identity, setIdentity] = useState<(IdentityState & { gated?: boolean }) | null>(null)
+  const gated = !!identity?.gated
+
   // Risk guardrails ('' = no limit).
   const [lossLimit, setLossLimit] = useState('')
   const [maxTrades, setMaxTrades] = useState('')
@@ -40,6 +48,9 @@ export default function SettingsPage() {
       setShareStats(!!d?.shareStats)
       setLossLimit(d?.dailyLossLimit == null ? '' : String(d.dailyLossLimit))
       setMaxTrades(d?.maxTradesPerDay == null ? '' : String(d.maxTradesPerDay))
+    }).catch(() => {})
+    fetch('/api/me/identity').then(r => (r.ok ? r.json() : null)).then(d => {
+      if (d) setIdentity(d)
     }).catch(() => {})
   }, [])
 
@@ -76,6 +87,7 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'alerts', label: 'Alerts', icon: Bell },
     { id: 'risk', label: 'Risk', icon: ShieldAlert },
+    { id: 'security', label: 'Security', icon: Fingerprint },
     { id: 'privacy', label: 'Privacy', icon: Shield },
   ]
 
@@ -141,7 +153,9 @@ export default function SettingsPage() {
       const res = await fetch(`/api/users/${session?.user?.id}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, username, bio }),
+        // ACCM members' display name is owned by the identity card below — sending
+        // it here would just be rejected by the server.
+        body: JSON.stringify({ username, bio, ...(gated ? {} : { name }) }),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -201,14 +215,22 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Name */}
+            {/* Name — locked for ACCM members, who edit it in the identity card below. */}
             <div>
-              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Full Name</label>
+              <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">
+                {gated ? 'Display Name' : 'Full Name'}
+              </label>
               <input
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink transition-colors"
+                disabled={gated}
+                className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-3 py-2.5 text-sm outline-none text-ink disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               />
+              {gated && (
+                <p className="text-xs text-ink3 mt-1 inline-flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Change this under Account identity, below.
+                </p>
+              )}
             </div>
 
             {/* Username */}
@@ -254,6 +276,38 @@ export default function SettingsPage() {
             <Button variant="gold" onClick={handleSaveProfile} loading={saving} disabled={!name.trim() || username.length < 3}>
               {saved ? '✓ Saved!' : 'Save Changes'}
             </Button>
+
+            {/* Account identity — ACCM members only. */}
+            {identity && gated && (
+              <div className="pt-5 mt-5 border-t border-line space-y-4">
+                <div>
+                  <h2 className="text-sm font-bold text-ink flex items-center gap-1.5">
+                    <BadgeCheck className="w-4 h-4 text-yellow-500" /> Account identity
+                  </h2>
+                  <p className="text-xs text-ink3 mt-1 leading-relaxed">
+                    Your display name carries your ACCM number so the community can tell real
+                    members apart. Changing any of this needs a code from your e-mail.
+                  </p>
+                </div>
+
+                <IdentityForm
+                  initial={identity}
+                  submitLabel="Save identity"
+                  onSaved={next => {
+                    setIdentity({ ...identity, ...next })
+                    setName(next.name ?? name)
+                    updateSession()
+                  }}
+                />
+
+                <ProofUpload
+                  status={identity.accmVerifyStatus}
+                  rejectReason={identity.accmRejectReason}
+                  accmNumber={identity.accmNumber}
+                  onSubmitted={s => setIdentity({ ...identity, accmVerifyStatus: s })}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -353,6 +407,12 @@ export default function SettingsPage() {
               These are counted from trades you journal with a date of today, so they only work as
               well as your journalling. They warn — they never lock you out.
             </p>
+          </div>
+        )}
+
+        {activeTab === 'security' && (
+          <div className="max-w-md">
+            <PasskeyManager />
           </div>
         )}
 

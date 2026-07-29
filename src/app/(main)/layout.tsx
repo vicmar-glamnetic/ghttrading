@@ -8,7 +8,8 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { SessionGuard } from '@/components/SessionGuard'
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat'
 import { WelcomeTour } from '@/components/WelcomeTour'
-import { AccmNumberGate } from '@/components/AccmNumberGate'
+import { IdentityGate } from '@/components/IdentityGate'
+import { PasskeyPrompt } from '@/components/identity/PasskeyPrompt'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -35,7 +36,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       </div>
       <MobileBottomNav paywallEnabled={PAYWALL_ENABLED} />
       <WelcomeTour />
-      <AccmNumberGate />
+      <IdentityGate />
+      <PasskeyPrompt />
     </div>
   )
 }

@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Fingerprint } from 'lucide-react'
+import { biometricsAvailable, loginWithPasskey } from '@/lib/passkey'
 
 function LoginForm() {
   const router = useRouter()
@@ -16,10 +17,32 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [canBiometric, setCanBiometric] = useState(false)
+  const [passkeyBusy, setPasskeyBusy] = useState(false)
 
   const callbackUrl = searchParams.get('callbackUrl') || '/'
   const sessionReplaced = searchParams.get('reason') === 'session_replaced'
   const justVerified = searchParams.get('verified') === '1'
+
+  useEffect(() => {
+    biometricsAvailable().then(setCanBiometric).catch(() => {})
+  }, [])
+
+  async function handlePasskey() {
+    setPasskeyBusy(true)
+    setError('')
+    const res = await loginWithPasskey(callbackUrl)
+    setPasskeyBusy(false)
+
+    if (res.ok) {
+      router.push(callbackUrl)
+      router.refresh()
+      return
+    }
+    // Dismissing the Face ID sheet isn't an error worth shouting about.
+    if (res.cancelled) return
+    setError(res.error)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -70,22 +93,27 @@ function LoginForm() {
           </div>
         )}
         <div>
-          <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Email</label>
+          <label htmlFor="login-email" className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Email</label>
+          {/* name + autoComplete are what make iOS/Android offer to save this
+              login and then Face ID-autofill it next time. Without them the
+              password manager mostly ignores the form. */}
           <input
-            type="email" value={email} onChange={e => setEmail(e.target.value)}
+            id="login-email" name="email" type="email" autoComplete="username"
+            value={email} onChange={e => setEmail(e.target.value)}
             placeholder="trader@example.com" required
             className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-ink placeholder-ink3 transition-colors"
           />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-semibold text-ink2 uppercase tracking-wider">Password</label>
+            <label htmlFor="login-password" className="text-xs font-semibold text-ink2 uppercase tracking-wider">Password</label>
             <Link href="/forgot-password" className="text-xs text-ink3 hover:text-yellow-500 transition-colors">
               Forgot password?
             </Link>
           </div>
           <div className="relative">
             <input
+              id="login-password" name="password" autoComplete="current-password"
               type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
               placeholder="••••••••" required
               className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 pr-10 text-sm outline-none text-ink placeholder-ink3 transition-colors"
@@ -107,6 +135,31 @@ function LoginForm() {
           Sign In to Trade
         </Button>
       </form>
+
+      {/* Only rendered once we know the device has a biometric sensor — offering
+          Face ID on a machine that can't do it is just a dead button. */}
+      {canBiometric && (
+        <>
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-line" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-surface px-3 text-ink3">or</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handlePasskey}
+            disabled={passkeyBusy || loading}
+            className="w-full inline-flex items-center justify-center gap-2 py-3 text-sm font-bold border border-line hover:border-yellow-500/50 text-ink hover:text-yellow-500 disabled:opacity-60 rounded-lg transition-colors"
+          >
+            <Fingerprint className="w-4 h-4" />
+            {passkeyBusy ? 'Waiting for Face ID…' : 'Sign in with Face ID'}
+          </button>
+        </>
+      )}
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">

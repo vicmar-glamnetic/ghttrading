@@ -12,7 +12,7 @@ import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
   LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator, Sparkles, Trophy, CalendarClock,
-  GraduationCap,
+  GraduationCap, BadgeCheck,
 } from 'lucide-react'
 
 // Core, daily-use features — kept at the top.
@@ -94,6 +94,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   const role = session?.user?.role
   const utility = [...utilityNav]
   if (role === 'admin' || role === 'coach') utility.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
+  if (role === 'admin' || role === 'coach') utility.push({ href: '/verifications', label: 'Verifications', icon: BadgeCheck })
   if (role === 'admin' || role === 'coach') utility.push({ href: '/admin', label: 'Admin', icon: Shield })
 
   const NavLink = ({ href, label, icon: Icon, premium }: { href: string; label: string; icon: typeof Home; premium?: boolean }) => (

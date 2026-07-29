@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireStaff, canManageRole, COACH_ASSIGNABLE_ROLES, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 import { sendApprovalEmail } from '@/lib/email'
+import { VERIFY_STATUSES } from '@/lib/identity'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
-  role: true, approved: true, accmMember: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
+  role: true, approved: true, accmMember: true, accmVerifyStatus: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
 }
 
 const SUB_STATUSES = ['free', 'active', 'comp', 'canceled', 'past_due', 'pending']
@@ -60,6 +61,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
 
   if (typeof body.approved === 'boolean') {
     data.approved = body.approved
+  }
+
+  // Manual verification override. Proof-of-account upload blocks the app
+  // (PROOF_REQUIRED), so a member who can't produce a screenshot — no phone,
+  // account opened through an agent, whatever — would otherwise be stuck with
+  // nobody able to help them. Staff can vouch for them here instead.
+  if (typeof body.accmVerifyStatus === 'string') {
+    if (!(VERIFY_STATUSES as readonly string[]).includes(body.accmVerifyStatus)) {
+      return NextResponse.json({ error: 'Invalid verification status' }, { status: 400 })
+    }
+    data.accmVerifyStatus = body.accmVerifyStatus
+    data.accmVerifiedById = session.user.id
+    data.accmVerifiedAt = body.accmVerifyStatus === 'verified' ? new Date() : null
+    data.accmRejectReason = null
   }
 
   // Trial length, counted from now. 0 ends the trial immediately.

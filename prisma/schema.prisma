@@ -32,6 +32,20 @@ model User {
   approved           Boolean  @default(false)     // admin approval gate for new sign-ups
   accmMember         Boolean  @default(true)      // ACCM member (free) vs other broker ($5)
   accmNumber         String?  @unique              // ACCM (AC Capital Market) account number — required from members before using the app; must be unique
+
+  // Identity. ACCM members must display "<Name> - <accmNumber>" so anyone in the
+  // community can tie a post to a real trading account. `name` holds that public
+  // display name; `realName` is the legal name behind it and is NEVER shown to
+  // other members — only to staff and the owner (see identityFor() in lib/identity).
+  realName           String?
+  // Proof-of-account review. accmProofUrl is a Vercel Blob URL, deleted as soon
+  // as staff decides, so an ID screenshot doesn't sit on a public URL forever.
+  accmProofUrl       String?
+  accmVerifyStatus   String   @default("unverified") // unverified | pending | verified | rejected
+  accmProofAt        DateTime?  // when the member submitted proof
+  accmVerifiedAt     DateTime?
+  accmVerifiedById   String?    // staff user id that decided
+  accmRejectReason   String?
   subscriptionStatus String   @default("free")
   stripeCustomerId   String?
   stripeSubId        String?
@@ -43,6 +57,7 @@ model User {
   lastSeenAt         DateTime? // heartbeat from the open app; drives the online dot
 
   accounts          Account[]
+  authenticators    Authenticator[]
   sessions          Session[]
   posts             Post[]
   comments          Comment[]
@@ -82,6 +97,7 @@ model User {
   maxTradesPerDay   Int?      // warn once this many trades are journalled today
 
   @@index([lastSeenAt])
+  @@index([accmVerifyStatus])
   @@map("users")
 }
 
@@ -322,6 +338,56 @@ model EmailVerificationCode {
   createdAt DateTime @default(now())
 
   @@map("email_verification_codes")
+}
+
+// A passkey (WebAuthn credential) — Face ID / Touch ID / Windows Hello sign-in.
+//
+// These are DISCOVERABLE credentials (resident keys): the private key is stored
+// in the device's secure enclave along with the user handle, so signing in needs
+// no e-mail typed at all — which also means the login screen can't be used to
+// probe whether an address has an account here.
+//
+// The key material never reaches us. `credentialPublicKey` is the public half;
+// the private half cannot leave the device and cannot be phished.
+model Authenticator {
+  id                   String    @id @default(cuid())
+  credentialID         String    @unique   // base64url
+  userId               String
+  credentialPublicKey  String              // base64url
+  counter              Int       @default(0)
+  credentialDeviceType String    @default("singleDevice")
+  credentialBackedUp   Boolean   @default(false)
+  transports           String?             // comma-separated, e.g. "internal,hybrid"
+  name                 String?             // friendly label, e.g. "iPhone"
+  createdAt            DateTime  @default(now())
+  lastUsedAt           DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("authenticators")
+}
+
+// Short-lived e-mail codes that re-confirm a sensitive account change. Separate
+// from EmailVerificationCode (which is keyed by e-mail for sign-up) so a member
+// mid-registration and a member changing their name never clash.
+//
+// The code is stored as a SHA-256 hash, never in the clear: a leaked DB row must
+// not hand out a working code. `attempts` caps online guessing at MAX_CODE_ATTEMPTS
+// and `lastSentAt` throttles resends.
+model SecurityCode {
+  id         String   @id @default(cuid())
+  userId     String
+  purpose    String   // "identity" — display name / real name / ACCM number change
+  codeHash   String
+  expires    DateTime
+  attempts   Int      @default(0)
+  lastSentAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, purpose])
+  @@index([expires])
+  @@map("security_codes")
 }
 
 // Single-row config for the live webinar (managed by coaches/admins).

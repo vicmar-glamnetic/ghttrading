@@ -5,6 +5,7 @@ import { encode } from 'next-auth/jwt'
 import bcrypt from 'bcryptjs'
 import { randomUUID } from 'crypto'
 import { db } from './db'
+import { consumeTicket } from './securityCode'
 import { authConfig, stripLargePicture } from './auth.config'
 
 // "Remember me" session lengths. When the box is checked the session lasts the
@@ -34,24 +35,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
         rememberMe: { label: 'Remember me', type: 'text' },
+        passkeyTicket: { label: 'Passkey ticket', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
+        let user = null
 
-        // Case-insensitive so login works regardless of how the email was typed.
-        const email = String(credentials.email).trim().toLowerCase()
-        const user = await db.user.findFirst({
-          where: { email: { equals: email, mode: 'insensitive' } },
-        })
+        // --- Passkey sign-in ---------------------------------------------
+        // The ticket is only minted after /api/auth/passkey/login/verify has
+        // checked the assertion against the stored public key, so reaching here
+        // with a valid one means the device already proved the member's
+        // identity — no password involved. Routing it through authorize()
+        // rather than minting a session directly keeps every sign-in on one
+        // path: same emailVerified gate, same session-token rotation below.
+        if (typeof credentials?.passkeyTicket === 'string' && credentials.passkeyTicket) {
+          const userId = await consumeTicket(credentials.passkeyTicket, 'passkey')
+          if (!userId) return null
+          user = await db.user.findUnique({ where: { id: userId } })
+          if (!user) return null
+        } else {
+          // --- Password sign-in --------------------------------------------
+          if (!credentials?.email || !credentials?.password) return null
 
-        if (!user || !user.password) return null
+          // Case-insensitive so login works regardless of how the email was typed.
+          const email = String(credentials.email).trim().toLowerCase()
+          user = await db.user.findFirst({
+            where: { email: { equals: email, mode: 'insensitive' } },
+          })
 
-        const passwordsMatch = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        )
+          if (!user || !user.password) return null
 
-        if (!passwordsMatch) return null
+          const passwordsMatch = await bcrypt.compare(
+            credentials.password as string,
+            user.password
+          )
+
+          if (!passwordsMatch) return null
+        }
 
         // Block sign-in until the email is verified (new sign-ups must confirm).
         if (!user.emailVerified) return null
