@@ -8,7 +8,7 @@ import {
   Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
   CandlestickChart, Radio, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Users, Bell, Settings,
   Shield, User, LogOut, Smartphone, UserCheck, Calculator, Sparkles, Trophy, CalendarClock,
-  GraduationCap,
+  GraduationCap, BadgeCheck,
 } from 'lucide-react'
 import { openTour } from '@/components/WelcomeTour'
 import { useLiveStatus } from '@/lib/useLiveStatus'
@@ -89,6 +89,7 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const menu: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [...allNav]
   if (session?.user?.id) menu.push({ href: `/profile/${session.user.id}`, label: 'Profile', icon: User })
   if (role === 'admin' || role === 'coach') menu.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
+  if (role === 'admin' || role === 'coach') menu.push({ href: '/verifications', label: 'Verifications', icon: BadgeCheck })
   if (role === 'admin' || role === 'coach') menu.push({ href: '/admin', label: 'Admin', icon: Shield })
 
   return (
