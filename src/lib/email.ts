@@ -450,3 +450,51 @@ export async function sendIdentityCodeEmail(email: string, code: string, name?: 
 </body></html>`.trim(),
   })
 }
+
+/**
+ * Sent the moment a coach verifies a member's ACCM account.
+ *
+ * This one matters more than a normal notification: an unverified member is
+ * locked out of the app, so they have no reason to open it and no way to see an
+ * in-app notification. E-mail is the only channel that reaches them to say the
+ * block is lifted.
+ */
+export async function sendVerifiedEmail(email: string, name?: string | null) {
+  const loginUrl = `${APP_URL}/login`
+  const greeting = name ? `You're verified, ${name}!` : "You're verified!"
+
+  await getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: 'Your ACCM account is verified ✅',
+    html: `
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#16161f;border:1px solid #2a2a3a;border-radius:16px;overflow:hidden;">
+        <tr><td style="padding:32px;text-align:center;border-bottom:1px solid #2a2a3a;">
+          <h1 style="margin:0;font-size:24px;font-weight:900;color:#ffffff;">GHT <span style="color:#ad9045;">Community</span></h1>
+        </td></tr>
+        <tr><td style="padding:32px;text-align:center;">
+          <div style="font-size:44px;line-height:1;margin-bottom:12px;">&#9989;</div>
+          <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#f0f0f8;">${greeting}</h2>
+          <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;">
+            We&rsquo;ve checked your ACCM account and you&rsquo;re all set. Your profile now carries a
+            <strong style="color:#4ade80;">Verified</strong> badge, and you have full access to the community again.
+          </p>
+          <a href="${loginUrl}" style="display:inline-block;background:#ad9045;color:#0a0a0f;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;">Open the community</a>
+          <p style="margin:24px 0 0;font-size:13px;color:#5a5a72;line-height:1.6;">
+            Tip: turn on Face ID in <strong style="color:#9090a8;">Settings &rsaquo; Security</strong> and you can sign in
+            without typing your password again.
+          </p>
+        </td></tr>
+        <tr><td style="padding:20px 32px;border-top:1px solid #2a2a3a;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#3a3a4a;">&copy; 2026 Gold Heist Trading &middot; All rights reserved</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  })
+}

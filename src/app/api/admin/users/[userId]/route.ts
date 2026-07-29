@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireStaff, canManageRole, COACH_ASSIGNABLE_ROLES, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
-import { sendApprovalEmail } from '@/lib/email'
-import { VERIFY_STATUSES } from '@/lib/identity'
+import { sendApprovalEmail, sendVerifiedEmail } from '@/lib/email'
+import { VERIFY_STATUSES, namePartOf } from '@/lib/identity'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
@@ -19,7 +19,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId } = await params
-  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true, approved: true } })
+  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true, approved: true, accmVerifyStatus: true } })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   // Coaches manage members and coaches; admin accounts stay out of their reach.
@@ -98,6 +98,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
       await sendApprovalEmail(updated.email, updated.name)
     } catch (err) {
       console.error('Failed to send approval email:', err)
+    }
+  }
+
+  // Same as the verification queue: being verified is what lifts the block, and
+  // a member who was locked out won't see an in-app notification. Only on the
+  // transition, so re-saving an already-verified member doesn't re-mail them.
+  if (data.accmVerifyStatus === 'verified' && target.accmVerifyStatus !== 'verified' && updated.email) {
+    try {
+      await sendVerifiedEmail(updated.email, namePartOf(updated.name))
+    } catch (err) {
+      console.error('Failed to send verification email:', err)
     }
   }
 

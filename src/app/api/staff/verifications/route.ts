@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { del } from '@vercel/blob'
 import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/admin'
+import { sendVerifiedEmail } from '@/lib/email'
+import { namePartOf } from '@/lib/identity'
 
 /** Pending proof-of-account submissions, oldest first (fairest queue order). */
 export async function GET() {
@@ -37,7 +39,7 @@ export async function POST(req: Request) {
 
   const target = await db.user.findUnique({
     where: { id: userId },
-    select: { id: true, role: true, accmProofUrl: true, accmVerifyStatus: true },
+    select: { id: true, role: true, accmProofUrl: true, accmVerifyStatus: true, email: true, name: true },
   })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   // Staff accounts aren't part of this flow at all.
@@ -87,6 +89,18 @@ export async function POST(req: Request) {
       link: '/settings',
     },
   }).catch(err => console.error('[VERIFICATION_NOTIFY]', err))
+
+  // An approved member was locked out until this moment, so they have no reason
+  // to open the app and would never see the in-app notification. E-mail is what
+  // actually tells them the block is lifted. Best-effort: a mail failure must
+  // never undo a decision that's already saved.
+  if (action === 'approve' && target.email) {
+    try {
+      await sendVerifiedEmail(target.email, namePartOf(target.name))
+    } catch (err) {
+      console.error('[VERIFICATION_EMAIL]', err)
+    }
+  }
 
   return NextResponse.json({ ok: true, accmVerifyStatus: action === 'approve' ? 'verified' : 'rejected' })
 }
