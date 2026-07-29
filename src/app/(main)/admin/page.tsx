@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { Button } from '@/components/ui/Button'
 import {
-  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail, UserX, BookOpen,
+  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail, UserX, BookOpen, BadgeCheck,
 } from 'lucide-react'
 
 import { format } from 'date-fns'
@@ -30,7 +30,12 @@ interface AdminUser {
   createdAt: string
   lastSeenAt: string | null
 }
-interface Stats { total: number; admin: number; coach: number; member: number; onlineNow: number }
+interface Stats {
+  total: number; admin: number; coach: number; member: number; onlineNow: number
+  // ACCM members only — staff are auto-verified and would otherwise inflate these.
+  verified: number; pendingVerify: number; rejectedVerify: number; unverified: number
+}
+const EMPTY_STATS: Stats = { total: 0, admin: 0, coach: 0, member: 0, onlineNow: 0, verified: 0, pendingVerify: 0, rejectedVerify: 0, unverified: 0 }
 
 const ROLE_OPTIONS = ['admin', 'coach', 'member'] as const
 // Coaches run user management but can never hand out admin — mirrors
@@ -62,11 +67,12 @@ export default function AdminPage() {
   // Admin rows are read-only for coaches — the API rejects these edits too.
   const canEdit = (u: AdminUser) => isAdmin || u.role !== 'admin'
   const [users, setUsers] = useState<AdminUser[]>([])
-  const [stats, setStats] = useState<Stats>({ total: 0, admin: 0, coach: 0, member: 0, onlineNow: 0 })
+  const [stats, setStats] = useState<Stats>(EMPTY_STATS)
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('')
   const [accmFilter, setAccmFilter] = useState<'' | 'true' | 'false'>('')
+  const [verifyFilter, setVerifyFilter] = useState<'' | 'verified' | 'pending' | 'rejected' | 'unverified'>('')
   const [showAdd, setShowAdd] = useState(false)
   const [showOnline, setShowOnline] = useState(false)
   const [page, setPage] = useState(1)
@@ -163,14 +169,15 @@ export default function AdminPage() {
       if (q.trim()) p.set('q', q.trim())
       if (roleFilter) p.set('role', roleFilter)
       if (accmFilter) p.set('accm', accmFilter)
+      if (verifyFilter) p.set('verify', verifyFilter)
       const res = await fetch(`/api/admin/users?${p.toString()}`)
       const data = await res.json()
       setUsers(data.users ?? [])
-      setStats(data.stats ?? { total: 0, admin: 0, coach: 0, member: 0, onlineNow: 0 })
+      setStats(data.stats ?? EMPTY_STATS)
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [q, roleFilter, accmFilter])
+  }, [q, roleFilter, accmFilter, verifyFilter])
 
   useEffect(() => {
     const t = setTimeout(load, 250) // debounce search
@@ -178,7 +185,11 @@ export default function AdminPage() {
   }, [load])
 
   // Back to the first page whenever the result set changes underneath us.
-  useEffect(() => { setPage(1) }, [q, roleFilter, accmFilter])
+  useEffect(() => { setPage(1) }, [q, roleFilter, accmFilter, verifyFilter])
+
+  // Denominator for the verification bar: ACCM members only, matching what
+  // the API counts.
+  const verifiedTotal = stats.verified + stats.pendingVerify + stats.rejectedVerify + stats.unverified
 
   const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE))
   const pageSafe = Math.min(page, pageCount)
@@ -291,6 +302,63 @@ export default function AdminPage() {
             <Plus className="w-3.5 h-3.5" /> Add User
           </Button>
         </div>
+      </div>
+
+      {/* Verification progress. Rollout is the whole point of this panel right
+          now — one glance should answer "how far through are we?". Every tile
+          filters the table below, so a count is always one tap from the names. */}
+      <div className="rounded-xl border border-line bg-surface p-3">
+        <div className="flex items-center gap-1.5 mb-2">
+          <BadgeCheck className="w-3.5 h-3.5 text-yellow-500" />
+          <span className="text-[10px] text-ink3 uppercase tracking-wider">ACCM verification</span>
+          <span className="ml-auto text-[10px] text-ink3">
+            {verifiedTotal > 0
+              ? `${Math.round((stats.verified / verifiedTotal) * 100)}% verified`
+              : 'No ACCM members yet'}
+          </span>
+        </div>
+
+        {verifiedTotal > 0 && (
+          <div className="flex h-2 rounded-full overflow-hidden bg-elevated mb-2.5">
+            {[
+              { n: stats.verified, cls: 'bg-green-500' },
+              { n: stats.pendingVerify, cls: 'bg-yellow-500' },
+              { n: stats.rejectedVerify, cls: 'bg-red-500' },
+            ].map(({ n, cls }, i) => n > 0 && (
+              <div key={i} className={cls} style={{ width: `${(n / verifiedTotal) * 100}%` }} />
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { key: 'verified' as const, label: 'Verified', value: stats.verified, color: 'text-green-400', ring: 'hover:border-green-400/40' },
+            { key: 'pending' as const, label: 'In review', value: stats.pendingVerify, color: 'text-yellow-500', ring: 'hover:border-yellow-500/40' },
+            { key: 'rejected' as const, label: 'Rejected', value: stats.rejectedVerify, color: 'text-red-400', ring: 'hover:border-red-400/40' },
+            { key: 'unverified' as const, label: 'Not verified', value: stats.unverified, color: 'text-ink2', ring: 'hover:border-line2' },
+          ].map(({ key, label, value, color, ring }) => (
+            <button
+              key={key}
+              onClick={() => setVerifyFilter(verifyFilter === key ? '' : key)}
+              title={`Show only ${label.toLowerCase()} members`}
+              className={`rounded-lg border p-2 text-left transition-colors ${ring} ${
+                verifyFilter === key ? 'border-yellow-500/40 bg-yellow-500/5' : 'border-line bg-elevated'
+              }`}
+            >
+              <p className="text-[10px] text-ink3 uppercase tracking-wider">{label}</p>
+              <p className={`text-xl font-black ${color}`}>{value}</p>
+            </button>
+          ))}
+        </div>
+
+        {verifyFilter && (
+          <button
+            onClick={() => setVerifyFilter('')}
+            className="mt-2 text-[11px] font-semibold text-yellow-500 hover:underline"
+          >
+            Clear verification filter
+          </button>
+        )}
       </div>
 
       {/* stats — the Online Now tile opens the live roster */}

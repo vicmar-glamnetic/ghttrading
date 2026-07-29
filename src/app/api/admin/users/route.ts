@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { requireStaff, COACH_ASSIGNABLE_ROLES, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 import { ONLINE_WINDOW_MS } from '@/lib/presence'
+import { VERIFY_STATUSES } from '@/lib/identity'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
   const q = params.get('q')?.trim()
   const role = params.get('role')?.trim()
   const accm = params.get('accm')?.trim() // 'true' = ACCM members, 'false' = non-ACCM (other broker)
+  const verify = params.get('verify')?.trim() // one of VERIFY_STATUSES
 
   const where: Record<string, unknown> = {}
   if (q) {
@@ -30,17 +32,29 @@ export async function GET(req: Request) {
   if (role && (ROLES as readonly string[]).includes(role)) where.role = role
   if (accm === 'true') where.accmMember = true
   else if (accm === 'false') where.accmMember = false
+  if (verify && (VERIFY_STATUSES as readonly string[]).includes(verify)) where.accmVerifyStatus = verify
 
-  const [users, counts, onlineNow] = await Promise.all([
+  const [users, counts, onlineNow, verifyCounts] = await Promise.all([
     db.user.findMany({ where, orderBy: { createdAt: 'desc' }, select: USER_SELECT }),
     db.user.groupBy({ by: ['role'], _count: { _all: true } }),
     // Site-wide, not scoped to the current search/role filter.
     db.user.count({ where: { lastSeenAt: { gt: new Date(Date.now() - ONLINE_WINDOW_MS) } } }),
+    // Verification only applies to ACCM members, so staff and other-broker
+    // accounts are excluded — otherwise the "verified" tile would count the
+    // admins who were auto-verified by the migration and read as progress.
+    db.user.groupBy({
+      by: ['accmVerifyStatus'],
+      where: { role: 'member', accmMember: true },
+      _count: { _all: true },
+    }),
   ])
 
   const byRole: Record<string, number> = {}
   for (const c of counts) byRole[c.role] = c._count._all
   const total = Object.values(byRole).reduce((a, b) => a + b, 0)
+
+  const byVerify: Record<string, number> = {}
+  for (const c of verifyCounts) byVerify[c.accmVerifyStatus] = c._count._all
 
   return NextResponse.json({
     users,
@@ -50,6 +64,10 @@ export async function GET(req: Request) {
       coach: byRole.coach ?? 0,
       member: byRole.member ?? 0,
       onlineNow,
+      verified: byVerify.verified ?? 0,
+      pendingVerify: byVerify.pending ?? 0,
+      rejectedVerify: byVerify.rejected ?? 0,
+      unverified: byVerify.unverified ?? 0,
     },
   })
 }
