@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { JournalAnalytics } from './JournalAnalytics'
 import { ChartUpload } from '@/components/trading/ChartUpload'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
+import { ScrollArea } from '@/components/ui/ScrollArea'
 import { SETUPS_AZ, setupLabel, setupLabels, setupMatches, parseSetups } from '@/lib/setups'
 import { deriveTrade } from '@/lib/journal'
 import { JOURNAL_TEMPLATES, getTemplate, promptForDay, journalingStreak, type JournalTemplate } from '@/lib/journalTemplates'
@@ -823,8 +824,10 @@ export default function JournalPage() {
                       )}
                     </div>
                     {/* Capped height so the picker can't push the rest of the
-                        composer off-screen on a phone. */}
-                    <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-44 overflow-y-auto">
+                        composer off-screen on a phone; ScrollArea draws the rail
+                        that tells you it scrolls, which a phone's overlay
+                        scrollbar never does at rest. */}
+                    <ScrollArea className="max-h-40 sm:max-h-44 mt-1.5" contentClassName="flex flex-wrap gap-1.5">
                       {visibleSetups.map(s => {
                         const active = setups.includes(s.value)
                         return (
@@ -849,7 +852,7 @@ export default function JournalPage() {
                           if none fit.
                         </p>
                       )}
-                    </div>
+                    </ScrollArea>
                   </div>
 
                   {/* Prices — fill entry, exit and lots and the P&L computes itself */}
