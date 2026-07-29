@@ -122,29 +122,49 @@ export const VERIFY_STATUSES = ['unverified', 'pending', 'verified', 'rejected']
 export type VerifyStatus = (typeof VERIFY_STATUSES)[number]
 
 /**
- * Whether proof-of-account upload blocks app access.
+ * Whether verification blocks app access.
  *
- * true: a member cannot use the app until they have submitted a screenshot.
- * Note they are unblocked as soon as it is SUBMITTED (status 'pending'), not
- * when staff approves — holding 260+ members hostage to the review queue would
- * take the community offline for as long as the backlog lasts.
+ * true: an ACCM member cannot use the app until a coach or admin has actually
+ * approved their proof. Submitting is NOT enough — 'pending' stays blocked.
  *
- * A member who genuinely can't produce a screenshot is fully blocked, so staff
- * have a manual override on the admin user list (accmVerifyStatus).
+ * Consequence to keep in mind: every unverified member is waiting on the review
+ * queue, so the queue is on the critical path for their access. Staff have a
+ * manual override on the admin user list for anyone who can't produce a
+ * screenshot, which is the only way out for them.
  */
 export const PROOF_REQUIRED = true
 
 /**
- * Does the gate still need proof from this member? Submitted ('pending') and
- * approved ('verified') both pass; 'rejected' comes back so they can re-upload
- * with the staff reason in front of them.
+ * Is this member blocked pending verification? The single source of truth for
+ * both the blocking popup and the server-side enforcement in auth.config, so
+ * the two can never drift apart.
  */
-export function needsProof(u: {
+export function needsVerification(u: {
   role?: string | null; accmMember?: boolean | null; accmVerifyStatus?: string | null
 }): boolean {
   if (!PROOF_REQUIRED) return false
   if (!isGatedMember(u)) return false
-  return u.accmVerifyStatus !== 'pending' && u.accmVerifyStatus !== 'verified'
+  return u.accmVerifyStatus !== 'verified'
+}
+
+/**
+ * Requests an unverified member may still make, so the gate itself keeps
+ * working while they're locked out: signing in/out, setting their identity,
+ * requesting an e-mail code, and uploading their proof (which needs the Blob
+ * token from /api/upload). Presence is allowed so the heartbeat doesn't spew
+ * 403s in their console.
+ */
+export const VERIFICATION_EXEMPT_PATHS = [
+  '/api/auth',
+  '/api/me/identity',
+  '/api/me/accm-proof',
+  '/api/upload',
+  '/api/presence',
+]
+
+/** True when `pathname` is one of the endpoints a blocked member may still use. */
+export function isVerificationExempt(pathname: string): boolean {
+  return VERIFICATION_EXEMPT_PATHS.some(p => pathname === p || pathname.startsWith(`${p}/`))
 }
 
 /** Can this member's real name be shown to `viewer`? Staff and the owner only. */

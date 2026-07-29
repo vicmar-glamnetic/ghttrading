@@ -111,12 +111,54 @@ export interface Idea {
   status: 'pending' | 'running' | 'tp_hit' | 'sl_hit' | 'breakeven' | 'closed' | 'cancelled'
 }
 
-export type StatusKey = 'valid' | 'zone' | 'missed' | 'tp' | 'sl' | 'be' | 'closed' | 'cancelled'
+/**
+ * The take-profit a closed signal has to reach before it counts as a win
+ * (0-based, so 1 = TP2). House rule: TP1 alone is not a win — a trade that
+ * stalls at the first target and gets closed there is booked as a loss.
+ */
+export const WIN_TP_INDEX = 1
+
+export type SignalOutcome = 'open' | 'win' | 'loss' | 'neutral'
+
+/** Deepest take-profit marked hit, 0-based. -1 when none are ticked. */
+export function deepestTpHit(takeProfits: { hit?: boolean }[]): number {
+  return takeProfits.reduce((deepest, tp, i) => (tp.hit ? i : deepest), -1)
+}
+
+/**
+ * Does this signal move win-rate, and which way?
+ *
+ * SL hit is a loss and pending/running/breakeven/closed/cancelled are neutral,
+ * as before. A TP close is only a win once TP2 is ticked:
+ *  - TP2 or deeper ticked → win
+ *  - TP1 ticked while a TP2 exists → loss (target never paid out in full)
+ *  - the only TP on the signal ticked → win (there is no TP2 to reach)
+ *  - nothing ticked → win, i.e. we trust the coach's explicit "Win (TP)" close
+ *    rather than inventing a loss from missing data.
+ */
+export function signalOutcome(idea: { status: string; takeProfits?: { hit?: boolean }[] | null }): SignalOutcome {
+  if (idea.status === 'pending' || idea.status === 'running') return 'open'
+  if (idea.status === 'sl_hit') return 'loss'
+  if (idea.status !== 'tp_hit') return 'neutral'
+  const tps = idea.takeProfits ?? []
+  const deepest = deepestTpHit(tps)
+  if (deepest < 0) return 'win'
+  if (deepest >= WIN_TP_INDEX) return 'win'
+  return tps.length > WIN_TP_INDEX ? 'loss' : 'win'
+}
+
+export type StatusKey = 'valid' | 'zone' | 'missed' | 'tp' | 'tp1' | 'sl' | 'be' | 'closed' | 'cancelled'
 export interface LiveStatus { key: StatusKey; label: string; tone: 'green' | 'amber' | 'red' | 'slate' | 'void'; dot: string }
 
 /** Where the current price sits relative to the entry zone. */
 export function liveSignalStatus(idea: Idea, price: number | null): LiveStatus | null {
-  if (idea.status === 'tp_hit') return { key: 'tp', label: 'TP hit', tone: 'green', dot: '✅' }
+  if (idea.status === 'tp_hit') {
+    // A TP close that stopped at TP1 reads as a loss, so say so on the card
+    // instead of showing a green "TP hit" the stats then contradict.
+    return signalOutcome(idea) === 'win'
+      ? { key: 'tp', label: 'TP hit', tone: 'green', dot: '✅' }
+      : { key: 'tp1', label: 'TP1 only · counts as loss', tone: 'red', dot: '🟠' }
+  }
   if (idea.status === 'sl_hit') return { key: 'sl', label: 'SL hit', tone: 'red', dot: '🔴' }
   if (idea.status === 'breakeven') return { key: 'be', label: 'Breakeven', tone: 'amber', dot: '⚪' }
   if (idea.status === 'closed') return { key: 'closed', label: 'Closed manually', tone: 'slate', dot: '⚫' }

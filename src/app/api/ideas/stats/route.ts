@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { isGold, pipUnit, signalPips } from '@/lib/trading'
+import { isGold, pipUnit, signalOutcome, signalPips } from '@/lib/trading'
 
 interface TP { price?: number; pips?: number | null; hit?: boolean }
 
@@ -52,10 +52,11 @@ export async function GET() {
 
   for (const i of ideas) {
     const closed = i.status === 'tp_hit' || i.status === 'sl_hit'
-    const win = i.status === 'tp_hit'
+    // A TP close only counts as a win once TP2 was reached — see signalOutcome.
+    const win = signalOutcome({ status: i.status, takeProfits: (i.takeProfits as TP[]) || [] }) === 'win'
     if (i.status === 'pending' || i.status === 'running') open++
-    else if (win) wins++
-    else if (i.status === 'sl_hit') losses++
+    else if (closed && win) wins++
+    else if (closed) losses++
 
     if (closed) {
       const rr = plannedRR(mid(i.entryLow, i.entryHigh), mid(i.slLow, i.slHigh), (i.takeProfits as TP[]) || [])

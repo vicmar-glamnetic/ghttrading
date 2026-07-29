@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { isGold, pipUnit, signalPips } from '@/lib/trading'
+import { isGold, pipUnit, signalOutcome, signalPips } from '@/lib/trading'
 
 export const runtime = 'nodejs'
 
@@ -44,7 +44,8 @@ export async function POST(req: Request) {
   const other = new Map<string, { pips: number; unit: 'pips' | 'points' }>()
   let best = { pips: -Infinity, symbol: '' }
   for (const i of closed) {
-    if (i.status === 'tp_hit') wins++; else losses++
+    // TP1-only closes book as losses here too, so the recap matches the stats page.
+    if (signalOutcome({ status: i.status, takeProfits: (i.takeProfits as TP[]) || [] }) === 'win') wins++; else losses++
     const p = signalPips({
       symbol: i.symbol, direction: i.direction as 'buy' | 'sell',
       entryLow: i.entryLow, entryHigh: i.entryHigh, slLow: i.slLow, slHigh: i.slHigh,

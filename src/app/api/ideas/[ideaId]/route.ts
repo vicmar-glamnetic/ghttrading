@@ -2,7 +2,7 @@ import { NextResponse, after } from 'next/server'
 import { requireStaff } from '@/lib/admin'
 import { db } from '@/lib/db'
 import { sendPushToAll } from '@/lib/push'
-import { signalPips } from '@/lib/trading'
+import { signalOutcome, signalPips } from '@/lib/trading'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
 
@@ -54,12 +54,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
       include: { author: AUTHOR },
     })
 
-    // Celebrate a win: push when a public signal is newly marked TP hit.
-    if (updated.isPublic && existing.status !== 'tp_hit' && updated.status === 'tp_hit') {
+    // Celebrate a win: push when a public signal is newly marked TP hit. A close
+    // that only reached TP1 books as a loss, so it gets no celebration push.
+    const tps = (updated.takeProfits as { price: number; pips?: number | null; hit?: boolean }[]) || []
+    if (updated.isPublic && existing.status !== 'tp_hit' && updated.status === 'tp_hit'
+        && signalOutcome({ status: updated.status, takeProfits: tps }) === 'win') {
       const pips = signalPips({
         symbol: updated.symbol, direction: updated.direction as 'buy' | 'sell',
         entryLow: updated.entryLow, entryHigh: updated.entryHigh, slLow: updated.slLow, slHigh: updated.slHigh,
-        takeProfits: (updated.takeProfits as { price: number; pips?: number | null; hit?: boolean }[]) || [],
+        takeProfits: tps,
         status: 'tp_hit',
       })
       const authorId = session.user.id
@@ -105,12 +108,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ ideaId
       include: { author: AUTHOR },
     })
 
-    // Celebrate a win: push when a public signal is newly marked TP hit.
-    if (updated.isPublic && existing.status !== 'tp_hit' && status === 'tp_hit') {
+    // Celebrate a win: push when a public signal is newly marked TP hit. A close
+    // that only reached TP1 books as a loss, so it gets no celebration push.
+    const tps = (updated.takeProfits as { price: number; pips?: number | null; hit?: boolean }[]) || []
+    if (updated.isPublic && existing.status !== 'tp_hit' && status === 'tp_hit'
+        && signalOutcome({ status, takeProfits: tps }) === 'win') {
       const pips = signalPips({
         symbol: updated.symbol, direction: updated.direction as 'buy' | 'sell',
         entryLow: updated.entryLow, entryHigh: updated.entryHigh, slLow: updated.slLow, slHigh: updated.slHigh,
-        takeProfits: (updated.takeProfits as { price: number; pips?: number | null; hit?: boolean }[]) || [],
+        takeProfits: tps,
         status: 'tp_hit',
       })
       const authorId = session.user.id

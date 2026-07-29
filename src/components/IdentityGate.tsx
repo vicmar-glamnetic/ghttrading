@@ -18,36 +18,61 @@ import { ProofUpload } from '@/components/identity/ProofUpload'
  *
  * Replaces the old AccmNumberGate, which asked for the number alone.
  */
+/** How often a member waiting on review re-checks whether they've been approved. */
+const APPROVAL_POLL_MS = 30 * 1000
+
 export function IdentityGate() {
-  const { status } = useSession()
+  const { status, update } = useSession()
   const [state, setState] = useState<IdentityState | null>(null)
   const [step, setStep] = useState<'details' | 'proof'>('details')
 
   useEffect(() => {
     if (status !== 'authenticated') return
     let alive = true
-    // The session JWT lags behind the DB, so ask the server what's actually missing.
-    fetch('/api/me/identity')
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => {
-        if (!alive || !d || !d.gated) return
-        if (!d.complete) { setStep('details'); setState(d as IdentityState) }
-        // Name already set but proof outstanding (including a rejected upload)
-        // — open straight on the upload step rather than re-asking for the name.
-        else if (d.needsProof) { setStep('proof'); setState(d as IdentityState) }
-      })
-      .catch(() => {})
-    return () => { alive = false }
-  }, [status])
+    let wasBlocked = false
+    let settled = false   // verified or never gated — nothing left to wait for
+
+    // The session JWT lags the DB by up to 5 minutes, so ask the server what's
+    // actually outstanding rather than trusting the token.
+    const check = async () => {
+      const d = await fetch('/api/me/identity')
+        .then(r => (r.ok ? r.json() : null))
+        .catch(() => null)
+      if (!alive || !d) return
+
+      if (!d.gated || !d.needsVerification) {
+        // Just approved: refresh the JWT too, or the edge middleware would keep
+        // rejecting their posts for up to 5 more minutes.
+        if (wasBlocked) update()
+        setState(null)
+        settled = true
+        return
+      }
+      wasBlocked = true
+      setStep(d.complete ? 'proof' : 'details')
+      setState(d as IdentityState)
+    }
+
+    check()
+    // While they're sitting on "waiting for review", poll so the block lifts on
+    // its own the moment a coach approves — without this they'd stare at a dead
+    // screen until they thought to refresh. Stops as soon as they're through, so
+    // a verified member polls once per page load and never again.
+    const timer = setInterval(() => {
+      if (settled) clearInterval(timer)
+      else check()
+    }, APPROVAL_POLL_MS)
+    return () => { alive = false; clearInterval(timer) }
+  }, [status, update])
 
   if (!state) return null
 
   const showProof = step === 'proof'
-  // With PROOF_REQUIRED on, the only way out of the proof step is to submit one.
-  // 'pending' counts as submitted — members are unblocked while staff review,
-  // otherwise the whole community would sit behind the review queue.
-  const proofSubmitted = state.accmVerifyStatus === 'pending' || state.accmVerifyStatus === 'verified'
-  const canDismiss = proofSubmitted || !PROOF_REQUIRED
+  // Nothing dismisses this. With PROOF_REQUIRED on, only a coach approving the
+  // member clears it — submitting is not enough. The poll above is what makes
+  // that bearable.
+  const canDismiss = !PROOF_REQUIRED
+  const awaitingReview = state.accmVerifyStatus === 'pending'
 
   return (
     <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
@@ -61,12 +86,16 @@ export function IdentityGate() {
             <BadgeCheck className="w-7 h-7 text-yellow-500" />
           </div>
           <h2 className="text-lg font-black text-ink">
-            {showProof ? 'Verify your ACCM account' : 'Set up your member name'}
+            {!showProof ? 'Set up your member name'
+              : awaitingReview ? 'We’re checking your account'
+              : 'Verify your ACCM account'}
           </h2>
           <p className="mt-1.5 text-xs text-ink2 leading-relaxed">
-            {showProof
-              ? 'Last step — every member verifies their ACCM account. You can carry on as soon as you’ve sent the screenshot.'
-              : 'Every ACCM member now shows their name with their ACCM number, so the community knows who they’re trading alongside.'}
+            {!showProof
+              ? 'Every ACCM member now shows their name with their ACCM number, so the community knows who they’re trading alongside.'
+              : awaitingReview
+              ? 'A coach is reviewing your screenshot. This screen clears by itself the moment you’re approved — you don’t need to refresh.'
+              : 'Last step — every member verifies their ACCM account before using the community.'}
           </p>
         </div>
 
@@ -86,12 +115,13 @@ export function IdentityGate() {
                   onClick={() => setState(null)}
                   className="mt-4 w-full text-sm font-bold text-ink2 hover:text-ink border border-line rounded-lg py-2.5 transition-colors"
                 >
-                  {proofSubmitted ? 'Done' : 'I’ll do this later'}
+                  I&apos;ll do this later
                 </button>
               ) : (
                 <p className="mt-4 text-center text-[11px] text-ink3 leading-relaxed">
-                  A screenshot is required to continue. Stuck? Message a coach and
-                  they can sort it out for you.
+                  {awaitingReview
+                    ? 'Reviews are done by hand, so this can take a little while. Need it sooner? Message a coach.'
+                    : 'You’ll get access once a coach approves your screenshot. Stuck? Message a coach and they can sort it out for you.'}
                 </p>
               )}
             </>

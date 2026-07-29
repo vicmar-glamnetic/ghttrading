@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { consumeCode } from '@/lib/securityCode'
 import {
-  buildDisplayName, hasCompleteIdentity, isGatedMember, namePartOf, needsProof,
+  buildDisplayName, hasCompleteIdentity, isGatedMember, namePartOf, needsVerification,
   normalizeAccmNumber, normalizeRealName,
   validateAccmNumber, validateNamePart, validateRealName,
 } from '@/lib/identity'
@@ -26,7 +26,7 @@ export async function GET() {
     namePart: namePartOf(user.name),
     gated: isGatedMember(user),
     complete: hasCompleteIdentity(user),
-    needsProof: needsProof(user),
+    needsVerification: needsVerification(user),
   })
 }
 

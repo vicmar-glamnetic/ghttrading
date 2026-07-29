@@ -14,6 +14,7 @@ declare module 'next-auth' {
       accmMember?: boolean | null
       trialEndsAt?: string | null
       approved?: boolean | null
+      accmVerifyStatus?: string | null
     }
   }
 
@@ -24,6 +25,7 @@ declare module 'next-auth' {
     accmMember?: boolean | null
     trialEndsAt?: Date | string | null
     approved?: boolean | null
+    accmVerifyStatus?: string | null
     sessionToken?: string | null
     rememberMe?: boolean
   }
@@ -38,6 +40,7 @@ declare module 'next-auth/jwt' {
     accmMember?: boolean | null
     trialEndsAt?: string | null
     approved?: boolean | null
+    accmVerifyStatus?: string | null
     sessionToken?: string | null
     rememberMe?: boolean
     error?: string

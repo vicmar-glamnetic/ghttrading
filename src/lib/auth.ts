@@ -94,6 +94,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           accmMember: user.accmMember,
           trialEndsAt: user.trialEndsAt,
           approved: user.approved,
+          accmVerifyStatus: user.accmVerifyStatus,
           sessionToken,
           rememberMe: credentials.rememberMe !== 'false',
         }
@@ -111,6 +112,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accmMember = (user as { accmMember?: boolean }).accmMember
         token.trialEndsAt = (user as { trialEndsAt?: Date | null }).trialEndsAt?.toISOString?.() ?? null
         token.approved = (user as { approved?: boolean }).approved
+        token.accmVerifyStatus = (user as { accmVerifyStatus?: string }).accmVerifyStatus
         token.sessionToken = (user as { sessionToken?: string }).sessionToken
         token.rememberMe = (user as { rememberMe?: boolean }).rememberMe
         token.lastVerified = Date.now()
@@ -123,7 +125,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (due) {
           const dbUser = await db.user.findUnique({
             where: { id: token.id as string },
-            select: { sessionToken: true, username: true, role: true, subscriptionStatus: true, accmMember: true, trialEndsAt: true, approved: true },
+            select: { sessionToken: true, username: true, role: true, subscriptionStatus: true, accmMember: true, trialEndsAt: true, approved: true, accmVerifyStatus: true },
           })
           if (!dbUser || dbUser.sessionToken !== token.sessionToken) {
             token.error = 'SessionInvalid'
@@ -134,6 +136,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.accmMember = dbUser.accmMember
             token.trialEndsAt = dbUser.trialEndsAt ? dbUser.trialEndsAt.toISOString() : null
             token.approved = dbUser.approved // pick up approval
+            // Picks up a coach verifying them, which is what lifts the block.
+            token.accmVerifyStatus = dbUser.accmVerifyStatus
             token.lastVerified = Date.now()
           }
         }
@@ -150,6 +154,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.accmMember = (token.accmMember as boolean) ?? true
         session.user.trialEndsAt = (token.trialEndsAt as string) ?? null
         session.user.approved = (token.approved as boolean | undefined) ?? true
+        session.user.accmVerifyStatus = (token.accmVerifyStatus as string) ?? 'unverified'
         if (token.error) {
           session.error = token.error as string
         }

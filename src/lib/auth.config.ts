@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from 'next-auth'
 import type { JWT } from 'next-auth/jwt'
 import { hasAccess } from './billing'
+import { isVerificationExempt, needsVerification } from './identity'
 
 // A large avatar (e.g. a base64 data: URI) baked into the JWT bloats the session
 // cookie until it's chunked into Set-Cookie headers that exceed the edge header
@@ -35,10 +36,12 @@ export const authConfig: NextAuthConfig = {
         session.user.accmMember = (token.accmMember as boolean) ?? true
         session.user.trialEndsAt = (token.trialEndsAt as string) ?? null
         session.user.approved = (token.approved as boolean | undefined) ?? true
+        session.user.accmVerifyStatus = (token.accmVerifyStatus as string) ?? 'unverified'
       }
       return session
     },
-    authorized({ auth, request: { nextUrl } }) {
+    authorized({ auth, request }) {
+      const { nextUrl } = request
       const isLoggedIn = !!auth?.user
       const isAuthPage =
         nextUrl.pathname.startsWith('/login') ||
@@ -51,6 +54,21 @@ export const authConfig: NextAuthConfig = {
         nextUrl.pathname.startsWith('/terms') ||
         nextUrl.pathname.startsWith('/privacy') ||
         nextUrl.pathname.startsWith('/help')
+
+      // Unverified ACCM members are blocked from changing anything until a coach
+      // approves their proof. The popup is the UX, but a popup is only a
+      // suggestion — anyone with devtools can dismiss it — so the block has to
+      // live server-side as well. Writes only: reads stay open so the gate can
+      // load, and so nothing is gained by leaving the app half-broken.
+      if (isLoggedIn && auth?.user && needsVerification(auth.user) && !isVerificationExempt(nextUrl.pathname)) {
+        const isWrite = request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'OPTIONS'
+        if (isWrite) {
+          return Response.json(
+            { error: 'Your ACCM account is still being verified. You can post once a coach approves it.' },
+            { status: 403 },
+          )
+        }
+      }
 
       if (isApiRoute) return true
       if (isPublicPage) return true

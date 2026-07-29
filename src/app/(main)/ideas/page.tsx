@@ -14,7 +14,7 @@ import { PerformancePanel } from './PerformancePanel'
 import { ChartUpload } from '@/components/trading/ChartUpload'
 import { RiskGuard } from '@/components/trading/RiskGuard'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
-import { liveSignalStatus, signalPips, positionSize, pipConfig, mid } from '@/lib/trading'
+import { liveSignalStatus, signalOutcome, signalPips, positionSize, pipConfig, mid } from '@/lib/trading'
 import { normalizeSymbol, isPriceable } from '@/lib/symbols'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
@@ -55,10 +55,11 @@ const isGoldSymbol = (symbol: string) => symbol.toUpperCase().startsWith('XAU')
 
 /** Deep-link to the journal composer, pre-filled from a signal (#1). A closed
  *  signal carries its outcome so the entry opens as a win/loss template. */
-function journalHrefFor(idea: { symbol: string; direction: string; status: string }) {
+function journalHrefFor(idea: { symbol: string; direction: string; status: string; takeProfits: TakeProfit[] }) {
   const params = new URLSearchParams({ symbol: idea.symbol, direction: idea.direction })
-  if (idea.status === 'tp_hit') params.set('compose', 'win')
-  else if (idea.status === 'sl_hit') params.set('compose', 'loss')
+  const outcome = signalOutcome(idea)
+  if (outcome === 'win') params.set('compose', 'win')
+  else if (outcome === 'loss') params.set('compose', 'loss')
   else params.set('compose', 'blank')
   return `/journal?${params.toString()}`
 }
@@ -367,7 +368,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
           <p className="text-[11px] font-bold text-ink3 uppercase tracking-wider mb-2 px-1">Close signal as…</p>
           <div className="flex items-center gap-2">
             <button onClick={() => { onClose(idea, 'tp_hit'); setClosing(false) }}
-              className="flex-1 text-xs font-bold rounded-lg py-2 text-green-400 bg-green-400/10 border border-green-400/20 hover:bg-green-400/20 transition-colors">✅ Win (TP)</button>
+              className="flex-1 text-xs font-bold rounded-lg py-2 text-green-400 bg-green-400/10 border border-green-400/20 hover:bg-green-400/20 transition-colors">✅ TP hit</button>
             <button onClick={() => { onClose(idea, 'sl_hit'); setClosing(false) }}
               className="flex-1 text-xs font-bold rounded-lg py-2 text-red-400 bg-red-400/10 border border-red-400/20 hover:bg-red-400/20 transition-colors">🔴 Loss (SL)</button>
             <button onClick={() => { onClose(idea, 'breakeven'); setClosing(false) }}
@@ -385,6 +386,16 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
               <span className="block text-[10px] text-ink3 mt-0.5">Never entered</span>
             </button>
           </div>
+          {/* A TP close is only a win once TP2 is reached, and that's read off the
+              ticked TPs — so say it here, where the coach is about to close. */}
+          {tpTotal > 1 && (
+            <p className="mt-2 px-1 text-[10px] text-ink3 leading-snug">
+              <span className="font-semibold text-ink2">TP hit</span> counts as a win only when TP2 or deeper is ticked
+              {hitCount === 1
+                ? <> — only TP1 is ticked, so this books as a <span className="font-semibold text-red-400">loss</span>.</>
+                : '. Tick the targets that hit in Edit first.'}
+            </p>
+          )}
           <button onClick={() => setClosing(false)} className="mt-2 w-full text-[11px] text-ink3 hover:text-ink2 py-1">Cancel</button>
         </div>
       )}
@@ -975,17 +986,33 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
               <span className="font-semibold text-ink2"> Close signal</span> and pick one:
             </p>
             <ul className="space-y-1.5 text-ink3">
-              <li><span className="text-green-400 font-semibold">✅ Win (TP)</span> — target hit. <span className="text-ink2">Counts as a win.</span></li>
+              <li><span className="text-green-400 font-semibold">✅ TP hit</span> — targets hit. <span className="text-ink2">Counts as a win once TP2 is reached.</span></li>
               <li><span className="text-red-400 font-semibold">🔴 Loss (SL)</span> — stop hit. <span className="text-ink2">Counts as a loss.</span></li>
               <li><span className="text-ink2 font-semibold">⚪ Breakeven</span> — closed at entry, no gain/loss. <span className="text-ink2">Neutral.</span></li>
               <li><span className="text-ink2 font-semibold">⚫ Closed manually</span> — you <span className="text-ink2 font-semibold">entered</span> then closed by hand before TP/SL. <span className="text-ink2">Neutral.</span></li>
               <li><span className="text-ink3 font-semibold">🚫 Cancelled</span> — trade <span className="text-ink2 font-semibold">never triggered</span> (didn&rsquo;t reach entry / called off). <span className="text-ink2">Neutral.</span></li>
             </ul>
             <p className="text-[12px] text-ink3 leading-relaxed mt-2 rounded-lg bg-sunken border border-line px-3 py-2">
-              <span className="font-bold text-ink2">Only Win (TP) and Loss (SL) affect win-rate.</span> Breakeven,
+              <span className="font-bold text-ink2">Only TP hit and Loss (SL) affect win-rate.</span> Breakeven,
               Closed manually, and Cancelled are neutral — they never move your stats. Rule of thumb: <span className="italic">did we
               actually enter?</span> Yes → Closed manually · No → Cancelled.
             </p>
+          </section>
+
+          <section>
+            <h3 className="font-bold text-ink mb-1">TP1 alone is not a win</h3>
+            <p className="text-ink3 leading-relaxed">
+              A signal only counts as a <span className="font-semibold text-green-400">win</span> once it runs to
+              <span className="font-semibold text-ink2"> TP2</span>. If it stalls at TP1 and you close it there, it books as a
+              <span className="font-semibold text-red-400"> loss</span> — the card, the filters, Results and the weekly recap all
+              read it that way.
+            </p>
+            <ul className="space-y-1.5 text-ink3 mt-2">
+              <li>Which targets were reached comes from the <span className="font-semibold text-ink2">ticks</span> beside each TP — tick them in <span className="font-semibold text-ink2">Edit</span> (or on the card) as they hit, then close the signal.</li>
+              <li>TP2 or deeper ticked → <span className="text-green-400 font-semibold">win</span>. Only TP1 ticked → <span className="text-red-400 font-semibold">loss</span>.</li>
+              <li>A signal posted with a <span className="font-semibold text-ink2">single</span> take-profit has no TP2 to reach — hitting that one target is a win.</li>
+              <li>Closing as TP hit with <span className="font-semibold text-ink2">no</span> TP ticked is taken at your word and counts as a win, so tick the targets to keep the stats honest.</li>
+            </ul>
           </section>
 
           <section>
@@ -1001,7 +1028,7 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
             <h3 className="font-bold text-ink mb-1">Good to know</h3>
             <ul className="space-y-1.5 text-ink3">
               <li>Members see an <span className="font-semibold text-ink2">auto position size</span> (lots) from their own balance &amp; risk %, plus one-tap <span className="font-semibold text-ink2">copy</span> buttons for each price.</li>
-              <li>Closing as <span className="font-semibold text-ink2">Win (TP)</span> sends a push to the whole community — so update outcomes promptly.</li>
+              <li>Closing a signal that reached <span className="font-semibold text-ink2">TP2</span> sends a push to the whole community — so update outcomes promptly.</li>
               <li>Stats, the coach leaderboard, and the Monday weekly recap are all computed automatically from your closed signals.</li>
             </ul>
           </section>
@@ -1132,8 +1159,8 @@ export default function IdeasPage() {
     if (metalFilter === 'gold' && !isGoldSymbol(i.symbol)) return false
     if (metalFilter === 'other' && isGoldSymbol(i.symbol)) return false
     if (statusFilter === 'live') return i.status === 'pending' || i.status === 'running'
-    if (statusFilter === 'win') return i.status === 'tp_hit'
-    if (statusFilter === 'loss') return i.status === 'sl_hit'
+    if (statusFilter === 'win') return signalOutcome(i) === 'win'
+    if (statusFilter === 'loss') return signalOutcome(i) === 'loss'
     return true
   })
 
