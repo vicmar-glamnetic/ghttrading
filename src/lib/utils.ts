@@ -17,12 +17,14 @@ export function formatNumber(num: number): string {
 }
 
 export function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  // Ignore separators and other junk tokens ("Armand - 641545" must not read "A-").
+  const words = name.split(/\s+/).filter((w) => /^\p{L}/u.test(w))
+
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
+
+  // Single usable word (or none): fall back to its first two characters.
+  const chars = (words[0] ?? name).replace(/[^\p{L}\p{N}]/gu, '')
+  return chars.slice(0, 2).toUpperCase() || '?'
 }
 
 export function slugify(text: string): string {
