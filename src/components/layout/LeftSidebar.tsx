@@ -67,6 +67,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
   const [pending, setPending] = useState(0)
+  const [verifying, setVerifying] = useState(0)
   const isLive = useLiveStatus()
   const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
 
@@ -78,7 +79,10 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
         const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
         setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
       }).catch(() => {})
-      if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => setPending(d.count || 0)).catch(() => {})
+      if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => {
+        setPending(d.count || 0)
+        setVerifying(d.verifications || 0)
+      }).catch(() => {})
     }
     poll()
     const id = setInterval(poll, 45000)
@@ -115,6 +119,9 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
       )}
       {href === '/approvals' && pending > 0 && (
         <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{pending}</span>
+      )}
+      {href === '/verifications' && verifying > 0 && (
+        <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{verifying}</span>
       )}
       {href === '/live' && isLive && (
         <span className="ml-auto shrink-0 flex items-center gap-1 rounded-full bg-red-500/15 text-red-500 px-1.5 py-0.5 text-[9px] font-black tracking-wide">

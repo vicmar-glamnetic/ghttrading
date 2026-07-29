@@ -62,6 +62,7 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
   const [pending, setPending] = useState(0)
+  const [verifying, setVerifying] = useState(0)
   const isLive = useLiveStatus()
   const isStaff = session?.user?.role === 'admin' || session?.user?.role === 'coach'
 
@@ -73,7 +74,10 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
         const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
         setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
       }).catch(() => {})
-      if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => setPending(d.count || 0)).catch(() => {})
+      if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => {
+        setPending(d.count || 0)
+        setVerifying(d.verifications || 0)
+      }).catch(() => {})
     }
     poll()
     const id = setInterval(poll, 45000)
@@ -131,6 +135,9 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
                     {premium && locked && !(href === '/live' && isLive) && <Lock className="w-3 h-3 absolute top-2 right-2 text-ink3" />}
                     {href === '/approvals' && pending > 0 && (
                       <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
+                    )}
+                    {href === '/verifications' && verifying > 0 && (
+                      <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{verifying}</span>
                     )}
                     <Icon className="w-5 h-5" />
                     <span className="text-[11px] font-medium text-center leading-tight">{label}</span>
@@ -199,10 +206,12 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
             onClick={() => setOpen(true)}
             className="relative flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl text-ink3 active:text-ink2 transition-colors"
           >
-            {pending > 0 && (
-              <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
+            {/* Approvals and Verifications both live inside this sheet, so the
+                tab badge carries their combined backlog. */}
+            {pending + verifying > 0 && (
+              <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending + verifying}</span>
             )}
-            {pending === 0 && isLive && (
+            {pending + verifying === 0 && isLive && (
               <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-red-500 animate-pulse ring-2 ring-app" />
             )}
             <Menu className="w-6 h-6 shrink-0" />
