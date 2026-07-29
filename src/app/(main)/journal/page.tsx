@@ -546,8 +546,8 @@ export default function JournalPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <BookOpen className="w-5 h-5 text-yellow-500" />
           <h1 className="font-bold text-ink text-lg">My Journal</h1>
           {streak > 0 && (
@@ -603,7 +603,12 @@ export default function JournalPage() {
           <JournalAnalytics entries={entries} />
         )
       ) : (
-      <div className="flex gap-4 h-[calc(100vh-13rem)]">
+      <div
+        /* dvh, not vh: mobile browser chrome makes 100vh taller than what you can
+           see, which pushed the composer's Save row under the bottom nav. The
+           bigger mobile subtraction also reserves room for the fixed bottom nav. */
+        className="flex gap-4 h-[calc(100dvh-20rem)] min-h-104 lg:h-[calc(100vh-13rem)] lg:min-h-0"
+      >
         {/* Entry list */}
         <div className={`flex flex-col w-full lg:w-72 shrink-0 bg-surface rounded-xl border border-line overflow-hidden ${mobileShowEditor ? 'hidden lg:flex' : 'flex'}`}>
           <div className="p-3 border-b border-line">
@@ -673,15 +678,17 @@ export default function JournalPage() {
 
           {(mode === 'new' || mode === 'edit') ? (
             <div className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 border-b border-line flex items-center justify-between gap-3">
+              {/* Stacked on a phone: side by side, the title box shrank to a few
+                  characters and the two actions came out different widths. */}
+              <div className="p-3 sm:p-4 border-b border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                 <input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="Entry title (optional)"
-                  className="flex-1 bg-transparent text-ink font-semibold text-lg outline-none placeholder-line2"
+                  className="w-full sm:flex-1 min-w-0 bg-transparent text-ink font-semibold text-lg outline-none placeholder-line2"
                 />
-                <div className="flex gap-1.5">
-                  <Button variant="secondary" size="sm" onClick={cancelEdit} className="text-xs gap-1">
+                <div className="flex items-stretch gap-2 sm:gap-1.5 shrink-0">
+                  <Button variant="secondary" size="sm" onClick={cancelEdit} className="flex-1 sm:flex-none min-h-10 text-xs gap-1">
                     <X className="w-3 h-3" /> Cancel
                   </Button>
                   <Button
@@ -691,14 +698,14 @@ export default function JournalPage() {
                     loading={saving}
                     disabled={!content.trim()}
                     title={!content.trim() ? 'Add a note before saving' : undefined}
-                    className="text-xs gap-1"
+                    className="flex-1 sm:flex-none min-h-10 text-xs gap-1"
                   >
                     <Check className="w-3 h-3" /> Save
                   </Button>
                 </div>
               </div>
               {error && (
-                <div className="px-4 py-2.5 bg-red-500/10 border-b border-red-500/20 flex items-start gap-2">
+                <div className="px-3 sm:px-4 py-2.5 bg-red-500/10 border-b border-red-500/20 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-px" />
                   <span className="text-xs text-red-400 leading-snug">{error}</span>
                 </div>
@@ -706,7 +713,7 @@ export default function JournalPage() {
               <div className="flex-1 overflow-y-auto">
                 {/* Notes — the one required field, kept at the top so it's never
                     missed. Everything below it is optional. */}
-                <div className="px-4 py-3 border-b border-line">
+                <div className="px-3 sm:px-4 py-3 border-b border-line">
                   <label className="block">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">
                       Notes <span className="text-red-400">*</span>
@@ -716,7 +723,7 @@ export default function JournalPage() {
                       value={content}
                       onChange={e => { setContent(e.target.value); if (error) setError(null) }}
                       placeholder="What happened? Your setup, why you took it, how it felt…"
-                      className={`mt-1.5 w-full min-h-40 bg-sunken text-ink text-sm outline-none resize-none rounded-lg p-3 placeholder-line2 leading-relaxed border ${error && !content.trim() ? 'border-red-500/50' : 'border-line focus:border-yellow-500/40'}`}
+                      className={`mt-1.5 w-full min-h-32 sm:min-h-40 bg-sunken text-ink text-sm outline-none resize-none rounded-lg p-3 placeholder-line2 leading-relaxed border ${error && !content.trim() ? 'border-red-500/50' : 'border-line focus:border-yellow-500/40'}`}
                     />
                   </label>
                   {error && !content.trim() && (
@@ -726,14 +733,14 @@ export default function JournalPage() {
                   )}
                 </div>
                 {/* Mood picker (optional) */}
-                <div className="px-4 py-2 border-b border-line">
+                <div className="px-3 sm:px-4 py-2 border-b border-line">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">How did you feel? <span className="font-normal normal-case tracking-normal text-line2">· optional</span></span>
                   <div className="flex gap-2 flex-wrap mt-1.5">
                   {moods.map(m => (
                     <button
                       key={m.value}
                       onClick={() => setMood(mood === m.value ? '' : m.value)}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${mood === m.value ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
+                      className={`text-xs px-3 py-1.5 min-h-8 rounded-full border transition-colors ${mood === m.value ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
                     >
                       {m.label}
                     </button>
@@ -741,9 +748,9 @@ export default function JournalPage() {
                   </div>
                 </div>
                 {/* Trade details (optional) — powers the trading calendar */}
-                <div className="px-4 py-3 border-b border-line space-y-3">
+                <div className="px-3 sm:px-4 py-3 pb-6 border-b border-line space-y-3">
                   <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Trade details (optional) · shown on your calendar</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input
                       value={symbol}
                       onChange={e => setSymbol(e.target.value)}
@@ -757,19 +764,19 @@ export default function JournalPage() {
                       className={`${fieldCls} scheme-dark`}
                     />
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button onClick={() => setDirection(direction === 'buy' ? '' : 'buy')}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${direction === 'buy' ? 'bg-green-400/10 border-green-400/50 text-green-400' : 'border-line text-ink3 hover:text-ink2'}`}>
+                      className={`text-xs px-3 py-1.5 min-h-8 whitespace-nowrap rounded-full border transition-colors ${direction === 'buy' ? 'bg-green-400/10 border-green-400/50 text-green-400' : 'border-line text-ink3 hover:text-ink2'}`}>
                       ▲ Buy
                     </button>
                     <button onClick={() => setDirection(direction === 'sell' ? '' : 'sell')}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${direction === 'sell' ? 'bg-red-400/10 border-red-400/50 text-red-400' : 'border-line text-ink3 hover:text-ink2'}`}>
+                      className={`text-xs px-3 py-1.5 min-h-8 whitespace-nowrap rounded-full border transition-colors ${direction === 'sell' ? 'bg-red-400/10 border-red-400/50 text-red-400' : 'border-line text-ink3 hover:text-ink2'}`}>
                       ▼ Sell
                     </button>
-                    <span className="w-px bg-line mx-1" />
+                    <span className="w-px self-stretch bg-line mx-1" />
                     {results.map(r => (
                       <button key={r.value} onClick={() => setResult(result === r.value ? '' : r.value)}
-                        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${result === r.value ? `bg-sunken border-line2 ${r.cls}` : 'border-line text-ink3 hover:text-ink2'}`}>
+                        className={`text-xs px-3 py-1.5 min-h-8 whitespace-nowrap rounded-full border transition-colors ${result === r.value ? `bg-sunken border-line2 ${r.cls}` : 'border-line text-ink3 hover:text-ink2'}`}>
                         {r.label}
                       </button>
                     ))}
@@ -826,7 +833,7 @@ export default function JournalPage() {
                             type="button"
                             aria-pressed={active}
                             onClick={() => toggleSetup(s.value)}
-                            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${active ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
+                            className={`text-xs px-3 py-1.5 min-h-8 rounded-full border transition-colors ${active ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
                           >
                             {active && <span className="mr-1">✓</span>}
                             {s.label}

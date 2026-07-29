@@ -332,31 +332,35 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       {/* community sentiment (open signals) */}
       {isOpen && (
         <div className="mt-3 pt-3 border-t border-line">
-          <div className="flex items-center gap-2">
+          {/* Labels stay on one line and the row wraps as a whole, so the
+              buttons keep a single shared height on narrow phones. */}
+          <div className="flex flex-wrap items-stretch gap-2">
             <button onClick={() => vote('take')}
-              className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors ${votes.mine === 'take' ? 'text-green-400 bg-green-400/10 border-green-400/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
-              <ThumbsUp className="w-3.5 h-3.5" /> Taking {votes.take > 0 && votes.take}
+              className={`flex items-center justify-center gap-1.5 min-h-9 whitespace-nowrap text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors ${votes.mine === 'take' ? 'text-green-400 bg-green-400/10 border-green-400/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
+              <ThumbsUp className="w-3.5 h-3.5 shrink-0" /> Taking {votes.take > 0 && votes.take}
             </button>
             <button onClick={() => vote('skip')}
-              className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors ${votes.mine === 'skip' ? 'text-red-400 bg-red-400/10 border-red-400/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
-              <ThumbsDown className="w-3.5 h-3.5" /> Skipping {votes.skip > 0 && votes.skip}
+              className={`flex items-center justify-center gap-1.5 min-h-9 whitespace-nowrap text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors ${votes.mine === 'skip' ? 'text-red-400 bg-red-400/10 border-red-400/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
+              <ThumbsDown className="w-3.5 h-3.5 shrink-0" /> Skipping {votes.skip > 0 && votes.skip}
             </button>
             {/* Watch the coach's own zone rather than making the member pick a
                 number out of the signal and set a price alert for it. */}
             {priceable && hasZone && (
               <button onClick={toggleZoneAlert} disabled={alertBusy} title={zoneAlert ? 'Stop watching this zone' : 'Get a push when price enters the entry zone'}
-                className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors disabled:opacity-50 ${zoneAlert ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
-                <Bell className="w-3.5 h-3.5" /> {zoneAlert ? 'Watching' : 'Alert me'}
+                className={`flex items-center justify-center gap-1.5 min-h-9 whitespace-nowrap text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors disabled:opacity-50 ${zoneAlert ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30' : 'text-ink2 border-line hover:bg-elevated'}`}>
+                <Bell className="w-3.5 h-3.5 shrink-0" /> {zoneAlert ? 'Watching' : 'Alert me'}
               </button>
             )}
-            {totalVotes > 0 && (
-              <span className="ml-auto text-[11px] text-ink3">{takePct}% taking · {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
-            )}
           </div>
+          {/* Tally sits beside the bar instead of squeezing into the button row,
+              where it wrapped to three lines and pushed the buttons around. */}
           {totalVotes > 0 && (
-            <div className="mt-2 h-1.5 rounded-full bg-elevated overflow-hidden flex">
-              <div className="bg-green-500" style={{ width: `${takePct}%` }} />
-              <div className="bg-red-500/70" style={{ width: `${100 - takePct}%` }} />
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-elevated overflow-hidden flex">
+                <div className="bg-green-500" style={{ width: `${takePct}%` }} />
+                <div className="bg-red-500/70" style={{ width: `${100 - takePct}%` }} />
+              </div>
+              <span className="text-[11px] text-ink3 whitespace-nowrap">{takePct}% taking · {totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
             </div>
           )}
         </div>
@@ -366,13 +370,13 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       {canManage && isOpen && closing && (
         <div className="mt-3 rounded-lg border border-line bg-sunken p-2">
           <p className="text-[11px] font-bold text-ink3 uppercase tracking-wider mb-2 px-1">Close signal as…</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-stretch gap-2">
             <button onClick={() => { onClose(idea, 'tp_hit'); setClosing(false) }}
-              className="flex-1 text-xs font-bold rounded-lg py-2 text-green-400 bg-green-400/10 border border-green-400/20 hover:bg-green-400/20 transition-colors">✅ TP hit</button>
+              className="flex-1 min-w-0 min-h-10 text-xs font-bold rounded-lg px-1 py-2 text-green-400 bg-green-400/10 border border-green-400/20 hover:bg-green-400/20 transition-colors">✅ TP hit</button>
             <button onClick={() => { onClose(idea, 'sl_hit'); setClosing(false) }}
-              className="flex-1 text-xs font-bold rounded-lg py-2 text-red-400 bg-red-400/10 border border-red-400/20 hover:bg-red-400/20 transition-colors">🔴 Loss (SL)</button>
+              className="flex-1 min-w-0 min-h-10 text-xs font-bold rounded-lg px-1 py-2 text-red-400 bg-red-400/10 border border-red-400/20 hover:bg-red-400/20 transition-colors">🔴 Loss (SL)</button>
             <button onClick={() => { onClose(idea, 'breakeven'); setClosing(false) }}
-              className="flex-1 text-xs font-bold rounded-lg py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">⚪ Breakeven</button>
+              className="flex-1 min-w-0 min-h-10 text-xs font-bold rounded-lg px-1 py-2 text-ink2 bg-elevated border border-line hover:bg-line/40 transition-colors">⚪ Breakeven</button>
           </div>
           <div className="flex items-stretch gap-2 mt-2">
             <button onClick={() => { onClose(idea, 'closed'); setClosing(false) }}
@@ -422,29 +426,29 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
 
       {/* actions (staff manage controls; members use the per-level copy buttons above) */}
       {canManage && (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex items-stretch gap-2">
           {isOpen ? (
             <button onClick={() => { setClosing(v => !v); setStatusOpen(false) }} title="Close signal"
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-red-400 hover:border-red-400/40 hover:bg-elevated transition-colors">
-              <XCircle className="w-3.5 h-3.5" /> Close signal
+              className="flex-1 min-w-0 flex items-center justify-center gap-1.5 min-h-10 px-2.5 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-red-400 hover:border-red-400/40 hover:bg-elevated transition-colors">
+              <XCircle className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Close signal</span>
             </button>
           ) : (
             <button onClick={() => onClose(idea, 'pending')} title="Mark this signal as live again"
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
-              <RotateCcw className="w-3.5 h-3.5" /> Mark as Live
+              className="flex-1 min-w-0 flex items-center justify-center gap-1.5 min-h-10 px-2.5 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
+              <RotateCcw className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Mark as Live</span>
             </button>
           )}
           {isOpen && (
             <button onClick={() => { setStatusOpen(v => !v); setClosing(false) }} title="Update trade status (pending / running)"
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${idea.status === 'running' ? 'text-blue-400 border-blue-400/40 bg-blue-400/10' : 'text-ink2 border-line hover:text-blue-400 hover:border-blue-400/40 hover:bg-elevated'}`}>
-              <Activity className="w-3.5 h-3.5" /> {idea.status === 'running' ? 'Running' : 'Status'}
+              className={`flex items-center justify-center gap-1.5 min-h-10 px-2.5 py-2 rounded-lg text-xs font-bold whitespace-nowrap border transition-colors ${idea.status === 'running' ? 'text-blue-400 border-blue-400/40 bg-blue-400/10' : 'text-ink2 border-line hover:text-blue-400 hover:border-blue-400/40 hover:bg-elevated'}`}>
+              <Activity className="w-3.5 h-3.5 shrink-0" /> {idea.status === 'running' ? 'Running' : 'Status'}
             </button>
           )}
           <button onClick={() => onEdit(idea)} title="Edit signal"
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
-            <Pencil className="w-3.5 h-3.5" /> Edit
+            className="flex items-center justify-center gap-1.5 min-h-10 px-2.5 py-2 rounded-lg text-xs font-bold whitespace-nowrap text-ink2 border border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
+            <Pencil className="w-3.5 h-3.5 shrink-0" /> Edit
           </button>
-          <button onClick={() => onDelete(idea)} title="Delete signal" className="p-2 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={() => onDelete(idea)} title="Delete signal" aria-label="Delete signal" className="flex items-center justify-center min-h-10 w-10 shrink-0 rounded-lg text-ink3 hover:text-red-400 hover:bg-elevated transition-colors"><Trash2 className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -453,7 +457,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       {idea.status !== 'cancelled' && (
         <Link
           href={journalHrefFor(idea)}
-          className={`mt-3 flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${
+          className={`mt-3 flex items-center justify-center gap-1.5 w-full min-h-10 px-3 py-2 rounded-lg text-xs font-bold text-center border transition-colors ${
             isOpen
               ? 'text-ink2 border-line hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated'
               : 'text-yellow-500 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10'
