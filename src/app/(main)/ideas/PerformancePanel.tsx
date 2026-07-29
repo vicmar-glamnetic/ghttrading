@@ -158,7 +158,7 @@ export function PerformancePanel() {
       )}
 
       <p className="text-[10px] text-ink3 text-center">
-        Based on public signals marked TP-hit or SL-hit. A TP close counts as a win only once it reached TP2 — TP1 alone is booked as a loss. Win rate &amp; counts are exact; R:R is the planned reward:risk from posted levels. Past results don&rsquo;t guarantee future performance.
+        Based on public signals marked TP-hit or SL-hit. A TP close counts as a win at TP2 — or at TP1 alone only if it ran more than 20 pips, otherwise it&rsquo;s booked as a loss. Win rate &amp; counts are exact; R:R is the planned reward:risk from posted levels. Past results don&rsquo;t guarantee future performance.
       </p>
     </div>
   )

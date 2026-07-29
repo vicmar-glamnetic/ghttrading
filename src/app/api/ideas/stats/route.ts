@@ -52,8 +52,11 @@ export async function GET() {
 
   for (const i of ideas) {
     const closed = i.status === 'tp_hit' || i.status === 'sl_hit'
-    // A TP close only counts as a win once TP2 was reached — see signalOutcome.
-    const win = signalOutcome({ status: i.status, takeProfits: (i.takeProfits as TP[]) || [] }) === 'win'
+    // A TP close counts as a win at TP2, or at TP1 only if it ran far enough — see signalOutcome.
+    const win = signalOutcome({
+      status: i.status, symbol: i.symbol, entryLow: i.entryLow, entryHigh: i.entryHigh,
+      takeProfits: (i.takeProfits as TP[]) || [],
+    }) === 'win'
     if (i.status === 'pending' || i.status === 'running') open++
     else if (closed && win) wins++
     else if (closed) losses++

@@ -44,8 +44,12 @@ export async function POST(req: Request) {
   const other = new Map<string, { pips: number; unit: 'pips' | 'points' }>()
   let best = { pips: -Infinity, symbol: '' }
   for (const i of closed) {
-    // TP1-only closes book as losses here too, so the recap matches the stats page.
-    if (signalOutcome({ status: i.status, takeProfits: (i.takeProfits as TP[]) || [] }) === 'win') wins++; else losses++
+    // Short TP1-only closes book as losses here too, so the recap matches the stats page.
+    const won = signalOutcome({
+      status: i.status, symbol: i.symbol, entryLow: i.entryLow, entryHigh: i.entryHigh,
+      takeProfits: (i.takeProfits as TP[]) || [],
+    }) === 'win'
+    if (won) wins++; else losses++
     const p = signalPips({
       symbol: i.symbol, direction: i.direction as 'buy' | 'sell',
       entryLow: i.entryLow, entryHigh: i.entryHigh, slLow: i.slLow, slHigh: i.slHigh,

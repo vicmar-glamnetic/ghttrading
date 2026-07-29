@@ -58,7 +58,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ ideaId: 
     // that only reached TP1 books as a loss, so it gets no celebration push.
     const tps = (updated.takeProfits as { price: number; pips?: number | null; hit?: boolean }[]) || []
     if (updated.isPublic && existing.status !== 'tp_hit' && updated.status === 'tp_hit'
-        && signalOutcome({ status: updated.status, takeProfits: tps }) === 'win') {
+        && signalOutcome({ ...updated, takeProfits: tps }) === 'win') {
       const pips = signalPips({
         symbol: updated.symbol, direction: updated.direction as 'buy' | 'sell',
         entryLow: updated.entryLow, entryHigh: updated.entryHigh, slLow: updated.slLow, slHigh: updated.slHigh,
@@ -112,7 +112,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ ideaId
     // that only reached TP1 books as a loss, so it gets no celebration push.
     const tps = (updated.takeProfits as { price: number; pips?: number | null; hit?: boolean }[]) || []
     if (updated.isPublic && existing.status !== 'tp_hit' && status === 'tp_hit'
-        && signalOutcome({ status, takeProfits: tps }) === 'win') {
+        && signalOutcome({ ...updated, takeProfits: tps }) === 'win') {
       const pips = signalPips({
         symbol: updated.symbol, direction: updated.direction as 'buy' | 'sell',
         entryLow: updated.entryLow, entryHigh: updated.entryHigh, slLow: updated.slLow, slHigh: updated.slHigh,

@@ -14,7 +14,7 @@ import { PerformancePanel } from './PerformancePanel'
 import { ChartUpload } from '@/components/trading/ChartUpload'
 import { RiskGuard } from '@/components/trading/RiskGuard'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
-import { liveSignalStatus, signalOutcome, signalPips, positionSize, pipConfig, mid } from '@/lib/trading'
+import { liveSignalStatus, signalOutcome, signalPips, positionSize, pipConfig, pipUnit, mid, TP1_WIN_MIN_PIPS } from '@/lib/trading'
 import { normalizeSymbol, isPriceable } from '@/lib/symbols'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
@@ -55,7 +55,7 @@ const isGoldSymbol = (symbol: string) => symbol.toUpperCase().startsWith('XAU')
 
 /** Deep-link to the journal composer, pre-filled from a signal (#1). A closed
  *  signal carries its outcome so the entry opens as a win/loss template. */
-function journalHrefFor(idea: { symbol: string; direction: string; status: string; takeProfits: TakeProfit[] }) {
+function journalHrefFor(idea: TradeIdea) {
   const params = new URLSearchParams({ symbol: idea.symbol, direction: idea.direction })
   const outcome = signalOutcome(idea)
   if (outcome === 'win') params.set('compose', 'win')
@@ -159,6 +159,10 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   const inProfit = isOpen && hitCount > 0
   // Show the RUNNING label when the coach marked entry hit, or once a TP is hit.
   const isRunning = idea.status === 'running' || inProfit
+  // What closing this as TP hit would book, given the TPs ticked so far.
+  const tpCloseOutcome = signalOutcome({ ...idea, status: 'tp_hit' })
+  const unit = pipUnit(idea.symbol)
+  const tp1Pips = idea.takeProfits[0] ? tpPips(idea.takeProfits[0].price) : null
 
   // Auto position size from the member's saved account + this signal's entry/SL.
   const entryMid = idea.entryLow != null && idea.entryHigh != null ? (idea.entryLow + idea.entryHigh) / 2 : (idea.entryLow ?? idea.entryHigh)
@@ -390,16 +394,21 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
               <span className="block text-[10px] text-ink3 mt-0.5">Never entered</span>
             </button>
           </div>
-          {/* A TP close is only a win once TP2 is reached, and that's read off the
-              ticked TPs — so say it here, where the coach is about to close. */}
-          {tpTotal > 1 && (
-            <p className="mt-2 px-1 text-[10px] text-ink3 leading-snug">
-              <span className="font-semibold text-ink2">TP hit</span> counts as a win only when TP2 or deeper is ticked
-              {hitCount === 1
-                ? <> — only TP1 is ticked, so this books as a <span className="font-semibold text-red-400">loss</span>.</>
-                : '. Tick the targets that hit in Edit first.'}
-            </p>
-          )}
+          {/* Whether a TP close lands as a win is read off the ticked TPs, so spell
+              out what this one will do — here, where the coach is about to close. */}
+          <p className="mt-2 px-1 text-[10px] text-ink3 leading-snug">
+            {tpCloseOutcome === 'loss' ? (
+              <>
+                Only TP1 is ticked and it sits <span className="font-semibold text-ink2">{tp1Pips} {unit}</span> from entry,
+                so <span className="font-semibold text-ink2">TP hit</span> books this as a{' '}
+                <span className="font-semibold text-red-400">loss</span> — TP1 alone needs more than {TP1_WIN_MIN_PIPS} {unit}.
+              </>
+            ) : hitCount === 0 && tpTotal > 1 ? (
+              <>Tick the targets that actually hit in <span className="font-semibold text-ink2">Edit</span> first — TP2 is a win, TP1 alone only counts above {TP1_WIN_MIN_PIPS} {unit}.</>
+            ) : (
+              <><span className="font-semibold text-ink2">TP hit</span> books this as a <span className="font-semibold text-green-400">win</span>.</>
+            )}
+          </p>
           <button onClick={() => setClosing(false)} className="mt-2 w-full text-[11px] text-ink3 hover:text-ink2 py-1">Cancel</button>
         </div>
       )}
@@ -990,7 +999,7 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
               <span className="font-semibold text-ink2"> Close signal</span> and pick one:
             </p>
             <ul className="space-y-1.5 text-ink3">
-              <li><span className="text-green-400 font-semibold">✅ TP hit</span> — targets hit. <span className="text-ink2">Counts as a win once TP2 is reached.</span></li>
+              <li><span className="text-green-400 font-semibold">✅ TP hit</span> — targets hit. <span className="text-ink2">A win at TP2, or at TP1 alone if it ran more than {TP1_WIN_MIN_PIPS} pips.</span></li>
               <li><span className="text-red-400 font-semibold">🔴 Loss (SL)</span> — stop hit. <span className="text-ink2">Counts as a loss.</span></li>
               <li><span className="text-ink2 font-semibold">⚪ Breakeven</span> — closed at entry, no gain/loss. <span className="text-ink2">Neutral.</span></li>
               <li><span className="text-ink2 font-semibold">⚫ Closed manually</span> — you <span className="text-ink2 font-semibold">entered</span> then closed by hand before TP/SL. <span className="text-ink2">Neutral.</span></li>
@@ -1004,17 +1013,19 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
           </section>
 
           <section>
-            <h3 className="font-bold text-ink mb-1">TP1 alone is not a win</h3>
+            <h3 className="font-bold text-ink mb-1">When a TP close counts as a win</h3>
             <p className="text-ink3 leading-relaxed">
-              A signal only counts as a <span className="font-semibold text-green-400">win</span> once it runs to
-              <span className="font-semibold text-ink2"> TP2</span>. If it stalls at TP1 and you close it there, it books as a
-              <span className="font-semibold text-red-400"> loss</span> — the card, the filters, Results and the weekly recap all
-              read it that way.
+              Reaching <span className="font-semibold text-ink2">TP2</span> is a win, always. A signal that stalls at
+              <span className="font-semibold text-ink2"> TP1</span> only counts if TP1 was a real move — more than
+              <span className="font-semibold text-ink2"> {TP1_WIN_MIN_PIPS} pips</span> from entry. Under that, closing it books a
+              <span className="font-semibold text-red-400"> loss</span>, and the card, the filters, Results and the weekly recap
+              all read it that way.
             </p>
             <ul className="space-y-1.5 text-ink3 mt-2">
               <li>Which targets were reached comes from the <span className="font-semibold text-ink2">ticks</span> beside each TP — tick them in <span className="font-semibold text-ink2">Edit</span> (or on the card) as they hit, then close the signal.</li>
-              <li>TP2 or deeper ticked → <span className="text-green-400 font-semibold">win</span>. Only TP1 ticked → <span className="text-red-400 font-semibold">loss</span>.</li>
-              <li>A signal posted with a <span className="font-semibold text-ink2">single</span> take-profit has no TP2 to reach — hitting that one target is a win.</li>
+              <li>TP2 or deeper ticked → <span className="text-green-400 font-semibold">win</span>.</li>
+              <li>Only TP1 ticked → <span className="text-green-400 font-semibold">win</span> above {TP1_WIN_MIN_PIPS} pips from entry, <span className="text-red-400 font-semibold">loss</span> at or below it. The close menu tells you which before you tap.</li>
+              <li>On crypto and indices the same threshold is read in <span className="font-semibold text-ink2">points</span>, since those don&rsquo;t trade in pips.</li>
               <li>Closing as TP hit with <span className="font-semibold text-ink2">no</span> TP ticked is taken at your word and counts as a win, so tick the targets to keep the stats honest.</li>
             </ul>
           </section>
@@ -1032,7 +1043,7 @@ function CoachGuide({ onClose }: { onClose: () => void }) {
             <h3 className="font-bold text-ink mb-1">Good to know</h3>
             <ul className="space-y-1.5 text-ink3">
               <li>Members see an <span className="font-semibold text-ink2">auto position size</span> (lots) from their own balance &amp; risk %, plus one-tap <span className="font-semibold text-ink2">copy</span> buttons for each price.</li>
-              <li>Closing a signal that reached <span className="font-semibold text-ink2">TP2</span> sends a push to the whole community — so update outcomes promptly.</li>
+              <li>Closing a signal that counts as a <span className="font-semibold text-ink2">win</span> sends a push to the whole community — so update outcomes promptly.</li>
               <li>Stats, the coach leaderboard, and the Monday weekly recap are all computed automatically from your closed signals.</li>
             </ul>
           </section>

@@ -112,11 +112,17 @@ export interface Idea {
 }
 
 /**
- * The take-profit a closed signal has to reach before it counts as a win
- * (0-based, so 1 = TP2). House rule: TP1 alone is not a win — a trade that
- * stalls at the first target and gets closed there is booked as a loss.
+ * The take-profit that makes a closed signal a win outright (0-based, so
+ * 1 = TP2). House rule: reaching TP2 is a win, full stop.
  */
 export const WIN_TP_INDEX = 1
+
+/**
+ * How far TP1 has to sit from entry for a TP1-only close to still be a win.
+ * A trade that stalls at the first target is only worth banking if that target
+ * was a real move — under this, it goes down as a loss. Strictly greater than.
+ */
+export const TP1_WIN_MIN_PIPS = 20
 
 export type SignalOutcome = 'open' | 'win' | 'loss' | 'neutral'
 
@@ -125,18 +131,35 @@ export function deepestTpHit(takeProfits: { hit?: boolean }[]): number {
   return takeProfits.reduce((deepest, tp, i) => (tp.hit ? i : deepest), -1)
 }
 
+/** Distance from entry to a price, in this symbol's pips (points on crypto/indices). */
+function pipsFromEntry(idea: OutcomeIdea, price: number): number | null {
+  const entry = mid(idea.entryLow, idea.entryHigh)
+  if (entry == null || !Number.isFinite(price)) return null
+  return Math.abs(price - entry) / pipConfig(idea.symbol).pipSize
+}
+
+export interface OutcomeIdea {
+  status: string
+  symbol: string
+  entryLow: number | null
+  entryHigh: number | null
+  takeProfits?: { price?: number; hit?: boolean }[] | null
+}
+
 /**
  * Does this signal move win-rate, and which way?
  *
  * SL hit is a loss and pending/running/breakeven/closed/cancelled are neutral,
- * as before. A TP close is only a win once TP2 is ticked:
+ * as before. For a TP close, what counts is how far it actually ran:
  *  - TP2 or deeper ticked → win
- *  - TP1 ticked while a TP2 exists → loss (target never paid out in full)
- *  - the only TP on the signal ticked → win (there is no TP2 to reach)
- *  - nothing ticked → win, i.e. we trust the coach's explicit "Win (TP)" close
- *    rather than inventing a loss from missing data.
+ *  - TP1 only, more than TP1_WIN_MIN_PIPS from entry → win
+ *  - TP1 only, at or under that → loss (the move was too small to bank)
+ *  - nothing ticked → win, i.e. we trust the coach's explicit TP-hit close
+ *    rather than inventing a loss from missing data
+ *  - TP1 only but no entry/TP price to measure → falls back to the TP2 rule:
+ *    a win if TP1 was the signal's only target, a loss otherwise.
  */
-export function signalOutcome(idea: { status: string; takeProfits?: { hit?: boolean }[] | null }): SignalOutcome {
+export function signalOutcome(idea: OutcomeIdea): SignalOutcome {
   if (idea.status === 'pending' || idea.status === 'running') return 'open'
   if (idea.status === 'sl_hit') return 'loss'
   if (idea.status !== 'tp_hit') return 'neutral'
@@ -144,7 +167,9 @@ export function signalOutcome(idea: { status: string; takeProfits?: { hit?: bool
   const deepest = deepestTpHit(tps)
   if (deepest < 0) return 'win'
   if (deepest >= WIN_TP_INDEX) return 'win'
-  return tps.length > WIN_TP_INDEX ? 'loss' : 'win'
+  const pips = pipsFromEntry(idea, tps[0]?.price ?? NaN)
+  if (pips == null) return tps.length > WIN_TP_INDEX ? 'loss' : 'win'
+  return pips > TP1_WIN_MIN_PIPS ? 'win' : 'loss'
 }
 
 export type StatusKey = 'valid' | 'zone' | 'missed' | 'tp' | 'tp1' | 'sl' | 'be' | 'closed' | 'cancelled'
@@ -153,7 +178,7 @@ export interface LiveStatus { key: StatusKey; label: string; tone: 'green' | 'am
 /** Where the current price sits relative to the entry zone. */
 export function liveSignalStatus(idea: Idea, price: number | null): LiveStatus | null {
   if (idea.status === 'tp_hit') {
-    // A TP close that stopped at TP1 reads as a loss, so say so on the card
+    // A TP close that stopped short at TP1 reads as a loss, so say so on the card
     // instead of showing a green "TP hit" the stats then contradict.
     return signalOutcome(idea) === 'win'
       ? { key: 'tp', label: 'TP hit', tone: 'green', dot: '✅' }
