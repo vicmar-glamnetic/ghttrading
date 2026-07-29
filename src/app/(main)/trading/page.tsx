@@ -5,7 +5,7 @@ import { ACCM_REGISTER_URL } from '@/lib/billing'
 export const metadata = { title: 'Trading · Gold Heist Trading' }
 
 // AC Capital Market MT5 server (from your account approval email).
-const MT5_SERVER = 'MT5-ACCapitalMarket(S)-Real'
+const MT5_SERVER = 'ACCMIntl-Real'
 const BROKER = 'AC Capital Market'
 
 // Official MetaTrader 5 downloads (work with any broker/server).
