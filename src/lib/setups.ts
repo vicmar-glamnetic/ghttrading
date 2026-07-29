@@ -20,51 +20,82 @@
 export interface Setup {
   value: string
   label: string
+  /**
+   * Extra terms the picker's search box matches on, for the abbreviations
+   * traders actually type ("fvg", "ob", "choch"). Never stored — display and
+   * storage still go through `label` / `value`.
+   */
+  keywords?: string[]
 }
 
 export const SETUPS: Setup[] = [
   // Sessions & timing
-  { value: 'asian-range',           label: 'Asian Range' },
-  { value: 'london-breakout',       label: 'London Breakout' },
-  { value: 'ny-session',            label: 'New York Session' },
-  { value: 'silver-bullet',         label: 'Silver Bullet' },
-  { value: 'power-of-three',        label: 'Power of Three (AMD)' },
+  { value: 'asian-range',           label: 'Asian Range',                    keywords: ['asia', 'tokyo'] },
+  { value: 'london-breakout',       label: 'London Breakout',                keywords: ['lo'] },
+  { value: 'ny-session',            label: 'New York Session',               keywords: ['ny'] },
+  { value: 'silver-bullet',         label: 'Silver Bullet',                  keywords: ['sb'] },
+  { value: 'power-of-three',        label: 'Power of Three (AMD)',           keywords: ['amd', 'po3'] },
   // Smart-money / structure
-  { value: 'liquidity-sweep',       label: 'Liquidity Sweep' },
+  { value: 'liquidity-sweep',       label: 'Liquidity Sweep',                keywords: ['stop hunt', 'liq'] },
   { value: 'turtle-soup',           label: 'Turtle Soup' },
-  { value: 'equal-highs-lows',      label: 'Equal Highs / Lows' },
-  { value: 'order-block',           label: 'Order Block' },
-  { value: 'breaker-block',         label: 'Breaker Block' },
-  { value: 'mitigation-block',      label: 'Mitigation Block' },
-  { value: 'fair-value-gap',        label: 'Fair Value Gap' },
-  { value: 'break-of-structure',    label: 'Break of Structure' },
-  { value: 'change-of-character',   label: 'Change of Character (CHoCH)' },
-  { value: 'market-structure-shift',label: 'Market Structure Shift' },
-  { value: 'premium-discount',      label: 'Premium / Discount (OTE)' },
-  { value: 'supply-demand',         label: 'Supply / Demand Zone' },
+  { value: 'equal-highs-lows',      label: 'Equal Highs / Lows',             keywords: ['eqh', 'eql'] },
+  { value: 'order-block',           label: 'Order Block',                    keywords: ['ob'] },
+  { value: 'breaker-block',         label: 'Breaker Block',                  keywords: ['bb'] },
+  { value: 'mitigation-block',      label: 'Mitigation Block',               keywords: ['mb'] },
+  { value: 'fair-value-gap',        label: 'Fair Value Gap',                 keywords: ['fvg', 'imbalance'] },
+  { value: 'break-of-structure',    label: 'Break of Structure',             keywords: ['bos'] },
+  { value: 'change-of-character',   label: 'Change of Character (CHoCH)',    keywords: ['choch'] },
+  { value: 'market-structure-shift',label: 'Market Structure Shift',         keywords: ['mss'] },
+  { value: 'premium-discount',      label: 'Premium / Discount (OTE)',       keywords: ['ote'] },
+  { value: 'supply-demand',         label: 'Supply / Demand Zone',           keywords: ['sd zone'] },
   // Classic price action
   { value: 'break-retest',          label: 'Break & Retest' },
   { value: 'trend-continuation',    label: 'Trend Continuation' },
   { value: 'range-reversal',        label: 'Range Reversal' },
-  { value: 'sr-bounce',             label: 'Support / Resistance Bounce' },
+  { value: 'sr-bounce',             label: 'Support / Resistance Bounce',    keywords: ['sr'] },
   { value: 'trendline-break',       label: 'Trendline Break' },
   { value: 'double-top-bottom',     label: 'Double Top / Bottom' },
   { value: 'head-shoulders',        label: 'Head & Shoulders' },
-  { value: 'fibonacci',             label: 'Fibonacci Retracement' },
-  { value: 'ma-bounce',             label: 'Moving Average Bounce' },
+  { value: 'fibonacci',             label: 'Fibonacci Retracement',          keywords: ['fib'] },
+  { value: 'ma-bounce',             label: 'Moving Average Bounce',          keywords: ['ma', 'ema', 'sma'] },
   { value: 'vwap-reversion',        label: 'VWAP Reversion' },
-  { value: 'pin-bar',               label: 'Pin Bar / Rejection' },
+  { value: 'pin-bar',               label: 'Pin Bar / Rejection',            keywords: ['wick'] },
   { value: 'engulfing',             label: 'Engulfing Candle' },
   { value: 'inside-bar',            label: 'Inside Bar Breakout' },
   { value: 'gap-fill',              label: 'Gap Fill' },
   { value: 'scalp',                 label: 'Scalp' },
   // Catch-alls
-  { value: 'news-reaction',         label: 'News Reaction' },
+  { value: 'news-reaction',         label: 'News Reaction',                  keywords: ['nfp', 'cpi', 'fomc'] },
   { value: 'coach-signal',          label: 'Coach Signal' },
   { value: 'other',                 label: 'Other' },
 ]
 
 const BY_VALUE = new Map(SETUPS.map(s => [s.value, s]))
+
+/**
+ * The list as a human wants to read it: A–Z by label, with the "Other"
+ * catch-all pinned last so it doesn't hide in the middle of the alphabet.
+ * Pickers render this; `SETUPS` keeps its grouped order as the readable source
+ * of truth for whoever edits the vocabulary.
+ */
+export const SETUPS_AZ: Setup[] = [...SETUPS].sort((a, b) => {
+  if (a.value === 'other') return 1
+  if (b.value === 'other') return -1
+  return a.label.localeCompare(b.label, 'en')
+})
+
+/**
+ * Does this setup match what someone typed into the picker's search box?
+ * Matches the label, the stored value and the abbreviation keywords, so both
+ * "fair value" and "fvg" find Fair Value Gap.
+ */
+export function setupMatches(setup: Setup, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  if (setup.label.toLowerCase().includes(q)) return true
+  if (setup.value.includes(q.replace(/\s+/g, '-'))) return true
+  return (setup.keywords ?? []).some(k => k.includes(q))
+}
 
 /** Display name for a single stored setup value. Unknown values show as-is. */
 export function setupLabel(value: string | null | undefined): string | null {

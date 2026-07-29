@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { JournalAnalytics } from './JournalAnalytics'
 import { ChartUpload } from '@/components/trading/ChartUpload'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
-import { SETUPS, setupLabels, parseSetups } from '@/lib/setups'
+import { SETUPS_AZ, setupLabel, setupLabels, setupMatches, parseSetups } from '@/lib/setups'
 import { deriveTrade } from '@/lib/journal'
 import { JOURNAL_TEMPLATES, getTemplate, promptForDay, journalingStreak, type JournalTemplate } from '@/lib/journalTemplates'
 
@@ -156,6 +156,7 @@ export default function JournalPage() {
   const [targetPrice, setTargetPrice] = useState('')
   const [lots, setLots] = useState('')
   const [setups, setSetups] = useState<string[]>([])
+  const [setupQuery, setSetupQuery] = useState('')
   const [chartUrl, setChartUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -212,12 +213,21 @@ export default function JournalPage() {
     setTargetPrice('')
     setLots('')
     setSetups([])
+    setSetupQuery('')
     setChartUrl(null)
   }
 
   function toggleSetup(value: string) {
     setSetups(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value])
   }
+
+  // The A–Z list narrowed by the search box. Anything already tagged stays in
+  // the list even when it doesn't match, so a filter can never hide — or make
+  // you lose track of — a selection you've made.
+  const visibleSetups = useMemo(
+    () => SETUPS_AZ.filter(s => setups.includes(s.value) || setupMatches(s, setupQuery)),
+    [setupQuery, setups],
+  )
 
   function openNew(prefill?: { title?: string; content?: string; mood?: string; result?: string; direction?: string; symbol?: string }) {
     // No prefill = the plain "New Entry" button: restore an unsaved draft so a
@@ -321,6 +331,7 @@ export default function JournalPage() {
     setTargetPrice(entry.targetPrice == null ? '' : String(entry.targetPrice))
     setLots(entry.lots == null ? '' : String(entry.lots))
     setSetups(parseSetups(entry.setup))
+    setSetupQuery('')
     setChartUrl(entry.chartUrl)
     setMode('edit')
   }
@@ -773,21 +784,64 @@ export default function JournalPage() {
                       <span className="text-[10px] text-line2">
                         {setups.length ? `${setups.length} tagged` : 'tap all that apply'}
                       </span>
+                      {setups.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSetups([])}
+                          className="text-[10px] text-ink3 hover:text-ink2 underline decoration-line2 ml-auto"
+                        >
+                          Clear
+                        </button>
+                      )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {SETUPS.map(s => {
+                    {/* Search first, then an A–Z list: 35 chips is too many to
+                        scan, and traders know their setup by name or by its
+                        abbreviation ("fvg", "choch"). */}
+                    <div className="relative mt-1.5">
+                      <input
+                        value={setupQuery}
+                        onChange={e => setSetupQuery(e.target.value)}
+                        placeholder="Search setups (fvg, ob, ote…)"
+                        className={`w-full bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-xs text-ink outline-none focus:border-yellow-500/40 placeholder-line2 ${setupQuery ? 'pr-8' : ''}`}
+                      />
+                      {setupQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSetupQuery('')}
+                          aria-label="Clear setup search"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink3 hover:text-ink2 text-sm leading-none"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                    {/* Capped height so the picker can't push the rest of the
+                        composer off-screen on a phone. */}
+                    <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-44 overflow-y-auto">
+                      {visibleSetups.map(s => {
                         const active = setups.includes(s.value)
                         return (
                           <button
                             key={s.value}
                             type="button"
+                            aria-pressed={active}
                             onClick={() => toggleSetup(s.value)}
                             className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${active ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
                           >
+                            {active && <span className="mr-1">✓</span>}
                             {s.label}
                           </button>
                         )
                       })}
+                      {visibleSetups.length === 0 && (
+                        <p className="text-[11px] text-ink3 py-1">
+                          No setup matches “{setupQuery.trim()}” — clear the search and pick{' '}
+                          <button type="button" onClick={() => { setSetupQuery(''); toggleSetup('other') }} className="text-yellow-400 hover:underline">
+                            {setupLabel('other')}
+                          </button>{' '}
+                          if none fit.
+                        </p>
+                      )}
                     </div>
                   </div>
 
