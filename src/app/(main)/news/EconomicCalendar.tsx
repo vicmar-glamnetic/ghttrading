@@ -15,7 +15,6 @@ const IMPACT_FILTERS = ['all', 'high', 'medium', 'low'] as const
 
 export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
   const [impact, setImpact] = useState<(typeof IMPACT_FILTERS)[number]>('all')
-  const [currency, setCurrency] = useState('all')
   const todayRef = useRef<HTMLDivElement>(null)
 
   // Timestamps render in the viewer's timezone, which the server can't know —
@@ -26,17 +25,9 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
     if (mounted) todayRef.current?.scrollIntoView({ block: 'center' })
   }, [mounted])
 
-  const currencies = useMemo(
-    () => Array.from(new Set(events.map(e => e.currency).filter(Boolean))).sort(),
-    [events],
-  )
-
   const filtered = useMemo(
-    () => events.filter(e =>
-      (impact === 'all' || e.impact === impact) &&
-      (currency === 'all' || e.currency === currency),
-    ),
-    [events, impact, currency],
+    () => events.filter(e => impact === 'all' || e.impact === impact),
+    [events, impact],
   )
 
   // Group into local calendar days — UTC timestamps near midnight land on a
@@ -66,17 +57,6 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
             }`}>
             {f !== 'all' && <span className={`w-1.5 h-1.5 rounded-full ${IMPACT_STYLE[f].dot}`} />}
             {f === 'all' ? 'All Impact' : IMPACT_STYLE[f].label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {['all', ...currencies].map(c => (
-          <button key={c} onClick={() => setCurrency(c)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              currency === c ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'
-            }`}>
-            {c === 'all' ? 'All Currencies' : c}
           </button>
         ))}
       </div>

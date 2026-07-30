@@ -66,6 +66,9 @@ export function parseFeed(xml: string): CalendarEvent[] {
   return events.sort((a, b) => a.ts - b.ts)
 }
 
+// We only trade gold, so the dollar leg is the only one that moves our charts.
+export const CURRENCY = 'USD'
+
 export async function fetchCalendar(): Promise<CalendarEvent[]> {
   const read = async (init: RequestInit) => {
     const res = await fetch(FEED_URL, { headers: { 'User-Agent': 'Mozilla/5.0' }, ...init })
@@ -75,12 +78,16 @@ export async function fetchCalendar(): Promise<CalendarEvent[]> {
     return parseFeed(xml)
   }
 
+  // Filter after the emptiness check below, so a week with no USD events isn't
+  // mistaken for a rate-limited reply.
+  const usdOnly = (events: CalendarEvent[]) => events.filter(e => e.currency === CURRENCY)
+
   try {
     // A rate-limited reply is an HTML page, not XML, and would otherwise get
     // cached as "no events" for the full window — retry uncached before giving up.
     const cached = await read({ next: { revalidate: 900 } })
-    if (cached.length) return cached
-    return await read({ cache: 'no-store' })
+    if (cached.length) return usdOnly(cached)
+    return usdOnly(await read({ cache: 'no-store' }))
   } catch {
     return []
   }
