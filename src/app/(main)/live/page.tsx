@@ -71,14 +71,14 @@ export default function LivePage() {
   }, [isStaff])
 
   const emailEveryone = useCallback(async () => {
-    const who = emailCount === null ? 'every approved member' : `${emailCount} member${emailCount === 1 ? '' : 's'}`
+    const who = emailCount === null ? 'every verified member' : `${emailCount} verified member${emailCount === 1 ? '' : 's'}`
     if (!confirm(`Email ${who} that we're live now? This sends immediately and can't be undone.`)) return
     setEmailBusy(true); setEmailMsg('')
     try {
       const res = await fetch('/api/live/announce', { method: 'POST' })
       const d = await res.json()
       if (!res.ok) setEmailMsg(d.error || 'Failed to send')
-      else if (d.total === 0) setEmailMsg('No approved members to email.')
+      else if (d.total === 0) setEmailMsg('No verified members to email.')
       else setEmailMsg(`✓ Emailed ${d.sent} of ${d.total}${d.failed ? ` · ${d.failed} failed` : ''}`)
     } catch {
       setEmailMsg('Failed to send')
@@ -115,7 +115,7 @@ export default function LivePage() {
             </Button>
             {webinar.isLive && (
               <Button variant="secondary" size="sm" onClick={emailEveryone} loading={emailBusy} className="gap-1.5 text-xs">
-                <Mail className="w-3.5 h-3.5" /> Email everyone
+                <Mail className="w-3.5 h-3.5" /> Email members
                 {emailCount !== null && <span className="text-ink3">({emailCount})</span>}
               </Button>
             )}

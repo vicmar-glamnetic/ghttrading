@@ -4,9 +4,25 @@ import { requireStaff } from '@/lib/admin'
 import { sendLiveAnnounceEmails } from '@/lib/email'
 import type { Prisma } from '@/generated/prisma/client'
 
-// Everyone who can actually open the live page — approved accounts only, so we
-// never email sign-ups still sitting behind the approval gate.
-const RECIPIENTS: Prisma.UserWhereInput = { approved: true }
+/**
+ * Everyone who can actually open the live page, so the email never sends
+ * someone to a wall they can't get past:
+ *
+ *  - approved, so sign-ups still behind the approval gate are skipped;
+ *  - and past the verification gate. Mirrors needsVerification() in
+ *    lib/identity — staff carry no verify status and $5 other-broker members
+ *    can never earn one (no ACCM number to prove), yet neither is gated, so
+ *    both are in. Only ACCM members sitting on unverified/pending/rejected
+ *    are left out — they're locked out of the app until a coach reviews them.
+ */
+const RECIPIENTS: Prisma.UserWhereInput = {
+  approved: true,
+  OR: [
+    { role: { in: ['admin', 'coach'] } },
+    { accmVerifyStatus: 'verified' },
+    { role: 'member', accmMember: false },
+  ],
+}
 
 // How many members a "we're live" blast would reach.
 export async function GET() {
