@@ -75,6 +75,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
     data.accmVerifiedById = session.user.id
     data.accmVerifiedAt = body.accmVerifyStatus === 'verified' ? new Date() : null
     data.accmRejectReason = null
+    // Taking verification away has to stick. New accounts verify themselves off
+    // their own screenshot, so leaving that on would let the member re-upload
+    // and undo the admin a second later.
+    if (body.accmVerifyStatus !== 'verified') data.accmAutoVerify = false
   }
 
   // Trial length, counted from now. 0 ends the trial immediately.

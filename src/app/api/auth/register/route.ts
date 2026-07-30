@@ -45,7 +45,10 @@ export async function POST(req: Request) {
     // Give a 3-day free trial (matters only for non-ACCM/other-broker members).
     const trialEndsAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
     await db.user.create({
-      data: { name, email, password: hashedPassword, username, accmMember: isAccm, trialEndsAt }, // emailVerified stays null
+      // accmAutoVerify: everyone signing up from now on is verified the moment
+      // they upload their ACCM screenshot — no coach in the way. Accounts that
+      // pre-date this stay at the default (false) and keep the manual review.
+      data: { name, email, password: hashedPassword, username, accmMember: isAccm, trialEndsAt, accmAutoVerify: true }, // emailVerified stays null
       select: { id: true },
     })
 

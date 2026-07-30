@@ -18,8 +18,15 @@ function isOurBlobUrl(raw: string): boolean {
 }
 
 /**
- * Submit a screenshot of the member's ACCM account for staff review. Sets the
- * account to `pending`; a coach or admin decides from /verifications.
+ * Submit a screenshot of the member's ACCM account.
+ *
+ * Accounts registered since self-verification shipped (`accmAutoVerify`) are
+ * verified right here — they upload their verified ACCM account and the block
+ * lifts immediately, no queue. Accounts that pre-date it go to `pending` for a
+ * coach to decide from /verifications, as before.
+ *
+ * Either way the screenshot is kept: for a self-verified member it IS the audit
+ * trail, and staff can still revoke from /verifications if it doesn't hold up.
  */
 export async function POST(req: Request) {
   const session = await auth()
@@ -27,7 +34,7 @@ export async function POST(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, role: true, accmMember: true, accmNumber: true, realName: true, accmVerifyStatus: true },
+    select: { id: true, role: true, accmMember: true, accmNumber: true, realName: true, accmVerifyStatus: true, accmAutoVerify: true },
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (!isGatedMember(user)) {
@@ -46,15 +53,22 @@ export async function POST(req: Request) {
   if (!url) return NextResponse.json({ error: 'Please attach a screenshot first.' }, { status: 400 })
   if (!isOurBlobUrl(url)) return NextResponse.json({ error: 'That upload isn’t valid. Please try again.' }, { status: 400 })
 
+  const now = new Date()
+  const status = user.accmAutoVerify ? 'verified' : 'pending'
+
   await db.user.update({
     where: { id: user.id },
     data: {
       accmProofUrl: url,
-      accmProofAt: new Date(),
-      accmVerifyStatus: 'pending',
+      accmProofAt: now,
+      accmVerifyStatus: status,
       accmRejectReason: null,
+      // No staff user decided this one, so accmVerifiedById stays null — that's
+      // what marks a verification as self-served in the admin views.
+      accmVerifiedAt: status === 'verified' ? now : null,
+      accmVerifiedById: null,
     },
   })
 
-  return NextResponse.json({ accmVerifyStatus: 'pending' })
+  return NextResponse.json({ accmVerifyStatus: status })
 }

@@ -304,6 +304,7 @@ export default function SettingsPage() {
                   status={identity.accmVerifyStatus}
                   rejectReason={identity.accmRejectReason}
                   accmNumber={identity.accmNumber}
+                  autoVerify={identity.accmAutoVerify}
                   onSubmitted={s => setIdentity({ ...identity, accmVerifyStatus: s })}
                 />
               </div>

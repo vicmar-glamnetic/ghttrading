@@ -46,6 +46,11 @@ model User {
   accmVerifiedAt     DateTime?
   accmVerifiedById   String?    // staff user id that decided
   accmRejectReason   String?
+  // Set at sign-up: accounts registered since self-verification shipped are
+  // verified the moment they upload their screenshot, instead of queueing for a
+  // coach. Accounts that pre-date it stay false and keep going through
+  // /verifications. Their screenshot is kept so staff can audit it after.
+  accmAutoVerify     Boolean  @default(false)
   subscriptionStatus String   @default("free")
   stripeCustomerId   String?
   stripeSubId        String?

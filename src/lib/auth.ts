@@ -136,7 +136,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.accmMember = dbUser.accmMember
             token.trialEndsAt = dbUser.trialEndsAt ? dbUser.trialEndsAt.toISOString() : null
             token.approved = dbUser.approved // pick up approval
-            // Picks up a coach verifying them, which is what lifts the block.
+            // Picks up the verification that lifts the block — a new member
+            // clearing it themselves with a screenshot, or a coach approving an
+            // older account from the queue.
             token.accmVerifyStatus = dbUser.accmVerifyStatus
             token.lastVerified = Date.now()
           }

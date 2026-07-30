@@ -10,7 +10,7 @@ import {
 
 const SELECT = {
   id: true, name: true, realName: true, accmNumber: true, accmMember: true, role: true,
-  accmVerifyStatus: true, accmProofUrl: true, accmRejectReason: true,
+  accmVerifyStatus: true, accmProofUrl: true, accmRejectReason: true, accmAutoVerify: true,
 } as const
 
 /** Current identity + what the gate still needs from this member. */

@@ -5,20 +5,25 @@ import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import { PROOF_REQUIRED } from '@/lib/identity'
 
 /**
- * Proof-of-account upload: a screenshot of the member's ACCM account, reviewed
- * by a coach or admin. The image is deleted from storage the moment staff
- * decides, so it isn't left sitting on a public URL.
+ * Proof-of-account upload: a screenshot of the member's ACCM account.
+ *
+ * `autoVerify` members (everyone who registered since self-verification shipped)
+ * are verified the instant this uploads — no coach in between — so the wording
+ * has to promise that rather than "we'll get back to you". Older accounts still
+ * queue for staff, and their image is deleted the moment staff decides.
  *
  * The screenshot is worthless unless the ACCM account number is legible in it,
- * and a cropped number is by far the most common reason to reject one. So the
- * member previews their own picture against a checklist and has to confirm the
- * number is visible before it uploads — a rejection costs them their access
- * (PROOF_REQUIRED) and costs a coach a review, so it's worth the extra tap.
+ * and a cropped number is by far the most common reason one gets thrown out. So
+ * the member previews their own picture against a checklist and has to confirm
+ * the number is visible before it uploads. That tap matters more now, not less:
+ * with no coach reading it first, the checklist is the only thing standing
+ * between a useless screenshot and a verified account.
  */
-export function ProofUpload({ status, rejectReason, accmNumber, onSubmitted }: {
+export function ProofUpload({ status, rejectReason, accmNumber, autoVerify = false, onSubmitted }: {
   status: string
   rejectReason?: string | null
   accmNumber?: string | null
+  autoVerify?: boolean
   onSubmitted: (status: string) => void
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -81,7 +86,11 @@ export function ProofUpload({ status, rejectReason, accmNumber, onSubmitted }: {
         <BadgeCheck className="w-5 h-5 text-green-500 shrink-0" />
         <div>
           <p className="text-xs font-bold text-ink">Account verified</p>
-          <p className="text-[11px] text-ink3">Your ACCM account has been confirmed by the team.</p>
+          <p className="text-[11px] text-ink3">
+            {autoVerify
+              ? 'Your ACCM screenshot checked out — you have full access.'
+              : 'Your ACCM account has been confirmed by the team.'}
+          </p>
         </div>
       </div>
     )
@@ -130,6 +139,7 @@ export function ProofUpload({ status, rejectReason, accmNumber, onSubmitted }: {
       </ul>
       <p className="mt-1.5 text-[11px] text-ink3 leading-relaxed">
         Cover your balance if you prefer — we only check the name and the number.
+        {autoVerify && ' Send it and you’re in straight away — no waiting on a coach.'}
       </p>
 
       <input ref={fileRef} type="file" accept="image/*" onChange={pick} className="hidden" />
@@ -189,7 +199,9 @@ export function ProofUpload({ status, rejectReason, accmNumber, onSubmitted }: {
               disabled={busy || !confirmed}
               className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-yellow-500 hover:bg-yellow-400 disabled:opacity-40 text-black rounded-lg px-3 py-2 transition-colors"
             >
-              {busy ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending…</> : <><Upload className="w-3.5 h-3.5" /> Send for review</>}
+              {busy
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending…</>
+                : <><Upload className="w-3.5 h-3.5" /> {autoVerify ? 'Verify my account' : 'Send for review'}</>}
             </button>
           </div>
         </div>

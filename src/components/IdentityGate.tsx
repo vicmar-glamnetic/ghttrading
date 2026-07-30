@@ -25,11 +25,17 @@ export function IdentityGate() {
   const { status, update } = useSession()
   const [state, setState] = useState<IdentityState | null>(null)
   const [step, setStep] = useState<'details' | 'proof'>('details')
+  // Bumped when the member self-verifies, to re-run the check immediately
+  // instead of leaving them staring at the gate until the next poll.
+  const [recheck, setRecheck] = useState(0)
 
   useEffect(() => {
     if (status !== 'authenticated') return
     let alive = true
-    let wasBlocked = false
+    // A re-check only ever happens after the member was blocked and just cleared
+    // it themselves, so the JWT is stale for certain — say so, or this fresh run
+    // would clear the gate without refreshing the token.
+    let wasBlocked = recheck > 0
     let settled = false   // verified or never gated — nothing left to wait for
 
     // The session JWT lags the DB by up to 5 minutes, so ask the server what's
@@ -63,7 +69,7 @@ export function IdentityGate() {
       else check()
     }, APPROVAL_POLL_MS)
     return () => { alive = false; clearInterval(timer) }
-  }, [status, update])
+  }, [status, update, recheck])
 
   if (!state) return null
 
@@ -107,7 +113,14 @@ export function IdentityGate() {
                 status={state.accmVerifyStatus}
                 rejectReason={state.accmRejectReason}
                 accmNumber={state.accmNumber}
-                onSubmitted={s => setState({ ...state, accmVerifyStatus: s })}
+                autoVerify={state.accmAutoVerify}
+                onSubmitted={s => {
+                  setState({ ...state, accmVerifyStatus: s })
+                  // Self-verified: they're through this instant, so re-check now
+                  // and let the gate close rather than making them sit out the
+                  // 30s poll behind an already-lifted block.
+                  if (s === 'verified') setRecheck(n => n + 1)
+                }}
               />
               {canDismiss ? (
                 <button

@@ -110,8 +110,16 @@ export default function RegisterPage() {
                 </button>
               </div>
               <p className="text-[11px] text-ink3 mt-1.5">
-                ACCM members get full access free. Other brokers enjoy a 3-day free trial, then $5/mo. Membership may be verified.
+                ACCM members get full access free. Other brokers enjoy a 3-day free trial, then $5/mo.
               </p>
+              {/* Say it before they sign up, not after — the screenshot is the
+                  next thing we ask for and it's what unlocks the app. */}
+              {accmMember && (
+                <p className="text-[11px] text-ink2 mt-1.5 leading-relaxed">
+                  Have a screenshot of your ACCM account ready — one that shows your account number and your name.
+                  You&apos;ll upload it right after signing up and you&apos;re verified on the spot.
+                </p>
+              )}
             </div>
 
             <Turnstile onToken={setTurnstileToken} />

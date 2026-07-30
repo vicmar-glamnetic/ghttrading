@@ -14,6 +14,8 @@ export interface IdentityState {
   accmNumber: string | null
   accmVerifyStatus: string
   accmRejectReason?: string | null
+  /** Their screenshot verifies them on the spot, with no coach in between. */
+  accmAutoVerify?: boolean
   complete: boolean
 }
 

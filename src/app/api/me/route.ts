@@ -11,7 +11,7 @@ export async function GET() {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, realName: true, username: true, image: true, role: true, acctBalance: true, acctRiskPct: true, shareStats: true, accmMember: true, accmNumber: true, accmVerifyStatus: true, accmRejectReason: true, dailyLossLimit: true, maxTradesPerDay: true },
+    select: { id: true, name: true, realName: true, username: true, image: true, role: true, acctBalance: true, acctRiskPct: true, shareStats: true, accmMember: true, accmNumber: true, accmVerifyStatus: true, accmRejectReason: true, accmAutoVerify: true, dailyLossLimit: true, maxTradesPerDay: true },
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(user)
