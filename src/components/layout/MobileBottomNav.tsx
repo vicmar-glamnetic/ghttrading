@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { openTour } from '@/components/WelcomeTour'
 import { useLiveStatus } from '@/lib/useLiveStatus'
+import { anyRoomUnseen, SEEN_EVENT } from '@/lib/chatSeen'
 
 const items = [
   { href: '/ideas', label: 'Signals', icon: Zap          },
@@ -61,6 +62,7 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
+  const rooms = useRef<Record<string, string>>({})
   const [pending, setPending] = useState(0)
   const [verifying, setVerifying] = useState(0)
   const isLive = useLiveStatus()
@@ -71,8 +73,8 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
       if (document.hidden) return
       fetch('/api/chat/unread').then(r => r.json()).then(d => {
         setUnread(d.count || 0)
-        const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
-        setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
+        rooms.current = d.rooms || {}
+        setRoomDot(anyRoomUnseen(rooms.current))
       }).catch(() => {})
       if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => {
         setPending(d.count || 0)
@@ -84,9 +86,13 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
     return () => clearInterval(id)
   }, [isStaff])
 
+  // The chat page marks rooms read one at a time, so the dot survives opening
+  // /chat when a room you didn't look at still has messages.
   useEffect(() => {
-    if (pathname === '/chat') { localStorage.setItem('ght:chatSeenAt', String(Date.now())); setRoomDot(false) }
-  }, [pathname])
+    const recompute = () => setRoomDot(anyRoomUnseen(rooms.current))
+    window.addEventListener(SEEN_EVENT, recompute)
+    return () => window.removeEventListener(SEEN_EVENT, recompute)
+  }, [])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
   const role = session?.user?.role

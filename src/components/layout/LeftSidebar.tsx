@@ -4,9 +4,10 @@ import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMyProfile } from '@/lib/useMyProfile'
 import { useLiveStatus } from '@/lib/useLiveStatus'
+import { anyRoomUnseen, SEEN_EVENT } from '@/lib/chatSeen'
 import { openTour } from '@/components/WelcomeTour'
 import {
   Home, Bell, Settings, Users,
@@ -66,6 +67,7 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const [unread, setUnread] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
+  const rooms = useRef<Record<string, string>>({})
   const [pending, setPending] = useState(0)
   const [verifying, setVerifying] = useState(0)
   const isLive = useLiveStatus()
@@ -76,8 +78,8 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
       if (document.hidden) return
       fetch('/api/chat/unread').then(r => r.json()).then(d => {
         setUnread(d.count || 0)
-        const seen = Number(localStorage.getItem('ght:chatSeenAt') || 0)
-        setRoomDot(!!d.lastRoomAt && new Date(d.lastRoomAt).getTime() > seen)
+        rooms.current = d.rooms || {}
+        setRoomDot(anyRoomUnseen(rooms.current))
       }).catch(() => {})
       if (isStaff) fetch('/api/staff/approvals/count').then(r => r.json()).then(d => {
         setPending(d.count || 0)
@@ -89,10 +91,13 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
     return () => clearInterval(id)
   }, [isStaff])
 
-  // Opening the chat marks room messages as seen and clears the dot.
+  // The chat page marks rooms read one at a time, so the dot survives opening
+  // /chat when a room you didn't look at still has messages.
   useEffect(() => {
-    if (pathname === '/chat') { localStorage.setItem('ght:chatSeenAt', String(Date.now())); setRoomDot(false) }
-  }, [pathname])
+    const recompute = () => setRoomDot(anyRoomUnseen(rooms.current))
+    window.addEventListener(SEEN_EVENT, recompute)
+    return () => window.removeEventListener(SEEN_EVENT, recompute)
+  }, [])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
   const role = session?.user?.role

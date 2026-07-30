@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
 import { MessageCircle, Users, Send, Search, ChevronLeft, Plus, X } from 'lucide-react'
+import { markRoomSeen, isRoomUnseen, SEEN_EVENT } from '@/lib/chatSeen'
 
 interface Lite { id: string; name: string | null; image: string | null; username: string | null }
 interface RoomMsg { id: string; content: string; createdAt: string; author: Lite }
@@ -339,17 +340,53 @@ function ChatPageInner() {
   const [tab, setTab] = useState<Tab>(initialDm ? 'dm' : 'room')
   const [coaches, setCoaches] = useState<Lite[]>([])
   const [room, setRoom] = useState(initialRoom || 'community')
+  const [activity, setActivity] = useState<Record<string, string>>({})
+  const [dmUnread, setDmUnread] = useState(0)
+  // Bumped when a room is marked read, to recompute the dots below.
+  const [seenTick, setSeenTick] = useState(0)
 
   useEffect(() => {
     fetch('/api/chat/coaches').then(r => r.json()).then(d => { if (Array.isArray(d)) setCoaches(d) }).catch(() => {})
   }, [])
+
+  // Which rooms have messages I haven't seen, and how many DM threads are
+  // unread. Polled faster than the nav's 45s — this is the page you sit on.
+  useEffect(() => {
+    const poll = () => {
+      if (document.hidden) return
+      fetch('/api/chat/unread').then(r => r.json()).then(d => {
+        setActivity(d.rooms || {})
+        setDmUnread(d.count || 0)
+      }).catch(() => {})
+    }
+    poll()
+    const id = setInterval(poll, 15000)
+    document.addEventListener('visibilitychange', poll)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', poll) }
+  }, [])
+
+  useEffect(() => {
+    const bump = () => setSeenTick(t => t + 1)
+    window.addEventListener(SEEN_EVENT, bump)
+    return () => window.removeEventListener(SEEN_EVENT, bump)
+  }, [])
+
+  // The room on screen is being read right now — keep it marked, including as
+  // new messages land in it, so its own tab never dots at the reader.
+  useEffect(() => {
+    if (tab === 'room') markRoomSeen(room)
+  }, [tab, room, activity])
 
   const rooms = [
     { id: 'community', name: 'Community' },
     // A coach always sees their own room (the coaches list excludes self).
     ...(session?.user?.role === 'coach' && meId ? [{ id: `coach:${meId}`, name: 'My Room' }] : []),
     ...coaches.map(c => ({ id: `coach:${c.id}`, name: `${c.name?.split(' ')[0] || 'Coach'}'s Room` })),
-  ]
+  ].map(r => ({ ...r, unseen: isRoomUnseen(r.id, activity[r.id]) }))
+
+  // seenTick isn't read directly — it re-runs isRoomUnseen after a room is marked.
+  void seenTick
+  const roomsUnseen = tab !== 'room' && rooms.some(r => r.unseen)
 
   return (
     // -mb-28 cancels the mobile bottom padding the main layout adds for the fixed
@@ -364,10 +401,18 @@ function ChatPageInner() {
         <button onClick={() => setTab('room')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'room' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
           <Users className="w-4 h-4" /> Rooms
+          {roomsUnseen && (
+            <span aria-label="New room messages" className="w-2 h-2 rounded-full bg-yellow-500" />
+          )}
         </button>
         <button onClick={() => setTab('dm')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'dm' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
           <MessageCircle className="w-4 h-4" /> Messages
+          {dmUnread > 0 && (
+            <span className="min-w-4 h-4 px-1 grid place-items-center rounded-full bg-yellow-500 text-black text-[10px] font-black">
+              {dmUnread > 9 ? '9+' : dmUnread}
+            </span>
+          )}
         </button>
       </div>
 
@@ -378,8 +423,11 @@ function ChatPageInner() {
             <div className="flex gap-2 overflow-x-auto p-2 border-b border-line shrink-0 scrollbar-none">
               {rooms.map(r => (
                 <button key={r.id} onClick={() => setRoom(r.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${room === r.id ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${room === r.id ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'text-ink3 hover:bg-elevated border border-transparent'}`}>
                   {r.name}
+                  {r.unseen && (
+                    <span aria-label="New messages" title="New messages" className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  )}
                 </button>
               ))}
             </div>

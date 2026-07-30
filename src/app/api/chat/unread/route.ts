@@ -2,25 +2,25 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 
-// Chat activity for the nav badge:
-//  - count:      DM conversations with unread messages for me
-//  - lastRoomAt: newest room (community/coach) message not sent by me, so the
-//                nav can show a "new chat" dot (compared against a locally
-//                stored last-seen time on the client).
+// Chat activity for the nav badge and the chat tabs:
+//  - count: DM conversations with unread messages for me
+//  - rooms: newest message per room that I didn't write, so the client can dot
+//           each room it hasn't opened since (rooms have no read receipts —
+//           see lib/chatSeen).
 export async function GET() {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ count: 0, lastRoomAt: null })
+  if (!session?.user?.id) return NextResponse.json({ count: 0, rooms: {} })
   const me = session.user.id
 
-  const [convos, lastRoom] = await Promise.all([
+  const [convos, rooms] = await Promise.all([
     db.conversation.findMany({
       where: { OR: [{ user1Id: me }, { user2Id: me }] },
       include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
     }),
-    db.chatMessage.findFirst({
+    db.chatMessage.groupBy({
+      by: ['room'],
       where: { NOT: { authorId: me } },
-      orderBy: { createdAt: 'desc' },
-      select: { createdAt: true },
+      _max: { createdAt: true },
     }),
   ])
 
@@ -31,5 +31,10 @@ export async function GET() {
     return !myReadAt || last.createdAt > myReadAt
   }).length
 
-  return NextResponse.json({ count, lastRoomAt: lastRoom?.createdAt ?? null })
+  const roomActivity: Record<string, string> = {}
+  for (const r of rooms) {
+    if (r._max.createdAt) roomActivity[r.room] = r._max.createdAt.toISOString()
+  }
+
+  return NextResponse.json({ count, rooms: roomActivity })
 }
