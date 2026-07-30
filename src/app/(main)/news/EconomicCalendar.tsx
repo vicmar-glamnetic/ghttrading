@@ -1,7 +1,7 @@
 'use client'
-import { useState, useMemo, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useState, useMemo, useEffect, useSyncExternalStore } from 'react'
 import { ExternalLink } from 'lucide-react'
-import { format, isToday, isSameDay } from 'date-fns'
+import { format, isToday, isSameDay, startOfDay, endOfDay, addDays, isBefore } from 'date-fns'
 import type { CalendarEvent } from './feed'
 
 // Hue alone can't carry a three-step ramp at this size, so high also gets a ring
@@ -27,6 +27,15 @@ const nyClock = new Intl.DateTimeFormat('en-US', { ...CLOCK_OPTS, timeZone: NY_Z
 // ICU's narrow no-break space before AM/PM.
 const localClock = new Intl.DateTimeFormat('en-US', CLOCK_OPTS)
 
+// The feed pins All Day and Tentative events to UTC midnight, which falls on the
+// previous local day for anyone west of Greenwich — a New York viewer would see
+// Friday's holiday sitting under Thursday, and the "today or later" test would
+// drop it a day early. Rebuild those on the calendar date the feed meant.
+function eventDate(e: CalendarEvent) {
+  const d = new Date(e.ts)
+  return e.timed ? d : new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+}
+
 // The viewer's zone as they'd recognise it: "Europe/London (GMT+1)".
 function localZoneLabel() {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -39,19 +48,42 @@ function localZoneLabel() {
 
 export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
   const [impact, setImpact] = useState<(typeof IMPACT_FILTERS)[number]>('all')
-  const todayRef = useRef<HTMLDivElement>(null)
 
   // Timestamps render in the viewer's timezone, which the server can't know —
   // hold the first paint until mount so SSR and client markup agree.
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
+  // Releases drop off the list as they happen, so a tab left open all session
+  // doesn't keep showing news that's already priced in.
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    if (mounted) todayRef.current?.scrollIntoView({ block: 'center' })
-  }, [mounted])
+    const id = setInterval(() => { if (!document.hidden) setNow(Date.now()) }, 60000)
+    return () => clearInterval(id)
+  }, [])
 
-  const filtered = useMemo(
+  const byImpact = useMemo(
     () => events.filter(e => impact === 'all' || e.impact === impact),
     [events, impact],
+  )
+
+  // Today and tomorrow only, and only what hasn't happened yet. All Day and
+  // Tentative events carry no clock time — they'd read as "already past" the
+  // moment the day starts, so they're judged by date instead.
+  const filtered = useMemo(() => {
+    const today = startOfDay(new Date(now))
+    const cutoff = endOfDay(addDays(today, 1))
+    return byImpact.filter(e => {
+      const at = eventDate(e)
+      if (at > cutoff) return false
+      return e.timed ? e.ts >= now : !isBefore(at, today)
+    })
+  }, [byImpact, now])
+
+  // Weekends and late Fridays legitimately empty the window — name the next
+  // release rather than leaving a dead page.
+  const nextUp = useMemo(
+    () => (filtered.length ? null : byImpact.find(e => e.ts >= now) ?? null),
+    [filtered, byImpact, now],
   )
 
   // Only worth a second column when the viewer isn't already on New York time —
@@ -69,9 +101,12 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
   // Group into local calendar days — UTC timestamps near midnight land on a
   // different day depending on the viewer's offset.
   const days = useMemo(() => {
+    // Re-sort on the display date: a rebuilt All Day event no longer sits where
+    // its raw UTC timestamp put it, and the grouping below assumes day order.
+    const ordered = [...filtered].sort((a, b) => +eventDate(a) - +eventDate(b))
     const out: { date: Date; items: CalendarEvent[] }[] = []
-    for (const e of filtered) {
-      const d = new Date(e.ts)
+    for (const e of ordered) {
+      const d = eventDate(e)
       const last = out[out.length - 1]
       if (last && isSameDay(last.date, d)) last.items.push(e)
       else out.push({ date: d, items: [e] })
@@ -104,13 +139,18 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
 
       {days.length === 0 ? (
         <div className="bg-surface rounded-xl border border-line p-12 text-center">
-          <p className="text-ink3 text-sm">No events match this filter.</p>
+          <p className="text-ink3 text-sm">
+            {nextUp
+              ? `Nothing left today or tomorrow. Next up: ${nextUp.title} on ${format(new Date(nextUp.ts), 'EEEE, MMM d')}.`
+              : impact === 'all'
+                ? 'Nothing left on the calendar today or tomorrow.'
+                : 'No events match this filter today or tomorrow.'}
+          </p>
         </div>
       ) : (
         days.map(({ date, items }) => (
           <div
             key={date.toDateString()}
-            ref={isToday(date) ? todayRef : undefined}
             className="bg-surface rounded-xl border border-line overflow-hidden"
           >
             <div className={`flex items-center gap-2 px-3 py-2 border-b border-line ${isToday(date) ? 'bg-yellow-500/[0.06]' : ''}`}>
