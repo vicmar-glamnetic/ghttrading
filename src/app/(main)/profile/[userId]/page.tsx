@@ -2,10 +2,11 @@
 import { useState, useEffect, use, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { PostCard } from '@/components/posts/PostCard'
-import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check, BadgeCheck, Lock } from 'lucide-react'
+import { MapPin, Globe, Calendar, UserPlus, UserCheck, UserMinus, Camera, Pencil, X, Check, BadgeCheck, Lock, MessageCircle } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { isOnline, lastSeenLabel } from '@/lib/presence'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
@@ -439,7 +440,7 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
               )}
             </div>
 
-            <div className="flex gap-2 mb-1">
+            <div className="flex flex-wrap justify-end gap-2 mb-1">
               {isOwn ? (
                 <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                   <Pencil className="w-3.5 h-3.5" /> Edit Profile
@@ -463,6 +464,14 @@ export default function ProfilePage({ params }: { params: Promise<{ userId: stri
                       <UserPlus className="w-4 h-4" /> Add Trader
                     </Button>
                   )}
+                  {/* Opens (or creates) the 1-on-1 thread — /chat?dm= does the
+                      get-or-create, so no conversation is made until it's clicked. */}
+                  <Link
+                    href={`/chat?dm=${profile.id}`}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium bg-elevated hover:bg-line text-ink border border-line transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/50"
+                  >
+                    <MessageCircle className="w-4 h-4" /> Message
+                  </Link>
                   <Button
                     variant={profile.isFollowing ? 'secondary' : 'outline'}
                     size="sm"
