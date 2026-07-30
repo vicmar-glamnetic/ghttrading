@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { Button } from '@/components/ui/Button'
 import {
-  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail, UserX, BookOpen, BadgeCheck,
+  Shield, Users, GraduationCap, UserCog, Plus, Search, Trash2, X, DollarSign, Wifi, Mail, UserX, UserMinus, BookOpen, BadgeCheck,
 } from 'lucide-react'
 
 import { format } from 'date-fns'
@@ -95,6 +95,12 @@ export default function AdminPage() {
   const [winbackMsg, setWinbackMsg] = useState('')
   const [winbackCount, setWinbackCount] = useState<number | null>(null)
 
+  // Purge of never-verified ACCM accounts
+  const [purgeBusy, setPurgeBusy] = useState(false)
+  const [purgeMsg, setPurgeMsg] = useState('')
+  const [purgeCount, setPurgeCount] = useState<number | null>(null)
+  const [purgeMinAge, setPurgeMinAge] = useState(15) // days; the API is the source of truth
+
   useEffect(() => {
     if (!isAdmin) return // coaches never see the win-back card
     fetch('/api/admin/winback')
@@ -102,6 +108,18 @@ export default function AdminPage() {
       .then(d => { if (d) setWinbackCount(d.count) })
       .catch(() => {})
   }, [isAdmin])
+
+  // The purge count follows the "Not verified" tile, so it moves as members
+  // verify or new ones sign up — reload it whenever the table reloads.
+  const loadPurgeCount = useCallback(() => {
+    if (!isAdmin) return
+    fetch('/api/admin/purge-unverified')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) { setPurgeCount(d.count); if (d.minAgeDays) setPurgeMinAge(d.minAgeDays) } })
+      .catch(() => {})
+  }, [isAdmin])
+
+  useEffect(() => { loadPurgeCount() }, [loadPurgeCount])
 
   async function sendWinback() {
     if (!winbackCount) return
@@ -116,6 +134,38 @@ export default function AdminPage() {
     } catch {
       setWinbackMsg('Failed to send')
     } finally { setWinbackBusy(false) }
+  }
+
+  // Irreversible and bulk, so it asks twice: the count first, then the word.
+  async function purgeUnverified() {
+    if (!purgeCount) return
+    const label = `${purgeCount} unverified ACCM account${purgeCount === 1 ? '' : 's'}`
+    if (!confirm(
+      `Permanently delete ${label}?\n\n` +
+      `Every one of them signed up more than ${purgeMinAge} days ago and never verified. ` +
+      'Their posts, journals and messages go with them. Members waiting in the ' +
+      'review queue and non-ACCM (Standard) members are NOT touched.\n\n' +
+      'Everyone deleted is emailed that they can register again and verify.\n\n' +
+      'This cannot be undone.',
+    )) return
+    if (prompt(`Type DELETE to confirm removing ${label}.`)?.trim().toUpperCase() !== 'DELETE') {
+      setPurgeMsg('Cancelled — nothing was deleted.')
+      return
+    }
+    setPurgeBusy(true); setPurgeMsg('')
+    try {
+      const res = await fetch('/api/admin/purge-unverified', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) setPurgeMsg(d.error || 'Failed to delete')
+      else if (d.deleted === 0) setPurgeMsg('No unverified ACCM accounts to delete right now.')
+      else setPurgeMsg(`✓ Deleted ${d.deleted} account${d.deleted === 1 ? '' : 's'} · emailed ${d.sent}${d.failed ? ` · ${d.failed} email(s) failed` : ''}`)
+    } catch {
+      setPurgeMsg('Failed to delete')
+    } finally {
+      setPurgeBusy(false)
+      load()
+      loadPurgeCount()
+    }
   }
 
   async function postRecap() {
@@ -470,6 +520,34 @@ export default function AdminPage() {
           </Button>
         </div>
         {winbackMsg && <p className="text-xs text-ink2 mt-2">{winbackMsg}</p>}
+      </div>
+
+      {/* Purge never-verified ACCM sign-ups */}
+      <div className="rounded-xl border border-red-500/25 bg-surface p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-ink flex items-center gap-1.5">
+              <UserMinus className="w-4 h-4 text-red-400" /> Delete unverified accounts
+            </p>
+            <p className="text-xs text-ink3">
+              Permanently removes ACCM members who signed up over {purgeMinAge} days ago and never
+              submitted proof, and emails each one that they can register again and verify. Newer
+              sign-ups, members in review, rejected members and non-ACCM (Standard) members are left
+              alone.
+              {purgeCount !== null && (
+                <> <span className="font-semibold text-ink2">{purgeCount}</span> would be deleted.</>
+              )}
+            </p>
+          </div>
+          <Button
+            variant="secondary" size="sm" onClick={purgeUnverified} loading={purgeBusy}
+            disabled={purgeCount === 0}
+            className="text-xs shrink-0 text-red-400 border-red-400/30 hover:bg-red-500/10"
+          >
+            {purgeCount === 0 ? 'Nothing to delete' : 'Delete unverified accounts'}
+          </Button>
+        </div>
+        {purgeMsg && <p className="text-xs text-ink2 mt-2">{purgeMsg}</p>}
       </div>
       </>
       )}

@@ -402,6 +402,54 @@ export async function sendLiveAnnounceEmails(
   return { sent, failed }
 }
 
+/**
+ * Sent after an admin clears out the never-verified ACCM accounts. These
+ * members never got past the proof-of-account step, so e-mail is the only way
+ * to tell them — and the message has to double as an invitation back, since
+ * registering again is exactly what we want them to do.
+ */
+function buildAccountDeletedEmail(name?: string | null): { subject: string; html: string } {
+  const registerUrl = `${APP_URL}/register`
+  const greeting = name ? `Hi ${name},` : 'Hi,'
+  const inner = `
+    <h2 style="margin:0 0 12px;font-size:21px;font-weight:800;color:#f0f0f8;">${greeting} your account has been removed</h2>
+    <p style="margin:0 0 20px;font-size:14px;color:#9090a8;line-height:1.6;">
+      Your Gold Heist Trading account was never verified, so we&rsquo;ve removed it in a clean-up of
+      unverified sign-ups. Nothing is wrong on your side &mdash; the ACCM account check was simply
+      never completed.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;">
+      You&rsquo;re very welcome back. Just <strong style="color:#ad9045;">register again</strong> and finish
+      verification by uploading a screenshot of your ACCM account &mdash; once a coach approves it, you get
+      full access to the signals, the live room and the course library.
+    </p>
+    ${ctaButton(registerUrl, 'Register again →')}
+    <p style="margin:22px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">
+      Stuck on the verification step? Reply to this email and we&rsquo;ll help you through it.
+    </p>`
+  return { subject: 'Your Gold Heist Trading account has been removed', html: emailShell(inner) }
+}
+
+/** Batch-sends the account-removed notice. Same 100-per-call chunking as the rest. */
+export async function sendAccountDeletedEmails(
+  recipients: { email: string; name?: string | null }[],
+): Promise<{ sent: number; failed: number }> {
+  const resend = getResend()
+  let sent = 0, failed = 0
+  for (let i = 0; i < recipients.length; i += 100) {
+    const chunk = recipients.slice(i, i + 100)
+    const payload = chunk.map(r => {
+      const { subject, html } = buildAccountDeletedEmail(r.name)
+      return { from: FROM, to: r.email, subject, html }
+    })
+    try {
+      const { error } = await resend.batch.send(payload)
+      if (error) failed += chunk.length; else sent += chunk.length
+    } catch { failed += chunk.length }
+  }
+  return { sent, failed }
+}
+
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`
 
