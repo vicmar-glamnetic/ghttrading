@@ -163,6 +163,20 @@ body {
 :root[data-theme="light"] .badge-analysis { color: #8a7234; }
 :root[data-theme="light"] .badge-education { color: #4c50c7; }
 
+/* Economic calendar impact dots. Red and orange sat 27° apart in hue and read as
+   one colour at 6px — and as the same colour outright for red-green colour
+   blindness. High keeps red, medium moves to a true amber, and low leaves the
+   warm family entirely so it stops competing with the brand gold. */
+.impact-high   { background: #ef4444; }
+.impact-medium { background: #fbbf24; }
+.impact-low    { background: #38bdf8; }
+
+/* Bright dots vanish on the light theme's white surfaces (amber-400 is 1.7:1
+   there); drop a shade so each clears 3:1 against both backgrounds. */
+:root[data-theme="light"] .impact-high   { background: #dc2626; }
+:root[data-theme="light"] .impact-medium { background: #c2620a; }
+:root[data-theme="light"] .impact-low    { background: #0284c7; }
+
 /* Video upload */
 .upload-zone {
   border: 2px dashed var(--border);

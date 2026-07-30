@@ -4,11 +4,13 @@ import { ExternalLink } from 'lucide-react'
 import { format, isToday, isSameDay } from 'date-fns'
 import type { CalendarEvent } from './feed'
 
+// Hue alone can't carry a three-step ramp at this size, so high also gets a ring
+// — the severity that matters most stays legible without any colour perception.
 const IMPACT_STYLE: Record<CalendarEvent['impact'], { dot: string; label: string }> = {
-  high:    { dot: 'bg-red-400',    label: 'High' },
-  medium:  { dot: 'bg-orange-400', label: 'Medium' },
-  low:     { dot: 'bg-yellow-500', label: 'Low' },
-  holiday: { dot: 'bg-ink3/40',    label: 'Holiday' },
+  high:    { dot: 'impact-high ring-2 ring-red-500/25', label: 'High' },
+  medium:  { dot: 'impact-medium',                      label: 'Medium' },
+  low:     { dot: 'impact-low',                         label: 'Low' },
+  holiday: { dot: 'bg-ink3/40',                         label: 'Holiday' },
 }
 
 const IMPACT_FILTERS = ['all', 'high', 'medium', 'low'] as const
