@@ -133,10 +133,10 @@ const STEPS: Step[] = [
   },
   {
     icon: Clock,
-    title: 'Sessions & Economic Calendar',
-    body: 'The right sidebar shows live market sessions (London/NY/Tokyo) and flags the peak gold-volatility overlap. The Economic Calendar lists NFP, CPI, and FOMC — the events that move gold.',
-    href: '/events',
-    cta: 'Open Econ Calendar',
+    title: 'Sessions & news',
+    body: 'The right sidebar shows live market sessions (London/NY/Tokyo) and flags the peak gold-volatility overlap. Forex News carries the USD releases — NFP, CPI, FOMC — that move gold.',
+    href: '/news',
+    cta: 'Open Forex News',
   },
   {
     icon: Smartphone,

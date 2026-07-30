@@ -6,8 +6,8 @@ import { useSession, signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
-  CandlestickChart, Radio, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Users, Bell, Settings,
-  Shield, User, LogOut, Smartphone, UserCheck, Calculator, Sparkles, Trophy, CalendarClock,
+  Radio, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Users, Bell, Settings,
+  Shield, User, LogOut, Smartphone, UserCheck, Calculator, Sparkles, Trophy,
   GraduationCap, BadgeCheck,
 } from 'lucide-react'
 import { openTour } from '@/components/WelcomeTour'
@@ -27,15 +27,13 @@ const allNav = [
   { href: '/feed',          label: 'Feed',          icon: Home            },
   { href: '/chat',          label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',         label: 'Trading View',  icon: LineChart       },
-  { href: '/trading',       label: 'Trading',       icon: CandlestickChart, premium: true },
+  { href: '/journal',       label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/live',          label: 'Live',          icon: Radio,           premium: true },
   { href: '/courses',       label: 'Courses',       icon: GraduationCap,   premium: true },
   { href: '/education',     label: 'Education',     icon: BookOpen,        premium: true },
-  { href: '/journal',       label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/calendar',      label: 'Calendar',      icon: CalendarDays,    premium: true },
   { href: '/calculator',    label: 'Calculator',    icon: Calculator      },
   { href: '/leaderboard',   label: 'Leaderboard',   icon: Trophy          },
-  { href: '/events',        label: 'Econ Calendar', icon: CalendarClock   },
   { href: '/news',          label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',       label: 'Traders',       icon: Users           },
   { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },

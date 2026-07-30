@@ -12,7 +12,7 @@ import { openTour } from '@/components/WelcomeTour'
 import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator, Sparkles, Trophy, CalendarClock,
+  LineChart, Zap, Radio, MessageCircle, UserCheck, Calculator, Sparkles, Trophy,
   GraduationCap, BadgeCheck,
 } from 'lucide-react'
 
@@ -22,7 +22,7 @@ const primaryNav = [
   { href: '/feed',         label: 'Feed',          icon: Home            },
   { href: '/chat',         label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
-  { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
+  { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
 ]
 
 // Secondary features — shown below a divider.
@@ -30,11 +30,9 @@ const moreNav = [
   { href: '/live',         label: 'Live',          icon: Radio,           premium: true },
   { href: '/courses',      label: 'Courses',       icon: GraduationCap,   premium: true },
   { href: '/education',    label: 'Education',     icon: BookOpen,        premium: true },
-  { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
   { href: '/calendar',     label: 'Calendar',      icon: CalendarDays,    premium: true },
   { href: '/calculator',   label: 'Calculator',    icon: Calculator      },
   { href: '/leaderboard',  label: 'Leaderboard',   icon: Trophy          },
-  { href: '/events',       label: 'Econ Calendar', icon: CalendarClock   },
   { href: '/news',         label: 'Forex News',    icon: Newspaper       },
   { href: '/friends',      label: 'Traders',       icon: Users           },
   { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },

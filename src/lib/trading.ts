@@ -102,6 +102,25 @@ export function tradeMath(opts: {
   return { pips, pnl, riskAmount, r: pnl / riskAmount }
 }
 
+/**
+ * Signed pips on a closed trade, from the prices alone. Lot size doesn't move
+ * the pip count, so this reads entries that never recorded a size — unlike
+ * tradeMath, which needs lots to reach a cash figure.
+ *
+ * Null on points instruments (crypto, indices): a 1-point index move and a
+ * 0.0001 FX pip are different units, and a total that mixes them means nothing.
+ */
+export function tradePips(opts: {
+  symbol: string; direction: string; entry: number; exit: number
+}): number | null {
+  const { symbol, direction, entry, exit } = opts
+  if (![entry, exit].every(Number.isFinite)) return null
+  const { pipSize } = pipConfig(symbol)
+  if (pipSize === 1) return null
+  const move = direction === 'sell' ? entry - exit : exit - entry
+  return move / pipSize
+}
+
 export interface Idea {
   symbol: string
   direction: 'buy' | 'sell'
