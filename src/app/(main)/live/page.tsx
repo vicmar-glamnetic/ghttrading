@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
-import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2, Maximize2, Minimize2 } from 'lucide-react'
+import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2, Maximize2, Minimize2, Mail } from 'lucide-react'
 import { toEmbed } from '@/lib/video'
 import { LiveRoom, type LiveRoomProps } from '@/components/LiveRoom'
 
@@ -18,6 +18,10 @@ export default function LivePage() {
   const [removing, setRemoving] = useState(false)
   const [room, setRoom] = useState<LiveRoomProps | null>(null)
   const [expanded, setExpanded] = useState(false)
+  // Manual "we're live" email blast (staff only)
+  const [emailBusy, setEmailBusy] = useState(false)
+  const [emailMsg, setEmailMsg] = useState('')
+  const [emailCount, setEmailCount] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -56,6 +60,31 @@ export default function LivePage() {
     }
   }, [expanded])
 
+  // How many members the blast would reach — loaded up front so the confirm
+  // dialog can state the real number before anything goes out.
+  useEffect(() => {
+    if (!isStaff) return
+    fetch('/api/live/announce')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d) setEmailCount(d.count) })
+      .catch(() => {})
+  }, [isStaff])
+
+  const emailEveryone = useCallback(async () => {
+    const who = emailCount === null ? 'every approved member' : `${emailCount} member${emailCount === 1 ? '' : 's'}`
+    if (!confirm(`Email ${who} that we're live now? This sends immediately and can't be undone.`)) return
+    setEmailBusy(true); setEmailMsg('')
+    try {
+      const res = await fetch('/api/live/announce', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) setEmailMsg(d.error || 'Failed to send')
+      else if (d.total === 0) setEmailMsg('No approved members to email.')
+      else setEmailMsg(`✓ Emailed ${d.sent} of ${d.total}${d.failed ? ` · ${d.failed} failed` : ''}`)
+    } catch {
+      setEmailMsg('Failed to send')
+    } finally { setEmailBusy(false) }
+  }, [emailCount])
+
   const removeLive = useCallback(async () => {
     if (!confirm('Remove the live stream? This takes it offline for everyone.')) return
     setRemoving(true)
@@ -79,16 +108,25 @@ export default function LivePage() {
       </div>
 
       {isStaff && (
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setShowSettings(true)} className="gap-1.5 text-xs">
-            <Settings2 className="w-3.5 h-3.5" /> Manage stream
-          </Button>
-          {(webinar.isLive || webinar.embedUrl || webinar.title) && (
-            <Button variant="secondary" size="sm" onClick={removeLive} loading={removing}
-              className="gap-1.5 text-xs text-red-400 hover:text-red-300">
-              <Trash2 className="w-3.5 h-3.5" /> Remove live
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setShowSettings(true)} className="gap-1.5 text-xs">
+              <Settings2 className="w-3.5 h-3.5" /> Manage stream
             </Button>
-          )}
+            {webinar.isLive && (
+              <Button variant="secondary" size="sm" onClick={emailEveryone} loading={emailBusy} className="gap-1.5 text-xs">
+                <Mail className="w-3.5 h-3.5" /> Email everyone
+                {emailCount !== null && <span className="text-ink3">({emailCount})</span>}
+              </Button>
+            )}
+            {(webinar.isLive || webinar.embedUrl || webinar.title) && (
+              <Button variant="secondary" size="sm" onClick={removeLive} loading={removing}
+                className="gap-1.5 text-xs text-red-400 hover:text-red-300">
+                <Trash2 className="w-3.5 h-3.5" /> Remove live
+              </Button>
+            )}
+          </div>
+          {emailMsg && <p className="text-xs text-ink2">{emailMsg}</p>}
         </div>
       )}
 

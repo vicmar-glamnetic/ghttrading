@@ -353,6 +353,55 @@ export async function sendMonthlyRecapEmails(
   return { sent, failed }
 }
 
+/**
+ * "We're live" blast — staff fire this by hand from the live page once a session
+ * is actually up. Going live already pushes a notification; this reaches the
+ * members who never enabled push, and it stays manual so re-uploading a stream
+ * (toggling live off and on again) doesn't email everyone twice.
+ */
+function buildLiveAnnounceEmail(name?: string | null, title?: string | null): { subject: string; html: string } {
+  const url = `${APP_URL}/live`
+  const greeting = name ? `Hey ${name},` : 'Hey trader,'
+  const inner = `
+    <div style="text-align:center;margin:0 0 18px;">
+      <span style="display:inline-block;background:#f8717120;border:1px solid #f8717150;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:800;color:#f87171;letter-spacing:1px;text-transform:uppercase;">&#128308; Live now</span>
+    </div>
+    <h2 style="margin:0 0 12px;font-size:21px;font-weight:800;color:#f0f0f8;text-align:center;">${greeting} we're live</h2>
+    ${title ? `<p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#ad9045;text-align:center;">${title}</p>` : ''}
+    <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;text-align:center;">
+      The session has started in the GHT live room — live gold analysis, the levels we're watching,
+      and trades called as they happen. Jump in now and bring your questions.
+    </p>
+    ${ctaButton(url, 'Watch live now →')}
+    <p style="margin:22px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">
+      Can't make it? The replay lands in the community afterwards.
+    </p>`
+  return {
+    subject: title ? `🔴 We're live: ${title}` : "🔴 We're live now — join the session",
+    html: emailShell(inner),
+  }
+}
+
+export async function sendLiveAnnounceEmails(
+  recipients: { email: string; name?: string | null }[],
+  title?: string | null,
+): Promise<{ sent: number; failed: number }> {
+  const resend = getResend()
+  let sent = 0, failed = 0
+  for (let i = 0; i < recipients.length; i += 100) {
+    const chunk = recipients.slice(i, i + 100)
+    const payload = chunk.map(r => {
+      const { subject, html } = buildLiveAnnounceEmail(r.name, title)
+      return { from: FROM, to: r.email, subject, html }
+    })
+    try {
+      const { error } = await resend.batch.send(payload)
+      if (error) failed += chunk.length; else sent += chunk.length
+    } catch { failed += chunk.length }
+  }
+  return { sent, failed }
+}
+
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`
 
