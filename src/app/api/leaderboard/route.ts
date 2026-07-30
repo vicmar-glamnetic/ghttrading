@@ -72,5 +72,32 @@ export async function GET() {
     })
     .filter(r => r.entries > 0)
 
-  return NextResponse.json(rows)
+  // The cash boards ship a position, never a figure. The client renders them
+  // masked, so sending pnl/avgPnl would hand every member's account size to
+  // anyone who opens the network tab — the ordering is the public part.
+  //
+  // Ranks cover everyone with a trade. The client still applies its own
+  // minimum-trades cut on the average board; that only drops rows, so the
+  // order of whoever survives is unchanged.
+  const rankBy = (pick: (r: (typeof rows)[number]) => number | null) => {
+    const ordered = rows
+      .filter(r => pick(r) != null)
+      .sort((a, b) => (pick(b) ?? 0) - (pick(a) ?? 0) || b.trades - a.trades)
+    return new Map(ordered.map((r, i) => [r.id, i + 1]))
+  }
+  const amountRank = rankBy(r => (r.trades > 0 ? r.pnl : null))
+  const avgRank = rankBy(r => r.avgPnl)
+
+  return NextResponse.json(rows.map(r => ({
+    id: r.id, name: r.name, username: r.username, image: r.image,
+    pips: r.pips,
+    pipTrades: r.pipTrades,
+    trades: r.trades,
+    decided: r.decided,
+    winRate: r.winRate,
+    entries: r.entries,
+    activeThisWeek: r.activeThisWeek,
+    amountRank: amountRank.get(r.id) ?? null,
+    avgRank: avgRank.get(r.id) ?? null,
+  })))
 }

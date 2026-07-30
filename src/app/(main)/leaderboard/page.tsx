@@ -7,8 +7,10 @@ import { cn } from '@/lib/utils'
 
 interface Row {
   id: string; name: string | null; username: string | null; image: string | null
-  pnl: number; pips: number; pipTrades: number; trades: number; decided: number
-  avgPnl: number | null; winRate: number | null; entries: number; activeThisWeek: boolean
+  pips: number; pipTrades: number; trades: number; decided: number
+  winRate: number | null; entries: number; activeThisWeek: boolean
+  /** Position on the cash boards. The figures behind them never leave the server. */
+  amountRank: number | null; avgRank: number | null
 }
 
 // A rate or an average off one lucky trade isn't a record. The boards that
@@ -18,9 +20,12 @@ const MIN_RANKED_TRADES = 5
 
 const medal = ['🥇', '🥈', '🥉']
 
+// Cash boards show their standing, not the money. Members compete on the
+// ranking without publishing what their account is worth.
+const MASKED = 'xxx'
+const byRank = (a: number | null, b: number | null) => (a ?? Infinity) - (b ?? Infinity)
+
 const signed = (n: number) => (n > 0 ? '+' : '') + n.toLocaleString(undefined, { maximumFractionDigits: 0 })
-const money = (n: number) =>
-  (n > 0 ? '+' : n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const tone = (n: number) => (n > 0 ? 'text-green-400' : n < 0 ? 'text-red-400' : 'text-ink3')
 
 interface Category {
@@ -53,12 +58,12 @@ const CATEGORIES: Category[] = [
     key: 'amount',
     label: 'Amount',
     icon: DollarSign,
-    eligible: r => r.trades > 0,
-    rank: (a, b) => b.pnl - a.pnl || b.trades - a.trades,
-    value: r => money(r.pnl),
-    valueClass: r => tone(r.pnl),
+    eligible: r => r.amountRank != null,
+    rank: (a, b) => byRank(a.amountRank, b.amountRank),
+    value: () => MASKED,
+    valueClass: () => 'text-ink3 tracking-[0.2em]',
     detail: r => `${r.trades} trade${r.trades !== 1 ? 's' : ''}`,
-    note: 'Net journaled P&L across every trade with a recorded result.',
+    note: 'Ranked by net journaled P&L. The amounts stay private — only the standing is public.',
   },
   {
     key: 'winrate',
@@ -75,12 +80,12 @@ const CATEGORIES: Category[] = [
     key: 'avg',
     label: 'Avg / Trade',
     icon: Scale,
-    eligible: r => r.avgPnl != null && r.trades >= MIN_RANKED_TRADES,
-    rank: (a, b) => (b.avgPnl ?? 0) - (a.avgPnl ?? 0) || b.trades - a.trades,
-    value: r => money(r.avgPnl ?? 0),
-    valueClass: r => tone(r.avgPnl ?? 0),
+    eligible: r => r.avgRank != null && r.trades >= MIN_RANKED_TRADES,
+    rank: (a, b) => byRank(a.avgRank, b.avgRank),
+    value: () => MASKED,
+    valueClass: () => 'text-ink3 tracking-[0.2em]',
     detail: r => `${r.trades} trade${r.trades !== 1 ? 's' : ''}`,
-    note: `Net P&L divided by trades — consistency, not one big day. Needs ${MIN_RANKED_TRADES}+ trades to rank.`,
+    note: `Ranked by net P&L divided by trades — consistency, not one big day. Amounts stay private. Needs ${MIN_RANKED_TRADES}+ trades to rank.`,
   },
 ]
 
