@@ -13,6 +13,28 @@ const IMPACT_STYLE: Record<CalendarEvent['impact'], { dot: string; label: string
 
 const IMPACT_FILTERS = ['all', 'high', 'medium', 'low'] as const
 
+// USD releases are scheduled in New York time — "8:30 ET" is how the desk and
+// ForexFactory both quote them — so pair the viewer's own clock with ET.
+const NY_ZONE = 'America/New_York'
+
+const CLOCK_OPTS: Intl.DateTimeFormatOptions = {
+  hour: 'numeric', minute: '2-digit', hour12: true,
+}
+const nyClock = new Intl.DateTimeFormat('en-US', { ...CLOCK_OPTS, timeZone: NY_ZONE })
+// Same formatter family as nyClock, so the comparison below isn't thrown off by
+// ICU's narrow no-break space before AM/PM.
+const localClock = new Intl.DateTimeFormat('en-US', CLOCK_OPTS)
+
+// The viewer's zone as they'd recognise it: "Europe/London (GMT+1)".
+function localZoneLabel() {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const abbr = new Intl.DateTimeFormat([], { timeZoneName: 'short' })
+    .formatToParts(new Date())
+    .find(p => p.type === 'timeZoneName')?.value
+  // A viewer on plain UTC would otherwise read "UTC (UTC)".
+  return abbr && abbr !== zone ? `${zone} (${abbr})` : zone
+}
+
 export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
   const [impact, setImpact] = useState<(typeof IMPACT_FILTERS)[number]>('all')
   const todayRef = useRef<HTMLDivElement>(null)
@@ -29,6 +51,18 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
     () => events.filter(e => impact === 'all' || e.impact === impact),
     [events, impact],
   )
+
+  // Only worth a second column when the viewer isn't already on New York time —
+  // compare rendered clocks, so Toronto (same offset, different zone name) also
+  // counts as ET.
+  const zone = useMemo(() => {
+    if (!mounted) return { label: '', showNY: false }
+    const now = new Date()
+    return {
+      label: localZoneLabel(),
+      showNY: nyClock.format(now) !== localClock.format(now),
+    }
+  }, [mounted])
 
   // Group into local calendar days — UTC timestamps near midnight land on a
   // different day depending on the viewer's offset.
@@ -60,6 +94,11 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
           </button>
         ))}
       </div>
+
+      <p className="text-[10px] text-ink3">
+        Times in <span className="text-ink2 font-semibold">{zone.label}</span>
+        {zone.showNY && <> · second line is New York time (ET)</>}
+      </p>
 
       {days.length === 0 ? (
         <div className="bg-surface rounded-xl border border-line p-12 text-center">
@@ -96,8 +135,15 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 sm:gap-3 px-3 py-2.5 hover:bg-elevated transition-colors group"
                 >
-                  <span className="text-xs font-semibold text-ink2 tabular-nums w-14 sm:w-16 shrink-0">
-                    {e.timed ? format(new Date(e.ts), 'h:mm a') : 'All Day'}
+                  <span className="w-16 sm:w-20 shrink-0">
+                    <span className="block text-xs font-semibold text-ink2 tabular-nums">
+                      {e.timed ? format(new Date(e.ts), 'h:mm a') : 'All Day'}
+                    </span>
+                    {e.timed && zone.showNY && (
+                      <span className="block text-[10px] text-ink3 tabular-nums">
+                        {nyClock.format(new Date(e.ts))} ET
+                      </span>
+                    )}
                   </span>
 
                   <span className="text-xs font-bold text-ink bg-sunken border border-line rounded px-1.5 py-0.5 w-12 text-center shrink-0">

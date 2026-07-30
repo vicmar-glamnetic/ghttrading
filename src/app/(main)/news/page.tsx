@@ -26,7 +26,7 @@ export default async function NewsPage() {
       )}
 
       <p className="text-[10px] text-ink3 text-center">
-        USD events from the ForexFactory economic calendar. Times shown in your local timezone. Updated periodically.
+        USD events from the ForexFactory economic calendar. Updated periodically.
       </p>
     </div>
   )
