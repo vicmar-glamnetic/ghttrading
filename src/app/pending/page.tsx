@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { LogoutButton } from '@/app/upgrade/LogoutButton'
+import { PendingVerification } from '@/components/identity/PendingVerification'
 import { Hourglass } from 'lucide-react'
 
 export const metadata = { title: 'Pending Approval · Gold Heist Trading' }
@@ -23,13 +24,20 @@ export default async function PendingPage() {
           reviewed by our team. You&apos;ll get full access once it&apos;s approved — usually within a few hours.
         </p>
 
-        <div className="bg-surface border border-line rounded-2xl p-5 mt-6 text-left">
-          <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">While you wait</p>
-          <p className="text-sm text-ink2">
-            Make sure you&apos;ve registered your ACCM trading account — ACCM members get{' '}
-            <span className="text-ink font-semibold">free access</span>. Questions? Reach out to our team.
-          </p>
-        </div>
+        {/* ACCM members do their verification here, before approval, so whoever
+            reviews the sign-up has the ACCM number and the screenshot in front
+            of them. Other-broker members have nothing to prove, so they just get
+            the wait. */}
+        {session.user.accmMember === false ? (
+          <div className="bg-surface border border-line rounded-2xl p-5 mt-6 text-left">
+            <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-1">While you wait</p>
+            <p className="text-sm text-ink2">
+              Your 3-day free trial starts as soon as you&apos;re approved. Questions? Reach out to our team.
+            </p>
+          </div>
+        ) : (
+          <PendingVerification />
+        )}
 
         <p className="text-[11px] text-ink3 mt-4">Already approved? Log out and back in to refresh your access.</p>
         <div className="flex items-center justify-between mt-3 px-1">

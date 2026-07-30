@@ -34,9 +34,11 @@ export async function GET() {
     }),
     db.user.findMany({
       // accmVerifiedById null is what says "no coach decided this" — once one
-      // does, the row is reviewed and leaves the list.
+      // does, the row is reviewed and leaves the list. Sign-ups still waiting on
+      // approval are left out: their screenshot is already on /approvals, and
+      // whoever approves them there has looked at it.
       where: {
-        accmVerifyStatus: 'verified', role: 'member',
+        accmVerifyStatus: 'verified', role: 'member', approved: true,
         accmAutoVerify: true, accmVerifiedById: null, accmProofUrl: { not: null },
       },
       select: { ...SELECT, accmVerifiedAt: true },

@@ -1,17 +1,21 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Avatar } from '@/components/ui/Avatar'
-import { UserCheck, Check, X } from 'lucide-react'
+import { ImageLightbox } from '@/components/ui/ImageLightbox'
+import { UserCheck, Check, X, BadgeCheck, ImageOff } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface Pending {
   id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string; accmMember: boolean; accmNumber: string | null
+  realName: string | null; accmProofUrl: string | null; accmVerifyStatus: string; accmProofAt: string | null
 }
 
 export default function ApprovalsPage() {
   const [pending, setPending] = useState<Pending[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
+  const [zoom, setZoom] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -75,7 +79,8 @@ export default function ApprovalsPage() {
       ) : (
         <div className="space-y-2">
           {pending.map(u => (
-            <div key={u.id} className="flex items-center gap-3 bg-surface rounded-xl border border-line p-3">
+            <div key={u.id} className="bg-surface rounded-xl border border-line p-3 space-y-3">
+            <div className="flex items-center gap-3">
               <Avatar src={u.image} name={u.name} size="md" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
@@ -108,11 +113,73 @@ export default function ApprovalsPage() {
                 </button>
               </div>
             </div>
+
+            {/* The proof, so this is a decision and not a guess. ACCM members
+                upload it from /pending while they wait, so it's normally here
+                before anyone opens this page. */}
+            {u.accmMember && <ProofBlock u={u} onZoom={setZoom} />}
+            </div>
           ))}
         </div>
       )}
 
-      <p className="text-[10px] text-ink3 text-center">Approving a member gives them access to the community.</p>
+      <p className="text-[10px] text-ink3 text-center">
+        Approving a member gives them access to the community. Their screenshot is deleted from storage at the same time.
+      </p>
+
+      {zoom && <ImageLightbox images={[zoom]} startIndex={0} onClose={() => setZoom(null)} />}
     </div>
+  )
+}
+
+/**
+ * What the ACCM member sent in, matched against what they claim. Deliberately
+ * loud when there's nothing to check: approving an account with no proof behind
+ * it is the thing this page exists to stop being accidental.
+ */
+function ProofBlock({ u, onZoom }: { u: Pending; onZoom: (url: string) => void }) {
+  if (!u.accmProofUrl) {
+    return (
+      <div className="flex items-start gap-2 rounded-lg border border-line bg-elevated px-3 py-2.5">
+        <ImageOff className="w-4 h-4 text-ink3 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-ink3 leading-relaxed">
+          {u.accmVerifyStatus === 'verified'
+            ? 'Already reviewed — the screenshot has been cleared from storage.'
+            : 'No screenshot yet. They’re asked for one on the waiting screen; approving now means nobody has checked their ACCM account.'}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-lg bg-elevated border border-line px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-ink3 font-semibold">Real name</p>
+          <p className="font-semibold text-ink truncate">{u.realName || '—'}</p>
+        </div>
+        <div className="rounded-lg bg-yellow-500/5 border border-yellow-500/30 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-wider text-ink3 font-semibold">Must appear in image</p>
+          <p className="font-mono font-bold text-yellow-500 truncate text-sm">{u.accmNumber || '—'}</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onZoom(u.accmProofUrl!)}
+        className="block w-full relative h-44 rounded-lg overflow-hidden border border-line bg-elevated"
+        title="Tap to enlarge"
+      >
+        <Image src={u.accmProofUrl} alt="Proof of ACCM account" fill sizes="480px" className="object-contain" unoptimized />
+      </button>
+
+      {u.accmVerifyStatus === 'verified' && (
+        <p className="flex items-center gap-1.5 text-[11px] text-green-500">
+          <BadgeCheck className="w-3.5 h-3.5 shrink-0" />
+          Verified from this screenshot
+          {u.accmProofAt && ` on ${format(new Date(u.accmProofAt), 'MMM d, h:mma')}`}
+        </p>
+      )}
+    </>
   )
 }
