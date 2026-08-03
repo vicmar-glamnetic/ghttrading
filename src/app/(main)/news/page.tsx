@@ -13,7 +13,7 @@ export default async function NewsPage() {
       <div className="flex items-center gap-2">
         <CalendarClock className="w-5 h-5 text-yellow-500" />
         <h1 className="font-bold text-ink text-lg">Forex News</h1>
-        <span className="ml-auto text-xs text-ink3">Upcoming USD releases · today &amp; tomorrow</span>
+        <span className="ml-auto text-xs text-ink3">Upcoming USD releases · this week</span>
       </div>
 
       {events.length === 0 ? (

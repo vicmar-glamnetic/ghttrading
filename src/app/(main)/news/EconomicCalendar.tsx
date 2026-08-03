@@ -1,7 +1,7 @@
 'use client'
 import { useState, useMemo, useEffect, useSyncExternalStore } from 'react'
 import { ExternalLink } from 'lucide-react'
-import { format, isToday, isSameDay, startOfDay, endOfDay, addDays, isBefore } from 'date-fns'
+import { format, isToday, isSameDay, startOfDay, isBefore } from 'date-fns'
 import type { CalendarEvent } from './feed'
 
 // Hue alone can't carry a three-step ramp at this size, so high also gets a ring
@@ -66,25 +66,16 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
     [events, impact],
   )
 
-  // Today and tomorrow only, and only what hasn't happened yet. All Day and
-  // Tentative events carry no clock time — they'd read as "already past" the
-  // moment the day starts, so they're judged by date instead.
+  // The feed carries the whole current week; show all of it that's still ahead
+  // and drop the days already behind us. All Day and Tentative events carry no
+  // clock time — they'd read as "already past" the moment the day starts, so
+  // they're judged by date instead.
   const filtered = useMemo(() => {
     const today = startOfDay(new Date(now))
-    const cutoff = endOfDay(addDays(today, 1))
-    return byImpact.filter(e => {
-      const at = eventDate(e)
-      if (at > cutoff) return false
-      return e.timed ? e.ts >= now : !isBefore(at, today)
-    })
+    return byImpact.filter(e =>
+      e.timed ? e.ts >= now : !isBefore(eventDate(e), today),
+    )
   }, [byImpact, now])
-
-  // Weekends and late Fridays legitimately empty the window — name the next
-  // release rather than leaving a dead page.
-  const nextUp = useMemo(
-    () => (filtered.length ? null : byImpact.find(e => e.ts >= now) ?? null),
-    [filtered, byImpact, now],
-  )
 
   // Only worth a second column when the viewer isn't already on New York time —
   // compare rendered clocks, so Toronto (same offset, different zone name) also
@@ -140,11 +131,9 @@ export function EconomicCalendar({ events }: { events: CalendarEvent[] }) {
       {days.length === 0 ? (
         <div className="bg-surface rounded-xl border border-line p-12 text-center">
           <p className="text-ink3 text-sm">
-            {nextUp
-              ? `Nothing left today or tomorrow. Next up: ${nextUp.title} on ${format(new Date(nextUp.ts), 'EEEE, MMM d')}.`
-              : impact === 'all'
-                ? 'Nothing left on the calendar today or tomorrow.'
-                : 'No events match this filter today or tomorrow.'}
+            {impact === 'all'
+              ? 'Nothing left on the calendar this week.'
+              : 'No events match this filter for the rest of the week.'}
           </p>
         </div>
       ) : (
