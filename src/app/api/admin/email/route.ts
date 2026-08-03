@@ -98,21 +98,24 @@ interface SendBody {
   body?: string
   ctaLabel?: string
   ctaUrl?: string
-  userIds?: string[]
-  /** Addresses typed by hand — anyone who isn't (or isn't yet) an account. */
-  extraEmails?: string[]
+  /**
+   * Who to mail — plain addresses, whether typed by hand or added from the
+   * member picker. Addresses rather than user ids so the composer can reach
+   * someone who has no account (or no longer has one).
+   */
+  emails?: string[]
   /** Ignores the recipient list and mails the signed-in admin a sample instead. */
   test?: boolean
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-/** Sends the composed message. Recipients are always explicit ids — never a raw filter. */
+/** Sends the composed message to an explicit list of addresses — never to a raw filter. */
 export async function POST(req: Request) {
   const session = await requireAdmin()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { subject, body, ctaLabel, ctaUrl, userIds, extraEmails, test }: SendBody =
+  const { subject, body, ctaLabel, ctaUrl, emails, test }: SendBody =
     await req.json().catch(() => ({}))
 
   if (!subject?.trim()) return NextResponse.json({ error: 'A subject is required.' }, { status: 400 })
@@ -138,33 +141,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ sent, failed, total: 1, test: true, to: me.email })
   }
 
-  const ids = Array.from(new Set(userIds ?? []))
-  const typed = Array.from(new Set(
-    (extraEmails ?? []).map(e => e.trim().toLowerCase()).filter(e => EMAIL_RE.test(e)),
+  // Case-insensitive dedupe, so the same person typed twice with different
+  // capitalisation is one recipient.
+  const addresses = Array.from(new Set(
+    (emails ?? []).map(e => e.trim().toLowerCase()).filter(e => EMAIL_RE.test(e)),
   ))
+  const rejected = (emails ?? []).filter(e => e.trim() && !EMAIL_RE.test(e.trim()))
 
-  if (ids.length === 0 && typed.length === 0) {
-    return NextResponse.json({ error: 'Pick at least one recipient.' }, { status: 400 })
+  if (addresses.length === 0) {
+    return NextResponse.json(
+      { error: rejected.length ? `No valid addresses — check "${rejected[0]}".` : 'Add at least one recipient.' },
+      { status: 400 },
+    )
   }
 
-  const picked = ids.length
-    ? await db.user.findMany({
-        where: { id: { in: ids } },
-        select: { email: true, name: true, accmNumber: true },
-      })
-    : []
+  // An address that belongs to an account is mailed off that account's row, so
+  // {{firstName}} and {{accmNumber}} resolve. Anyone else still gets the mail,
+  // with the tokens falling back to their defaults.
+  const known = await db.user.findMany({
+    where: { email: { in: addresses } },
+    select: { email: true, name: true, accmNumber: true },
+  })
+  const byEmail = new Map(known.map(u => [u.email.toLowerCase(), u]))
+  const recipients = addresses.map(email => byEmail.get(email) ?? { email, name: null, accmNumber: null })
 
-  // Someone typed by hand who already has an account is mailed once, off their
-  // account row, so their name still resolves.
-  const seen = new Set(picked.map(u => u.email.toLowerCase()))
-  const recipients = [
-    ...picked,
-    ...typed.filter(e => !seen.has(e)).map(email => ({ email, name: null, accmNumber: null })),
-  ]
-
-  if (recipients.length === 0) {
-    return NextResponse.json({ error: 'None of those recipients exist any more.' }, { status: 400 })
-  }
   if (recipients.length > MAX_RECIPIENTS) {
     return NextResponse.json(
       { error: `That's ${recipients.length} recipients — ${MAX_RECIPIENTS} is the limit for one send.` },
@@ -174,7 +174,14 @@ export async function POST(req: Request) {
 
   try {
     const { sent, failed, failedEmails } = await sendBroadcastEmails(recipients, tpl)
-    return NextResponse.json({ sent, failed, failedEmails: failedEmails.slice(0, 20), total: recipients.length })
+    return NextResponse.json({
+      sent, failed, failedEmails: failedEmails.slice(0, 20),
+      total: recipients.length,
+      // How many were addressed by name, so the composer can say whether the
+      // tokens actually landed.
+      matched: known.length,
+      skipped: rejected.slice(0, 20),
+    })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Failed to send emails'
     return NextResponse.json({ error: msg }, { status: 500 })
