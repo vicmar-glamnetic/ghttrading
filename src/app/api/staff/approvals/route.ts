@@ -3,6 +3,7 @@ import { del } from '@vercel/blob'
 import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/admin'
 import { sendApprovalEmail } from '@/lib/email'
+import { namePartOf, needsVerification } from '@/lib/identity'
 
 // Coaches/admins can review and approve pending sign-ups (no other admin powers).
 export async function GET() {
@@ -48,7 +49,9 @@ export async function POST(req: Request) {
       approved: true,
       ...(reviewedProof ? { accmVerifiedById: session.user.id, accmProofUrl: null } : {}),
     },
-    select: { email: true, name: true },
+    // role/accmMember/status come back so the approval email can tell whether
+    // this member still owes us an account screenshot.
+    select: { email: true, name: true, role: true, accmMember: true, accmVerifyStatus: true },
   })
 
   // Best-effort — an account screenshot shouldn't sit on a public URL once it
@@ -65,7 +68,7 @@ export async function POST(req: Request) {
   // fail the approval itself.
   if (!user.approved && updated.email) {
     try {
-      await sendApprovalEmail(updated.email, updated.name)
+      await sendApprovalEmail(updated.email, namePartOf(updated.name), needsVerification(updated))
     } catch (err) {
       console.error('Failed to send approval email:', err)
     }

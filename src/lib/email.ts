@@ -43,15 +43,51 @@ export async function sendVerificationEmail(email: string, code: string) {
   })
 }
 
-export async function sendApprovalEmail(email: string, name?: string | null) {
+/**
+ * Sign-up approved.
+ *
+ * Approval and ACCM verification are two separate gates, and staff often clear
+ * the first while the second is still open — an approved member who never
+ * uploaded their account screenshot walks straight into the blocking pop-up.
+ * Telling them "you now have full access" in that case is simply wrong, so pass
+ * `needsProof` (i.e. needsVerification(user)) and they get the one-step-left
+ * version instead.
+ */
+export function buildApprovalEmail(name?: string | null, needsProof = false): { subject: string; html: string } {
   const loginUrl = `${APP_URL}/login`
   const greeting = name ? `Welcome, ${name}!` : 'Welcome!'
 
-  await getResend().emails.send({
-    from: FROM,
-    to: email,
-    subject: 'Your Gold Heist Trading account has been approved 🎉',
-    html: `
+  const body = needsProof
+    ? `
+            <p style="margin:0 0 16px;font-size:14px;color:#9090a8;line-height:1.6;">
+              Good news — your sign-up has been <strong style="color:#ad9045;">approved</strong> by our team.
+              There&rsquo;s <strong style="color:#f0f0f8;">one step left</strong> before you can use the app.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;border:1px solid #2a2a3a;border-radius:12px;margin:0 0 20px;">
+              <tr><td style="padding:18px 20px;">
+                <p style="margin:0 0 6px;font-size:14px;font-weight:800;color:#ad9045;">Upload a screenshot of your ACCM account</p>
+                <p style="margin:0;font-size:13px;color:#9090a8;line-height:1.6;">
+                  Every member verifies their AC Capital Market account before joining the community —
+                  it&rsquo;s how we keep the signals and the live room to real, funded traders.
+                  Log in and the upload box appears straight away.
+                </p>
+              </td></tr>
+            </table>
+            <p style="margin:0 0 24px;font-size:13px;color:#9090a8;line-height:1.6;">
+              As soon as it&rsquo;s uploaded you&rsquo;re in. If a coach needs to check it first, we&rsquo;ll email you
+              the moment they do — you don&rsquo;t have to sit and wait on the screen.
+            </p>`
+    : `
+            <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;">
+              Great news — your account has been <strong style="color:#ad9045;">approved</strong> by our team.
+              You now have full access to the Gold Heist Trading community, live gold signals, and premium insights.
+            </p>`
+
+  const subject = needsProof
+    ? 'You’re approved — one step left to unlock your account'
+    : 'Your Gold Heist Trading account has been approved 🎉'
+
+  const html = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -69,22 +105,20 @@ export async function sendApprovalEmail(email: string, name?: string | null) {
         </tr>
         <tr>
           <td style="padding:32px;">
-            <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#f0f0f8;">${greeting}</h2>
-            <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;">
-              Great news — your account has been <strong style="color:#ad9045;">approved</strong> by our team.
-              You now have full access to the Gold Heist Trading community, live gold signals, and premium insights.
-            </p>
+            <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#f0f0f8;">${greeting}</h2>${body}
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td align="center">
                   <a href="${loginUrl}" style="display:inline-block;background:#ad9045;color:#000000;font-weight:700;font-size:14px;text-decoration:none;padding:14px 32px;border-radius:10px;">
-                    Log in to your account
+                    ${needsProof ? 'Log in &amp; upload your screenshot' : 'Log in to your account'}
                   </a>
                 </td>
               </tr>
             </table>
             <p style="margin:24px 0 0;font-size:13px;color:#5a5a72;line-height:1.6;">
-              If you were already signed in, just log out and back in to refresh your access.
+              ${needsProof
+                ? 'Don’t have a screenshot handy? Reply to this email and a coach will sort it out with you.'
+                : 'If you were already signed in, just log out and back in to refresh your access.'}
             </p>
           </td>
         </tr>
@@ -98,8 +132,14 @@ export async function sendApprovalEmail(email: string, name?: string | null) {
   </table>
 </body>
 </html>
-    `.trim(),
-  })
+    `.trim()
+
+  return { subject, html }
+}
+
+export async function sendApprovalEmail(email: string, name?: string | null, needsProof = false) {
+  const { subject, html } = buildApprovalEmail(name, needsProof)
+  await getResend().emails.send({ from: FROM, to: email, subject, html })
 }
 
 /**

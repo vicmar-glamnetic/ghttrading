@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireStaff, canManageRole, COACH_ASSIGNABLE_ROLES, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 import { sendApprovalEmail, sendVerifiedEmail } from '@/lib/email'
-import { VERIFY_STATUSES, namePartOf } from '@/lib/identity'
+import { VERIFY_STATUSES, namePartOf, needsVerification } from '@/lib/identity'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
@@ -96,10 +96,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
 
   const updated = await db.user.update({ where: { id: userId }, data, select: USER_SELECT })
 
-  // Notify the user when an admin flips them from pending to approved.
+  // Notify the user when an admin flips them from pending to approved. Read the
+  // verification gate off the row as it stands *after* this save — approving
+  // someone who still owes us an account screenshot must not promise them full
+  // access, since the pop-up will stop them the second they log in.
   if (data.approved === true && !target.approved && updated.email) {
     try {
-      await sendApprovalEmail(updated.email, updated.name)
+      await sendApprovalEmail(updated.email, namePartOf(updated.name), needsVerification(updated))
     } catch (err) {
       console.error('Failed to send approval email:', err)
     }
