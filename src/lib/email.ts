@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { applyTokens, escapeHtml, isSafeUrl, renderBody, type RecipientVars } from '@/lib/broadcast'
 
 // Lazily construct the client so a missing key doesn't crash the build /
 // page-data collection — it only errors if we actually try to send an email.
@@ -594,4 +595,72 @@ export async function sendVerifiedEmail(email: string, name?: string | null) {
   </table>
 </body></html>`.trim(),
   })
+}
+
+/**
+ * A one-off message written in the admin composer, rather than one of the fixed
+ * templates above. The subject and body are whatever staff typed; the chrome,
+ * the optional CTA button and the escaping are ours.
+ */
+export interface BroadcastTemplate {
+  subject: string
+  body: string
+  ctaLabel?: string | null
+  ctaUrl?: string | null
+  /** Small print under the message. Defaults to the standard "why am I getting this" line. */
+  footnote?: string | null
+}
+
+const BROADCAST_FOOTNOTE = 'You’re receiving this because you have a Gold Heist Trading account.'
+
+/**
+ * Renders one recipient's copy of a composed message. Exported so the send
+ * route and the composer's preview agree down to the markup.
+ */
+export function buildBroadcastEmail(
+  tpl: BroadcastTemplate,
+  vars: RecipientVars,
+): { subject: string; html: string } {
+  const subject = applyTokens(tpl.subject, vars).trim()
+  const cta =
+    tpl.ctaLabel?.trim() && tpl.ctaUrl?.trim() && isSafeUrl(tpl.ctaUrl)
+      ? ctaButton(applyTokens(tpl.ctaUrl.trim(), vars), escapeHtml(applyTokens(tpl.ctaLabel.trim(), vars)))
+      : ''
+  const note = (tpl.footnote ?? BROADCAST_FOOTNOTE).trim()
+  const inner = `
+    ${renderBody(applyTokens(tpl.body, vars))}
+    ${cta}
+    ${note ? `<p style="margin:22px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">${escapeHtml(note)}</p>` : ''}`
+  return { subject, html: emailShell(inner) }
+}
+
+/**
+ * Sends a composed message to a hand-picked list. Same 100-per-call batching as
+ * the other blasts, but it also reports which addresses failed so the composer
+ * can name them instead of showing a bare count.
+ */
+export async function sendBroadcastEmails(
+  recipients: RecipientVars[],
+  tpl: BroadcastTemplate,
+): Promise<{ sent: number; failed: number; failedEmails: string[] }> {
+  const resend = getResend()
+  let sent = 0
+  const failedEmails: string[] = []
+
+  for (let i = 0; i < recipients.length; i += 100) {
+    const chunk = recipients.slice(i, i + 100)
+    const payload = chunk.map(r => {
+      const { subject, html } = buildBroadcastEmail(tpl, r)
+      return { from: FROM, to: r.email, subject, html }
+    })
+    try {
+      const { error } = await resend.batch.send(payload)
+      if (error) failedEmails.push(...chunk.map(r => r.email))
+      else sent += chunk.length
+    } catch {
+      failedEmails.push(...chunk.map(r => r.email))
+    }
+  }
+
+  return { sent, failed: failedEmails.length, failedEmails }
 }
