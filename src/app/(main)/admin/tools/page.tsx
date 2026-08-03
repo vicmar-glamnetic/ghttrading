@@ -32,7 +32,7 @@ export default function AdminToolsPage() {
   const [purgeBusy, setPurgeBusy] = useState(false)
   const [purgeMsg, setPurgeMsg] = useState('')
   const [purgeCount, setPurgeCount] = useState<number | null>(null)
-  const [purgeMinAge, setPurgeMinAge] = useState(15) // days; the API is the source of truth
+  const [purgeMinAge, setPurgeMinAge] = useState(7) // days; the API is the source of truth
 
   useEffect(() => {
     fetch('/api/admin/winback')

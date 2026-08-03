@@ -12,7 +12,7 @@ const DAY = 24 * 60 * 60 * 1000
  * a screenshot the member may not have to hand, so a fresh account sitting at
  * 'unverified' is someone still getting round to it, not a stale sign-up.
  */
-const PURGE_MIN_AGE_DAYS = 15
+const PURGE_MIN_AGE_DAYS = 7
 
 /**
  * Who gets purged: ACCM members who never verified, and signed up long enough
@@ -53,7 +53,7 @@ export async function POST() {
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   // One cutoff for the whole request, so the delete can't reach an account that
-  // crossed the 15-day line between the read and the write.
+  // crossed the grace-period line between the read and the write.
   const now = new Date()
   const targets = await db.user.findMany({
     where: eligibleWhere(now),
