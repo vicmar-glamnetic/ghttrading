@@ -30,19 +30,55 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const inputCls =
   'w-full bg-sunken border border-line rounded-lg px-3 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-ink3'
 
-/** Starter copy — the ACCM sign-up follow-up, editable like anything else. */
-const STARTER_SUBJECT = '{{firstName}}, finish opening your ACCM account'
-const STARTER_BODY = `Hey {{firstName}},
+/**
+ * Ready-made compositions. They load into the fields and are editable from
+ * there — nothing is locked, and the steps match what the app actually asks a
+ * member to do (register → add the number → upload the screenshot).
+ */
+const TEMPLATES = [
+  {
+    id: 'accm-finish',
+    name: 'Finish ACCM registration',
+    subject: '{{firstName}}, your ACCM registration is still unfinished',
+    ctaLabel: 'Open my ACCM account →',
+    ctaUrl: ACCM_REGISTER_URL,
+    body: `Hey {{firstName}},
 
-You signed up to the GHT Community but we can't see an ACCM account on your profile yet — that's the one step between you and free access to the signals, the live room and the full course library.
+You're signed up to the GHT Community, but your **ACCM account registration isn't finished** — and it's the only thing standing between you and the live gold signals, the daily trading room, the full course library and the coaches.
 
-It takes about five minutes:
+Three steps, about ten minutes:
 
-- Open your ACCM account through our partner link below
-- Fund it to unlock the welcome bonus
-- Add your ACCM number in Settings so we can match it to your profile
+- **Open your ACCM account** using the button below. Register under the same name you used here so we can match it to your profile.
+- **Add your ACCM account number** in the community, under Settings. Your display name becomes "Name - 123456", so everyone can see you trade a real account.
+- **Upload a screenshot** of your ACCM account to verify it. That's the step that unlocks the members' area.
 
-Any trouble on the way, just reply to this email and we'll walk you through it.`
+Once you're verified, your membership stays free for as long as you trade with ACCM — no subscription, no card.
+
+Stuck anywhere along the way — the registration form, the deposit, MT5, the screenshot — just reply to this email and a coach will take you through it.
+
+See you in the trading room,
+The GHT Team`,
+  },
+  {
+    id: 'accm-number',
+    name: 'Send us your ACCM number',
+    subject: '{{firstName}}, one field left — your ACCM number',
+    ctaLabel: 'Add my ACCM number →',
+    ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://community.ghttrading.co'}/settings`,
+    body: `Hey {{firstName}},
+
+Your ACCM account is open — nice one. There's one field left before we can unlock the members' area for you: **your ACCM account number**.
+
+Add it under Settings in the community, then upload a screenshot of your ACCM account so we can confirm it's yours. Verification is quick, and once it's through you get the signals, the live room and the whole course library at no cost.
+
+If you can't find your account number, it's on your ACCM dashboard next to your account details — or reply here and we'll help you dig it out.
+
+See you inside,
+The GHT Team`,
+  },
+] as const
+
+const STARTER = TEMPLATES[0]
 
 export default function AdminEmailPage() {
   // The recipient list is plain addresses. Typing one and picking a member both
@@ -59,10 +95,10 @@ export default function AdminEmailPage() {
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
 
-  const [subject, setSubject] = useState(STARTER_SUBJECT)
-  const [body, setBody] = useState(STARTER_BODY)
-  const [ctaLabel, setCtaLabel] = useState('Open my ACCM account →')
-  const [ctaUrl, setCtaUrl] = useState(ACCM_REGISTER_URL)
+  const [subject, setSubject] = useState<string>(STARTER.subject)
+  const [body, setBody] = useState<string>(STARTER.body)
+  const [ctaLabel, setCtaLabel] = useState<string>(STARTER.ctaLabel)
+  const [ctaUrl, setCtaUrl] = useState<string>(STARTER.ctaUrl)
   const [showPreview, setShowPreview] = useState(true)
 
   const [sending, setSending] = useState(false)
@@ -172,6 +208,16 @@ export default function AdminEmailPage() {
 
   /* ---------- compose ---------- */
 
+  /** Overwrites the draft — asks first, since it's someone's typing on the line. */
+  function loadTemplate(t: (typeof TEMPLATES)[number]) {
+    const edited = subject !== STARTER.subject || body !== STARTER.body
+    if (edited && !confirm(`Replace what you've written with the "${t.name}" template?`)) return
+    setSubject(t.subject)
+    setBody(t.body)
+    setCtaLabel(t.ctaLabel)
+    setCtaUrl(t.ctaUrl)
+  }
+
   function insertToken(token: string) {
     const el = bodyRef.current
     if (!el) { setBody(b => b + token); return }
@@ -279,6 +325,19 @@ export default function AdminEmailPage() {
         {/* ---------- compose ---------- */}
         <div className="space-y-4">
           <div className="rounded-xl border border-line bg-surface p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-bold text-ink3 uppercase tracking-wider mr-0.5">Templates</span>
+              {TEMPLATES.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => loadTemplate(t)}
+                  className="rounded-md border border-line bg-elevated px-2 py-1 text-[11px] font-semibold text-ink2 hover:border-yellow-500/40 hover:text-yellow-500 transition-colors"
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+
             <div>
               <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Subject</label>
               <input value={subject} onChange={e => setSubject(e.target.value)} className={`${inputCls} mt-1`} placeholder="Subject line" />
