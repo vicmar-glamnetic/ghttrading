@@ -142,3 +142,31 @@ export function journalingStreak(dates: (string | Date)[], now = new Date()): nu
   }
   return streak
 }
+
+/**
+ * The longest run of consecutive journaled days ever — the number to beat once
+ * a streak breaks, so a reset day still has something to aim at.
+ */
+export function longestJournalingStreak(dates: (string | Date)[]): number {
+  if (dates.length === 0) return 0
+  const days = [...new Set(dates.map(d => {
+    const x = new Date(d)
+    return Date.UTC(x.getFullYear(), x.getMonth(), x.getDate())
+  }))].sort((a, b) => a - b)
+
+  let best = 1
+  let run = 1
+  for (let i = 1; i < days.length; i++) {
+    run = days[i] - days[i - 1] === 86400000 ? run + 1 : 1
+    if (run > best) best = run
+  }
+  return best
+}
+
+/** Streak milestones worth chasing — the next one is shown as a progress goal. */
+export const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 365]
+
+/** The next milestone above `streak` (or null once every milestone is passed). */
+export function nextStreakMilestone(streak: number): number | null {
+  return STREAK_MILESTONES.find(m => m > streak) ?? null
+}

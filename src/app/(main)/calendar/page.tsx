@@ -1,12 +1,12 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { CalendarDays, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, NotebookPen, Flame } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Target, NotebookPen, Flame, Trophy, ArrowRight, Check } from 'lucide-react'
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
-  addMonths, subMonths, format, isSameMonth, isSameDay, isToday, isFuture,
+  addMonths, subMonths, format, isSameMonth, isSameDay, isToday,
 } from 'date-fns'
-import { journalingStreak } from '@/lib/journalTemplates'
+import { journalingStreak, longestJournalingStreak, nextStreakMilestone, promptForDay } from '@/lib/journalTemplates'
 
 interface JournalEntry {
   id: string
@@ -36,6 +36,8 @@ export default function CalendarPage() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
+  // Pinned once so streak/"today" maths stay pure across re-renders.
+  const [today] = useState(() => new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
   const load = useCallback(async () => {
@@ -82,34 +84,67 @@ export default function CalendarPage() {
     return { net, wins, losses, winRate, trades, count: monthEntries.length }
   }, [entries, month])
 
-  // Journaling-consistency heatmap (#8): the last ~17 weeks as a GitHub-style
-  // grid — filled squares are days journaled, empty ones nag you to fill them.
-  const WEEKS = 17
-  const heatmap = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const e of entries) {
-      const k = format(entryDate(e), 'yyyy-MM-dd')
-      counts.set(k, (counts.get(k) ?? 0) + 1)
-    }
-    const end = endOfWeek(new Date())
-    const start = startOfWeek(new Date(end.getTime() - (WEEKS * 7 - 1) * 86400000))
-    const allDays = eachDayOfInterval({ start, end })
-    const weeks: { date: Date; count: number }[][] = []
-    for (let i = 0; i < allDays.length; i += 7) {
-      weeks.push(allDays.slice(i, i + 7).map(date => ({ date, count: counts.get(format(date, 'yyyy-MM-dd')) ?? 0 })))
-    }
-    return weeks
-  }, [entries])
+  // The streak, not a consistency grid, is what actually pulls people back: a
+  // number you can lose tonight beats a chart of what you already did.
+  const dayKeys = useMemo(() => new Set(entries.map(e => format(entryDate(e), 'yyyy-MM-dd'))), [entries])
+  const journaledToday = dayKeys.has(format(today, 'yyyy-MM-dd'))
+  const streak = useMemo(() => journalingStreak(entries.map(entryDate), today), [entries, today])
+  const bestStreak = useMemo(() => longestJournalingStreak(entries.map(entryDate)), [entries])
+  const journaledDays = dayKeys.size
+  const milestone = nextStreakMilestone(streak)
+  const todayPrompt = useMemo(() => promptForDay(today), [today])
 
-  const streak = useMemo(() => journalingStreak(entries.map(entryDate)), [entries])
-  const journaledDays = useMemo(() => new Set(entries.map(e => format(entryDate(e), 'yyyy-MM-dd'))).size, [entries])
+  // The last 7 days as a dot trail — just enough context to see the streak,
+  // and the gap at the end is the nag.
+  const week = useMemo(
+    () => eachDayOfInterval({ start: new Date(today.getTime() - 6 * 86400000), end: today })
+      .map(date => ({ date, done: dayKeys.has(format(date, 'yyyy-MM-dd')) })),
+    [dayKeys, today],
+  )
 
-  function heatCell(count: number) {
-    if (count <= 0) return 'bg-elevated border border-line'
-    if (count === 1) return 'bg-orange-500/30'
-    if (count === 2) return 'bg-orange-500/60'
-    return 'bg-orange-500'
-  }
+  // What we push them to write, in order of what would help most right now.
+  const recommendations = useMemo(() => {
+    const recent = entries.filter(e => entryDate(e) >= new Date(today.getTime() - 7 * 86400000))
+    const recs: { key: string; label: string; hint: string }[] = []
+    if (!journaledToday) {
+      recs.push({ key: 'prompt', label: todayPrompt.title, hint: "Today's prompt — 2 minutes" })
+    }
+    if (recent.some(e => e.result === 'loss')) {
+      recs.push({ key: 'lesson', label: 'Turn this week’s loss into a rule', hint: 'The entry that pays for itself' })
+    } else if (recent.some(e => e.result === 'win')) {
+      recs.push({ key: 'win', label: 'Bank what worked', hint: 'Write down the setup while it is fresh' })
+    }
+    if (recs.length < 2) recs.push({ key: 'plan', label: 'Plan tomorrow’s session', hint: 'Decide before the candles move you' })
+    return recs.slice(0, 2)
+  }, [entries, journaledToday, todayPrompt, today])
+
+  // One headline that changes with the state of the streak — praise when it is
+  // safe, urgency when it is about to break, a fresh start when it already did.
+  const streakCopy = journaledToday && streak > 0
+    ? {
+        tone: 'safe' as const,
+        title: `${streak}-day streak, locked in for today`,
+        body: milestone
+          ? `${milestone - streak} more ${milestone - streak === 1 ? 'day' : 'days'} and you hit ${milestone}. Show up tomorrow and it becomes ${streak + 1}.`
+          : `You are ${streak} days deep. Do not be the one who stops here.`,
+      }
+    : streak > 0
+      ? {
+          tone: 'risk' as const,
+          title: `Your ${streak}-day streak ends at midnight`,
+          body: `${streak} ${streak === 1 ? 'day' : 'days'} of work, gone unless you write one entry today. Three lines counts.`,
+        }
+      : journaledDays > 0
+        ? {
+            tone: 'reset' as const,
+            title: 'Your streak is at zero',
+            body: `Your best run was ${bestStreak} ${bestStreak === 1 ? 'day' : 'days'}. Day 1 is the only hard one — start it now and beat it.`,
+          }
+        : {
+            tone: 'reset' as const,
+            title: 'Start your first streak today',
+            body: 'Traders who write their trades down stop repeating them. One entry today is day 1.',
+          }
 
   function dayPnl(date: Date) {
     const list = byDay.get(format(date, 'yyyy-MM-dd'))
@@ -151,40 +186,78 @@ export default function CalendarPage() {
         ))}
       </div>
 
-      {/* Journaling consistency heatmap */}
-      <div className="bg-surface rounded-xl border border-line p-4">
-        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-          <h2 className="font-bold text-ink text-sm flex items-center gap-1.5">
-            <Flame className={`w-4 h-4 ${streak > 0 ? 'text-orange-400 fill-orange-400' : 'text-ink3'}`} />
-            Journaling consistency
-          </h2>
-          <div className="flex items-center gap-3 text-[11px] text-ink3">
-            {streak > 0 && <span className="text-orange-400 font-bold">{streak}-day streak</span>}
-            <span>{journaledDays} days journaled</span>
+      {/* Streak */}
+      <div className={`rounded-xl border p-4 ${
+        streakCopy.tone === 'risk' ? 'bg-orange-500/[0.07] border-orange-500/30'
+          : streakCopy.tone === 'safe' ? 'bg-surface border-orange-500/20'
+            : 'bg-surface border-line'
+      }`}>
+        <div className="flex items-start gap-4">
+          {/* The number itself */}
+          <div className="shrink-0 text-center">
+            <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center ${streak > 0 ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-elevated border border-line'}`}>
+              <Flame className={`absolute w-16 h-16 ${streak > 0 ? 'text-orange-500/10 fill-orange-500/10' : 'text-ink3/10'}`} />
+              <span className={`relative text-2xl font-black leading-none ${streak > 0 ? 'text-orange-400' : 'text-ink3'}`}>{streak}</span>
+            </div>
+            <p className="text-[10px] text-ink3 uppercase tracking-wider mt-1">day{streak === 1 ? '' : 's'}</p>
           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <div className="flex gap-1 min-w-max">
-            {heatmap.map((week, wi) => (
-              <div key={wi} className="flex flex-col gap-1">
-                {week.map(({ date, count }) => (
-                  <div
-                    key={date.toISOString()}
-                    title={`${format(date, 'EEE, MMM d')} — ${count ? `${count} ${count === 1 ? 'entry' : 'entries'}` : 'no entry'}`}
-                    className={`w-3 h-3 rounded-sm ${isFuture(date) ? 'opacity-0' : heatCell(count)} ${isToday(date) ? 'ring-1 ring-yellow-500' : ''}`}
-                  />
-                ))}
+
+          <div className="min-w-0 flex-1">
+            <h2 className={`font-bold text-sm ${streakCopy.tone === 'risk' ? 'text-orange-400' : 'text-ink'}`}>{streakCopy.title}</h2>
+            <p className="text-xs text-ink2 mt-1 leading-relaxed">{streakCopy.body}</p>
+
+            {/* Progress to the next milestone */}
+            {streak > 0 && milestone && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[10px] text-ink3 mb-1">
+                  <span>Next milestone</span>
+                  <span className="font-bold text-orange-400">{streak}/{milestone} days</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-elevated overflow-hidden">
+                  <div className="h-full rounded-full bg-orange-500 transition-all" style={{ width: `${Math.min(100, (streak / milestone) * 100)}%` }} />
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Last 7 days — the empty dot on the right is the point */}
+            <div className="flex items-center gap-1.5 mt-3">
+              {week.map(({ date, done }) => (
+                <div key={date.toISOString()} className="flex flex-col items-center gap-1">
+                  <div
+                    title={`${format(date, 'EEE, MMM d')} — ${done ? 'journaled' : 'nothing written'}`}
+                    className={`w-6 h-6 rounded-lg flex items-center justify-center ${done ? 'bg-orange-500/20 text-orange-400' : 'bg-elevated border border-line text-ink3'} ${isToday(date) ? 'ring-1 ring-yellow-500' : ''}`}
+                  >
+                    {done ? <Check className="w-3.5 h-3.5" /> : <span className="w-1 h-1 rounded-full bg-current opacity-40" />}
+                  </div>
+                  <span className="text-[9px] text-ink3">{format(date, 'EEEEE')}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Where to go write it */}
+            <div className="mt-3 flex flex-col gap-1.5">
+              {recommendations.map(r => (
+                <Link
+                  key={r.key}
+                  href={`/journal?compose=${r.key}`}
+                  className="group flex items-center justify-between gap-2 rounded-lg border border-line bg-sunken px-3 py-2 hover:border-yellow-500/40 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-ink truncate">{r.label}</p>
+                    <p className="text-[10px] text-ink3 truncate">{r.hint}</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-ink3 group-hover:text-yellow-500 shrink-0 transition-colors" />
+                </Link>
+              ))}
+            </div>
+
+            {journaledDays > 0 && (
+              <div className="flex items-center gap-3 mt-3 text-[10px] text-ink3">
+                <span className="flex items-center gap-1"><Trophy className="w-3 h-3" /> Best: {bestStreak} day{bestStreak === 1 ? '' : 's'}</span>
+                <span>{journaledDays} day{journaledDays === 1 ? '' : 's'} journaled all-time</span>
+              </div>
+            )}
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 mt-2 text-[10px] text-ink3">
-          <span>Less</span>
-          <span className="w-3 h-3 rounded-sm bg-elevated border border-line" />
-          <span className="w-3 h-3 rounded-sm bg-orange-500/30" />
-          <span className="w-3 h-3 rounded-sm bg-orange-500/60" />
-          <span className="w-3 h-3 rounded-sm bg-orange-500" />
-          <span>More</span>
         </div>
       </div>
 
