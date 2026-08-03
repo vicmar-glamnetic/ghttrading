@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Users, BookOpen, Mail, GraduationCap, Wrench } from 'lucide-react'
+import { Users, BookOpen, Mail, GraduationCap, Wrench, SlidersHorizontal } from 'lucide-react'
 
 /**
  * Top-level nav for the admin screens. The user table, the mailer and the
@@ -15,6 +15,7 @@ const TABS = [
   { href: '/admin/email', label: 'Email', icon: Mail, adminOnly: true },
   { href: '/admin/courses', label: 'Courses', icon: GraduationCap, adminOnly: true },
   { href: '/admin/tools', label: 'Tools', icon: Wrench, adminOnly: true },
+  { href: '/admin/settings', label: 'Settings', icon: SlidersHorizontal, adminOnly: true },
 ] as const
 
 export function AdminTabs() {

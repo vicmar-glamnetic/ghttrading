@@ -658,3 +658,15 @@ model LessonProgress {
   @@index([userId])
   @@map("lesson_progress")
 }
+
+// Site-wide switches an admin flips at runtime, as key → value strings. Env vars
+// can't be it: changing one needs a redeploy, and these have to move the moment
+// the admin taps the toggle. A missing row means "never set" — every reader
+// supplies its own default, so a fresh database behaves like the old code did.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}

@@ -354,6 +354,98 @@ export async function sendMonthlyRecapEmails(
   return { sent, failed }
 }
 
+/** The part of a new signal an email is allowed to carry. */
+export interface SignalTeaser {
+  symbol: string
+  direction: string        // buy | sell
+  entry?: string | null    // pre-formatted entry price or range, e.g. "3320–3324"
+  targetCount?: number     // how many take-profits are set — the number, never the prices
+  hasStop?: boolean
+}
+
+/**
+ * New-signal alert. Deliberately a teaser: the pair, the direction and the entry
+ * zone are enough for a member to know whether to drop what they're doing, but
+ * the stop, the targets, the chart and the coach's notes stay behind the login.
+ * Emails get forwarded and screenshotted — the full setup is what members are
+ * here for, so it never leaves the app.
+ */
+function buildSignalAlertEmail(signal: SignalTeaser, name?: string | null): { subject: string; html: string } {
+  const url = `${APP_URL}/ideas`
+  const greeting = name ? `Hey ${name},` : 'Hey trader,'
+  const isBuy = signal.direction.toLowerCase() !== 'sell'
+  const dir = isBuy ? 'BUY' : 'SELL'
+  const accent = isBuy ? '#4ade80' : '#f87171'
+  const symbol = escapeHtml(signal.symbol)
+
+  // Only the levels that are safe to show. Everything else is described by
+  // count, so the member can see there IS a full plan without reading it here.
+  const rows: [string, string][] = [['Pair', symbol], ['Direction', dir]]
+  if (signal.entry) rows.push(['Entry zone', escapeHtml(signal.entry)])
+
+  const rowsHtml = rows.map(([label, value]) => `
+    <tr>
+      <td style="padding:8px 0;font-size:13px;color:#9090a8;">${label}</td>
+      <td style="padding:8px 0;font-size:15px;font-weight:800;color:#f0f0f8;text-align:right;">${value}</td>
+    </tr>`).join('')
+
+  const locked = [
+    signal.hasStop ? 'stop loss' : null,
+    signal.targetCount ? `${signal.targetCount} take-profit target${signal.targetCount === 1 ? '' : 's'}` : null,
+    'the chart and the coach’s notes',
+  ].filter(Boolean) as string[]
+  const lockedText =
+    locked.length > 1 ? `${locked.slice(0, -1).join(', ')} and ${locked[locked.length - 1]}` : locked[0]
+
+  const inner = `
+    <div style="text-align:center;margin:0 0 18px;">
+      <span style="display:inline-block;background:${accent}20;border:1px solid ${accent}50;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:800;color:${accent};letter-spacing:1px;text-transform:uppercase;">&#128200; New ${dir} signal</span>
+    </div>
+    <h2 style="margin:0 0 12px;font-size:21px;font-weight:800;color:#f0f0f8;text-align:center;">${greeting} a new signal just dropped</h2>
+    <p style="margin:0 0 20px;font-size:14px;color:#9090a8;line-height:1.6;text-align:center;">
+      One of our coaches has published a new ${dir} setup on <strong style="color:#f0f0f8;">${symbol}</strong>.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;border:1px solid #2a2a3a;border-radius:12px;padding:6px 18px;margin:0 0 20px;">
+      ${rowsHtml}
+    </table>
+
+    <p style="margin:0 0 22px;font-size:13px;color:#9090a8;line-height:1.6;text-align:center;">
+      The ${lockedText} are in the app — log in to see the full setup before price moves.
+    </p>
+    ${ctaButton(url, 'Log in to view the full setup →')}
+    <p style="margin:22px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">
+      Trading involves risk. Always size your position to your own plan — never copy a signal blind.
+    </p>`
+
+  return { subject: `📈 New ${dir} signal · ${signal.symbol}`, html: emailShell(inner) }
+}
+
+/**
+ * Mails the teaser to everyone on the list via Resend's batch API (100 per
+ * call), greeting each by name. Never throws — a mail outage must not take the
+ * signal down with it, so the caller gets counts and moves on.
+ */
+export async function sendSignalAlertEmails(
+  recipients: { email: string; name?: string | null }[],
+  signal: SignalTeaser,
+): Promise<{ sent: number; failed: number }> {
+  const resend = getResend()
+  let sent = 0, failed = 0
+  for (let i = 0; i < recipients.length; i += 100) {
+    const chunk = recipients.slice(i, i + 100)
+    const payload = chunk.map(r => {
+      const { subject, html } = buildSignalAlertEmail(signal, r.name)
+      return { from: FROM, to: r.email, subject, html }
+    })
+    try {
+      const { error } = await resend.batch.send(payload)
+      if (error) failed += chunk.length; else sent += chunk.length
+    } catch { failed += chunk.length }
+  }
+  return { sent, failed }
+}
+
 /**
  * "We're live" blast — staff fire this by hand from the live page once a session
  * is actually up. Going live already pushes a notification; this reaches the

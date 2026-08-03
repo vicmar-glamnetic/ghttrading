@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { requireStaff } from '@/lib/admin'
 import { db } from '@/lib/db'
 import { sendPushToAll } from '@/lib/push'
+import { emailNewSignal, formatEntryZone } from '@/lib/signalAlerts'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
 
@@ -123,9 +124,7 @@ export async function POST(req: Request) {
     // Alert everyone when a new public signal drops — after the response.
     if (idea.isPublic) {
       const dir = idea.direction.toUpperCase()
-      const entry = idea.entryLow != null
-        ? (idea.entryHigh != null && idea.entryHigh !== idea.entryLow ? `${idea.entryLow}–${idea.entryHigh}` : `${idea.entryLow}`)
-        : ''
+      const entry = formatEntryZone(idea.entryLow, idea.entryHigh)
       const authorId = session.user.id
       after(async () => {
         await sendPushToAll(
@@ -137,6 +136,19 @@ export async function POST(req: Request) {
           },
           authorId,
         ).catch(() => {})
+
+        // Push only reaches members who enabled it. The email covers everyone
+        // else — but only while the admin toggle on /admin/settings is on.
+        await emailNewSignal(
+          {
+            symbol: idea.symbol,
+            direction: idea.direction,
+            entry,
+            targetCount: takeProfits.length,
+            hasStop: slLow != null || slHigh != null,
+          },
+          authorId,
+        )
       })
     }
 
