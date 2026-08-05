@@ -962,19 +962,17 @@ function TradeMessageComposer({ onClose, onPosted }: {
 
           {/* how the message is rendered on its way out */}
           <div>
-            <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Send it</label>
-            <div className="flex items-center gap-2 mt-1.5">
-              <button onClick={() => setFormat('raw')} className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${format === 'raw' ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}>
-                Exactly as typed
-              </button>
-              <button onClick={() => setFormat('formatted')} className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${format === 'formatted' ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}>
-                Formatted
-              </button>
-            </div>
-            <p className="text-[10px] text-ink3 mt-1.5 leading-snug">
+            <button
+              onClick={() => setFormat(format === 'raw' ? 'formatted' : 'raw')}
+              className="w-full flex items-center gap-2 text-left"
+            >
+              {format === 'raw' ? <CheckSquare className="w-4 h-4 shrink-0 text-yellow-500" /> : <Square className="w-4 h-4 shrink-0 text-ink3" />}
+              <span className={`text-sm font-semibold ${format === 'raw' ? 'text-ink' : 'text-ink3'}`}>Send as raw message</span>
+            </button>
+            <p className="text-[11px] text-ink3 mt-1.5 leading-snug">
               {format === 'raw'
-                ? 'Your words, untouched — every entry price survives, including a third scale-in level.'
-                : 'Adds the pair/direction header and the disclaimer. The entry range collapses to its outer two prices.'}
+                ? 'Your words go out untouched — no header, no disclaimer. Every entry price survives, including a third scale-in level.'
+                : 'Adds the pair/direction header and the disclaimer. Note the entry range collapses to its outer two prices.'}
             </p>
             {format === 'formatted' && (
               <button onClick={() => setIncludeLink(!includeLink)} className="w-full flex items-center gap-2 text-left mt-2">
