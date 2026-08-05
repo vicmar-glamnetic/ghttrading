@@ -30,10 +30,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const inputCls =
   'w-full bg-sunken border border-line rounded-lg px-3 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-ink3'
 
+const APP = process.env.NEXT_PUBLIC_APP_URL || 'https://community.ghttrading.co'
+
 /**
  * Ready-made compositions. They load into the fields and are editable from
  * there — nothing is locked, and the steps match what the app actually asks a
  * member to do (register → add the number → upload the screenshot).
+ *
+ * Anything staff must decide per-send — a deadline, this quarter's win rate —
+ * is left as a `[bracketed]` placeholder rather than a plausible-looking made-up
+ * value, so an unedited send reads as obviously unfinished instead of quietly
+ * mailing out the wrong date or a number we never measured.
  */
 const TEMPLATES = [
   {
@@ -64,7 +71,7 @@ The GHT Team`,
     name: 'Send us your ACCM number',
     subject: '{{firstName}}, one field left — your ACCM number',
     ctaLabel: 'Add my ACCM number →',
-    ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://community.ghttrading.co'}/settings`,
+    ctaUrl: `${APP}/settings`,
     body: `Hey {{firstName}},
 
 Your ACCM account is open — nice one. There's one field left before we can unlock the members' area for you: **your ACCM account number**.
@@ -74,6 +81,112 @@ Add it under Settings in the community, then upload a screenshot of your ACCM ac
 If you can't find your account number, it's on your ACCM dashboard next to your account details — or reply here and we'll help you dig it out.
 
 See you inside,
+The GHT Team`,
+  },
+  {
+    id: 'accm-verify',
+    name: 'Verify your ACCM account',
+    subject: '{{firstName}}, your ACCM account is open — the app still says unverified',
+    ctaLabel: 'Upload my screenshot →',
+    ctaUrl: `${APP}/settings`,
+    body: `Hey {{firstName}},
+
+You've done the hard part — your ACCM account is open and we have your number on file ({{accmNumber}}). But inside the community you're still marked **not verified**, and that's what's keeping the members' area shut.
+
+There's one step left, and it takes a minute:
+
+- **Log in** to the community and open Settings.
+- **Upload a screenshot** of your ACCM account showing your name and account number.
+- **That's it** — a coach checks it, usually the same day, and we email you the moment you're cleared.
+
+Verified members get the live gold signals, the daily trading room, the full course library, the coaches and the tools — free, for as long as you trade with ACCM.
+
+Screenshot giving you trouble? Reply to this email with it attached and we'll verify you by hand.
+
+See you in the trading room,
+The GHT Team`,
+  },
+  {
+    id: 'price-10',
+    name: 'Standard price → $10',
+    subject: 'Your GHT membership moves to $10/month on [date]',
+    ctaLabel: 'Keep it free — open an ACCM account →',
+    ctaUrl: ACCM_REGISTER_URL,
+    body: `Hey {{firstName}},
+
+A straight heads-up: from **[date]**, the standard GHT Community membership goes from **$5/month to $10/month**. You're on the standard tier, so this affects you.
+
+Here's the honest reason. Our published gold calls have run at a **[XX]% win rate over the last [period]**, and the room has grown into something we have to staff properly — more sessions, faster signal turnaround, and coaches actually answering people. $5 doesn't cover that any more.
+
+What your $10 keeps buying:
+
+- **Live gold (XAU/USD) signals** — entry, stop and targets the moment we take them.
+- **The live trading room**, every session, with the reasoning out loud.
+- **The full course library** and the coaches' daily bias and levels.
+- **The tools** — position-size calculator, journal, economic calendar and price alerts.
+
+Two things worth knowing:
+
+- **Nothing changes until [date].** Your next bill after that date is the new amount, and you can cancel any time before it from Settings.
+- **You can pay nothing at all.** Open an account with our ACCM partner, verify it, and your membership is free for as long as you trade there — that route isn't changing.
+
+If the new price doesn't work for you, reply and tell us. We'd rather hear it than lose you quietly.
+
+Thanks for being here since the $5 days,
+The GHT Team`,
+  },
+  {
+    id: 'accm-no-deposit',
+    name: 'ACCM · no deposit yet',
+    subject: '{{firstName}}, your ACCM account has no balance — action needed by [date]',
+    ctaLabel: 'Upload my updated account →',
+    ctaUrl: `${APP}/settings`,
+    body: `Hey {{firstName}},
+
+We're running another round of ACCM verification on **[date]**, and your account ({{accmNumber}}) is flagged: it's open, but it's **never been funded**.
+
+Free membership here is built on one thing — everyone in the room trades a real, funded ACCM account. That's what keeps the signals honest and the live room worth sitting in. An account with no balance isn't trading, so it doesn't hold a free seat.
+
+What happens next:
+
+- **Fund your ACCM account** before [date] — any live balance you're comfortable trading counts. There's no minimum we impose.
+- **Upload a fresh screenshot** in Settings showing the funded balance, so the re-check clears you.
+- **If nothing changes by [date]**, the account will be **removed from the community** in the clean-up.
+
+Removal isn't a ban. You can register again the moment your account is funded, and you keep your ACCM account either way.
+
+Don't want to fund a live account right now? You can stay on the paid tier instead and keep everything — reply and we'll switch you over.
+
+Any trouble with the deposit itself — the method, the wait, the MT5 side — reply here and a coach will walk you through it.
+
+The GHT Team`,
+  },
+  {
+    id: 'expired-standard',
+    name: 'Win back · expired',
+    subject: "{{firstName}}, your access expired — today's gold signals are going out without you",
+    ctaLabel: 'Reactivate my membership →',
+    ctaUrl: `${APP}/upgrade`,
+    body: `Hey {{firstName}},
+
+Your GHT Community membership has lapsed, so the signals we posted this week, the live sessions and the coaches' levels all went out without you.
+
+Everything's still there waiting:
+
+- **Live gold (XAU/USD) signals** — entry, stop and take-profit as we take them.
+- **The live trading room**, every session.
+- **The full course library**, from the basics to consistent execution.
+- **Coach trade ideas**, daily bias and key levels.
+- **The tools** — position-size calculator, journal, economic calendar and alerts.
+- **The community** — feed, groups, price alerts and direct chat.
+
+Reactivating takes about thirty seconds and your old account, journal and history come back exactly as you left them.
+
+**One reason not to sit on this:** the standard membership moves to **$10/month on [date]**. Come back before then and you keep the **$5** rate.
+
+Prefer to pay nothing? Trade with our ACCM partner and your membership is free for as long as you do — reply and we'll set that up instead.
+
+See you back in the room,
 The GHT Team`,
   },
 ] as const
