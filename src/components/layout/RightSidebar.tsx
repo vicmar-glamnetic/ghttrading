@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Activity, Lightbulb, Globe, Smartphone } from 'lucide-react'
 import { OnlineNow } from '@/components/OnlineNow'
+import { isGoldMarketOpen } from '@/lib/marketHours'
 
 // Shared height so every widget card in the sidebar lines up uniformly.
 export const CARD_H = 'h-60'
@@ -25,19 +26,43 @@ function useTvWidget(src: string, config: Record<string, unknown>) {
   return ref
 }
 
+/**
+ * Whether gold is trading, re-checked every minute so the badge flips on its own
+ * at the weekly close instead of at the next page load.
+ *
+ * Starts null and resolves after mount: this page is rendered on the server and
+ * cached, so a status baked into the HTML would happily claim "Live" all
+ * weekend. Until the client answers, the badge isn't drawn at all — better a
+ * missing label for one frame than a wrong one.
+ */
+function useGoldMarketOpen() {
+  const [open, setOpen] = useState<boolean | null>(null)
+  useEffect(() => {
+    const tick = () => setOpen(isGoldMarketOpen())
+    tick()
+    const id = setInterval(tick, 60_000)
+    return () => clearInterval(id)
+  }, [])
+  return open
+}
+
 function LiveGoldWidget() {
   const ref = useTvWidget(
     'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js',
     { symbol: 'OANDA:XAUUSD', width: '100%', height: '100%', locale: 'en', dateRange: '1D', autosize: true },
   )
+  const open = useGoldMarketOpen()
   return (
     <div className={`bg-surface rounded-xl border border-line overflow-hidden flex flex-col ${CARD_H}`}>
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line shrink-0">
         <Activity className="w-4 h-4 text-yellow-500" />
         <span className="text-sm font-bold text-ink">XAUUSD · Gold</span>
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-green-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
-        </span>
+        {open !== null && (
+          <span className={`ml-auto inline-flex items-center gap-1 text-[10px] ${open ? 'text-green-400' : 'text-ink3'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${open ? 'bg-green-400 animate-pulse' : 'bg-ink3'}`} />
+            {open ? 'Live' : 'Closed'}
+          </span>
+        )}
       </div>
       <div ref={ref} className="flex-1 min-h-0 p-1 bg-[#0d0d14]" />
     </div>
