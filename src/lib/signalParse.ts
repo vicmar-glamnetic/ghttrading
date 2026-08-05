@@ -19,6 +19,13 @@
      Tp1: 4120
      Tp2: 4115
    → { symbol, direction, entry range, stop-loss, take-profits, extra "buy more" levels }. */
+/**
+ * What a signal is assumed to be about when the text never names an instrument.
+ * The desk trades gold, and coaches rarely write "XAUUSD" above a price list —
+ * so an unlabelled signal is a gold signal.
+ */
+export const DEFAULT_SYMBOL = 'XAUUSD'
+
 export const numsIn = (s: string) => (s.match(/\d+(?:\.\d+)?/g) || []).map(Number)
 // Common instrument tickers (won't match plain words like "SIGNAL"/"LIMIT").
 const SYMBOL_RE = /\b(XAU[A-Z]{2,3}|XAG[A-Z]{2,3}|(?:EUR|GBP|USD|AUD|NZD|CAD|CHF|JPY|XAU|XAG)(?:USD|JPY|EUR|GBP|CHF|CAD|AUD|NZD)|BTC[A-Z]{0,4}|ETH[A-Z]{0,4}|US30|US500|NAS100|GER40|UK100|SPX500)\b/

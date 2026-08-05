@@ -18,7 +18,7 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { liveSignalStatus, signalOutcome, signalPips, positionSize, pipConfig, pipUnit, mid, TP1_WIN_MIN_PIPS } from '@/lib/trading'
 import { normalizeSymbol, isPriceable } from '@/lib/symbols'
 import { formatSignalText } from '@/lib/signalRelay'
-import { parseSignal } from '@/lib/signalParse'
+import { parseSignal, DEFAULT_SYMBOL } from '@/lib/signalParse'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
@@ -500,7 +500,7 @@ const ROOM_STYLE = {
 } as const
 
 const EMPTY = {
-  symbol: 'XAUUSD', direction: 'buy' as 'buy' | 'sell', entryLow: '', entryHigh: '',
+  symbol: DEFAULT_SYMBOL, direction: 'buy' as 'buy' | 'sell', entryLow: '', entryHigh: '',
   slLow: '', slHigh: '', currentPrice: '', status: 'pending' as TradeIdea['status'],
   notes: '', chartUrl: '', isPublic: true,
   takeProfits: [{ price: '', pips: '', hit: false }] as { price: string; pips: string; hit: boolean }[],
@@ -869,7 +869,7 @@ function TradeMessageComposer({ onClose, onPosted }: {
     if (!parsed) return null
     return formatSignalText(
       {
-        symbol: parsed.symbol ?? 'Signal',
+        symbol: parsed.symbol ?? DEFAULT_SYMBOL,
         direction: parsed.direction ?? 'buy',
         entryLow: parsed.entryLow,
         entryHigh: parsed.entryHigh,
@@ -882,13 +882,17 @@ function TradeMessageComposer({ onClose, onPosted }: {
     )
   }, [parsed])
 
-  // Only blocks the half that stores data — a room message needs neither.
+  // Only blocks the half that stores data — a room message needs no entry.
+  // A missing symbol isn't a blocker: it falls back to gold (see DEFAULT_SYMBOL).
   const appBlockers = !parsed
     ? ['Type a message first.']
-    : [
-        !parsed.symbol && 'No symbol found (e.g. XAUUSD).',
-        parsed.entryLow == null && parsed.entryHigh == null && 'No entry price found.',
-      ].filter((v): v is string => Boolean(v))
+    : parsed.entryLow == null && parsed.entryHigh == null
+      ? ['No entry price found.']
+      : []
+
+  // Say so when we've assumed the pair, so a EURUSD signal that never names
+  // itself can't quietly post as gold.
+  const assumedSymbol = parsed && !parsed.symbol ? DEFAULT_SYMBOL : null
 
   const canSend = text.trim() !== '' && (to.length > 0 || postToApp) && !(postToApp && appBlockers.length > 0)
 
@@ -950,6 +954,12 @@ function TradeMessageComposer({ onClose, onPosted }: {
             <div>
               <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">What the rooms receive</label>
               <pre className="mt-1.5 rounded-lg border border-line bg-sunken p-3 text-[11px] leading-relaxed text-ink2 whitespace-pre-wrap font-mono">{preview}</pre>
+              {assumedSymbol && (
+                <p className="text-[10px] text-ink3 mt-1.5">
+                  No pair named — assuming <span className="font-semibold text-ink2">{assumedSymbol}</span>.
+                  Type another (e.g. EURUSD) in the message to change it.
+                </p>
+              )}
             </div>
           )}
 
