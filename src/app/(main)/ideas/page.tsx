@@ -862,7 +862,15 @@ function TradeMessageComposer({ onClose, onPosted }: {
     let alive = true
     fetch('/api/staff/relay')
       .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (alive && d) setRooms(d.destinations ?? []) })
+      .then(d => {
+        if (!alive || !d) return
+        const found: RelayRoom[] = d.destinations ?? []
+        setRooms(found)
+        // Ticked on open: unlike New Signal, a message with no room selected
+        // does nothing at all, so the rooms are the point rather than an extra.
+        // Untick anything this particular message shouldn't go to.
+        setTo(found.map(r => r.id))
+      })
       .catch(() => {})
     return () => { alive = false }
   }, [])
