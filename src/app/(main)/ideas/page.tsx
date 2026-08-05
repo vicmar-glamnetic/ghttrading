@@ -18,6 +18,7 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { liveSignalStatus, signalOutcome, signalPips, positionSize, pipConfig, pipUnit, mid, TP1_WIN_MIN_PIPS } from '@/lib/trading'
 import { normalizeSymbol, isPriceable } from '@/lib/symbols'
 import { formatSignalText } from '@/lib/signalRelay'
+import { parseSignal } from '@/lib/signalParse'
 
 interface TakeProfit { price: number; pips?: number | null; hit?: boolean }
 interface Author { id: string; name: string | null; image: string | null; username: string | null }
@@ -488,88 +489,6 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
   )
 }
 
-/* ---------- shorthand signal parser ----------
-   Handles both the freeform shorthand:
-     Buy now 4110-4105 buy more 4098 4001
-     4115
-     Sl 4088
-   and the labeled format:
-     🚨XAUUSD SELL LIMIT🚨
-     EP: 4125
-     Sl: 4117
-     Tp1: 4120
-     Tp2: 4115
-   → { symbol, direction, entry range, stop-loss, take-profits, extra "buy more" levels }. */
-const numsIn = (s: string) => (s.match(/\d+(?:\.\d+)?/g) || []).map(Number)
-// Common instrument tickers (won't match plain words like "SIGNAL"/"LIMIT").
-const SYMBOL_RE = /\b(XAU[A-Z]{2,3}|XAG[A-Z]{2,3}|(?:EUR|GBP|USD|AUD|NZD|CAD|CHF|JPY|XAU|XAG)(?:USD|JPY|EUR|GBP|CHF|CAD|AUD|NZD)|BTC[A-Z]{0,4}|ETH[A-Z]{0,4}|US30|US500|NAS100|GER40|UK100|SPX500)\b/
-
-function parseSignal(text: string) {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-  let direction: 'buy' | 'sell' | null = null
-  let symbol: string | null = null
-  const entries: number[] = []
-  const more: number[] = []
-  const tps: number[] = []
-  const sls: number[] = []
-
-  for (const line of lines) {
-    const low = line.toLowerCase()
-
-    // Skip disclaimer / noise lines.
-    if (/disclaimer|financial advice|risk manage/.test(low)) continue
-
-    // Symbol (from a header line), detected once.
-    if (!symbol) {
-      const m = line.toUpperCase().replace(/[^A-Z0-9/ ]/g, ' ').match(SYMBOL_RE)
-      if (m) symbol = m[1]
-    }
-
-    // Direction — any line mentioning buy/sell.
-    if (/\bsell\b/.test(low)) direction = 'sell'
-    else if (/\bbuy\b/.test(low)) direction = direction ?? 'buy'
-
-    // Take profit: "tp", "tp1", "take profit N", "target" (label number ignored).
-    const tp = low.match(/\b(?:tp|take\s*profit|target)\s*\d*\s*[:=.\-]?\s*(.+)$/)
-    if (tp) { const v = numsIn(tp[1]); if (v.length) { tps.push(...v); continue } }
-
-    // Stop loss: "sl", "s/l", "stop loss".
-    const sl = low.match(/\b(?:sl|s\/l|stop\s*loss)\s*[:=.\-]?\s*(.+)$/)
-    if (sl) { const v = numsIn(sl[1]); if (v.length) { sls.push(...v); continue } }
-
-    // Entry: "ep", "entry", "entry price".
-    const ep = low.match(/\b(?:ep|entry\s*price|entry)\s*[:=.\-]?\s*(.+)$/)
-    if (ep) { const v = numsIn(ep[1]); if (v.length) { entries.push(...v); continue } }
-
-    // A number immediately followed by an emoji is an explicit take-profit.
-    const emojiTps = [...line.matchAll(/(\d+(?:\.\d+)?)\s*\p{Extended_Pictographic}/gu)].map(m => Number(m[1]))
-    if (emojiTps.length) { tps.push(...emojiTps); continue }
-
-    // Freeform entry / "buy more" line.
-    if (/buy|sell|entry|now|more/.test(low)) {
-      const moreIdx = low.indexOf('more')
-      if (moreIdx >= 0) {
-        numsIn(line.slice(0, moreIdx)).forEach(n => entries.push(n))
-        numsIn(line.slice(moreIdx)).forEach(n => more.push(n))
-      } else {
-        entries.push(...numsIn(line))
-      }
-      continue
-    }
-
-    // Otherwise a bare price line → take profit.
-    const bare = numsIn(line)
-    if (bare.length) tps.push(...bare)
-  }
-
-  const entryLow = entries.length ? Math.min(...entries) : null
-  const entryHigh = entries.length ? Math.max(...entries) : null
-  const slLow = sls.length ? Math.min(...sls) : null
-  const slHigh = sls.length ? Math.max(...sls) : null
-
-  return { symbol, direction, entryLow, entryHigh, slLow, slHigh, takeProfits: tps, moreEntries: more }
-}
-
 /* ---------- editor modal ---------- */
 /** A room a signal can be mirrored into — Telegram, Discord, or Telegram via IFTTT. */
 interface RelayRoom { id: string; channel: 'telegram' | 'discord' | 'ifttt'; label: string }
@@ -620,94 +539,6 @@ function IdeaEditor({ initial, onClose, onSaved }: {
   const [pasteInfo, setPasteInfo] = useState<{ type: 'error' | 'ok'; msg: string } | null>(null)
   // Blocking validation errors shown above the Post button.
   const [errors, setErrors] = useState<string[]>([])
-
-  // The Telegram groups / Discord channels this signal can also be posted to.
-  // Nothing is ticked by default — mirroring a setup off-site is always a
-  // deliberate choice, never something that happens because a coach forgot.
-  const [rooms, setRooms] = useState<RelayRoom[]>([])
-  const [relayTo, setRelayTo] = useState<string[]>([])
-  const [testing, setTesting] = useState(false)
-  const [relayMsg, setRelayMsg] = useState('')
-
-  useEffect(() => {
-    // An edit never re-broadcasts: the rooms already received the original post,
-    // and a second copy reads as a second trade.
-    if (initial) return
-    let alive = true
-    fetch('/api/staff/relay')
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (alive && d) setRooms(d.destinations ?? []) })
-      .catch(() => {})
-    return () => { alive = false }
-  }, [initial])
-
-  const toggleRoom = (id: string) =>
-    setRelayTo(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]))
-
-  const num = (v: string) => (v.trim() === '' ? null : Number(v))
-
-  /**
-   * The signal exactly as the relay would send it — same function, so a copied
-   * message and an automated one are identical. This is the manual escape
-   * hatch for a room the app can't post to itself.
-   */
-  function signalText() {
-    return formatSignalText(
-      {
-        symbol: f.symbol,
-        direction: f.direction,
-        entryLow: num(f.entryLow),
-        entryHigh: num(f.entryHigh),
-        slLow: num(f.slLow),
-        slHigh: num(f.slHigh),
-        takeProfits: f.takeProfits
-          .filter(t => t.price.trim() !== '' && Number.isFinite(Number(t.price)))
-          .map(t => ({ price: Number(t.price) })),
-        notes: f.notes,
-      },
-      { url: typeof window === 'undefined' ? undefined : `${window.location.origin}/ideas` },
-    )
-  }
-
-  const [copied, setCopied] = useState(false)
-  async function copyForTelegram() {
-    try {
-      await navigator.clipboard.writeText(signalText())
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      setRelayMsg('Could not reach the clipboard — select the text manually instead.')
-    }
-  }
-
-  /** Fire the sample signal at the ticked rooms — proves the wiring before a live setup relies on it. */
-  async function sendTest() {
-    setTesting(true); setRelayMsg('')
-    try {
-      const res = await fetch('/api/staff/relay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: relayTo }),
-      })
-      const d = await res.json()
-      if (!res.ok) {
-        setRelayMsg(d.error || 'Test send failed.')
-      } else if (d.skipped) {
-        setRelayMsg(`Nothing sent — ${d.skipped}.`)
-      } else {
-        const ok = d.sent ?? 0
-        const failed: string[] = d.failures ?? []
-        setRelayMsg(
-          `✓ Sample sent to ${ok} room${ok === 1 ? '' : 's'}.` +
-          (failed.length ? ` Failed: ${failed.join(', ')}.` : ''),
-        )
-      }
-    } catch {
-      setRelayMsg('Test send failed — check your connection.')
-    } finally {
-      setTesting(false)
-    }
-  }
 
   // Parse a pasted shorthand signal and fill the form.
   function applyPaste() {
@@ -832,8 +663,6 @@ function IdeaEditor({ initial, onClose, onSaved }: {
         takeProfits: f.takeProfits
           .filter(t => t.price.trim() !== '')
           .map(t => ({ price: Number(t.price), pips: t.pips.trim() === '' ? null : Number(t.pips), hit: t.hit })),
-        // Only a new signal broadcasts; the server ignores this on an edit.
-        ...(initial ? {} : { relayTo }),
       }
       const res = await fetch(initial ? `/api/ideas/${initial.id}` : '/api/ideas', {
         method: initial ? 'PUT' : 'POST',
@@ -976,84 +805,6 @@ function IdeaEditor({ initial, onClose, onSaved }: {
             <button onClick={() => set('isPublic', true)} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors ${f.isPublic ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}><Globe className="w-3.5 h-3.5" /> Public</button>
           </div>
 
-          {/* Also post to Telegram / Discord — new signals only */}
-          {!initial && (
-            <div className="rounded-lg border border-line bg-sunken/50 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider flex items-center gap-1.5">
-                  <Send className="w-3.5 h-3.5 text-yellow-500" /> Also post to
-                </label>
-                {rooms.length > 1 && (
-                  <button
-                    onClick={() => setRelayTo(relayTo.length === rooms.length ? [] : rooms.map(r => r.id))}
-                    className="text-[10px] font-semibold text-yellow-500 hover:text-yellow-400"
-                  >
-                    {relayTo.length === rooms.length ? 'Clear all' : 'Select all'}
-                  </button>
-                )}
-              </div>
-
-              {rooms.length === 0 ? (
-                <p className="text-[11px] text-ink3 leading-snug mt-1.5">
-                  No rooms connected yet. An admin adds them with the{' '}
-                  <code className="text-ink2">TELEGRAM_CHATS</code>,{' '}
-                  <code className="text-ink2">DISCORD_WEBHOOKS</code> or{' '}
-                  <code className="text-ink2">IFTTT_WEBHOOKS</code> environment variables — see{' '}
-                  <code className="text-ink2">docs/signal-relay.md</code>. You can still use{' '}
-                  <b>Copy for Telegram</b> below.
-                </p>
-              ) : (
-                <>
-                  <div className="space-y-1 mt-1.5">
-                    {rooms.map(r => {
-                      const on = relayTo.includes(r.id)
-                      return (
-                        <button
-                          key={r.id}
-                          onClick={() => toggleRoom(r.id)}
-                          className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${on ? 'bg-yellow-500/10 border border-yellow-500/40 text-ink' : 'bg-sunken border border-line text-ink3 hover:text-ink2'}`}
-                        >
-                          {on ? <CheckSquare className="w-4 h-4 shrink-0 text-yellow-500" /> : <Square className="w-4 h-4 shrink-0" />}
-                          {(() => { const { Icon, tint } = ROOM_STYLE[r.channel]; return <Icon className={`w-3.5 h-3.5 shrink-0 ${tint}`} /> })()}
-                          <span className="font-semibold truncate">{r.label}</span>
-                          <span className="ml-auto text-[10px] text-ink3 shrink-0 flex items-center gap-0.5">
-                            <Hash className="w-2.5 h-2.5" />{ROOM_STYLE[r.channel].tag}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <button
-                      onClick={sendTest}
-                      disabled={testing || relayTo.length === 0}
-                      className="text-[11px] font-semibold text-ink2 hover:text-ink border border-line rounded-lg px-2 py-1 disabled:opacity-40"
-                    >
-                      {testing ? 'Sending…' : 'Send a sample'}
-                    </button>
-                    <span className="text-[10px] text-ink3">
-                      {relayTo.length === 0
-                        ? 'Nothing ticked — this signal stays on the site.'
-                        : `Posts to ${relayTo.length} room${relayTo.length === 1 ? '' : 's'} when you hit Post.`}
-                    </span>
-                  </div>
-                </>
-              )}
-
-              {/* Manual escape hatch: the same text the relay sends, on the
-                  clipboard, for any room the app can't post to itself. */}
-              <button
-                onClick={copyForTelegram}
-                className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg border border-line bg-sunken py-2 text-xs font-semibold text-ink2 hover:text-ink transition-colors"
-              >
-                {copied
-                  ? <><Check className="w-3.5 h-3.5 text-green-400" /> Copied — paste it into the group</>
-                  : <><Copy className="w-3.5 h-3.5" /> Copy for Telegram</>}
-              </button>
-
-              {relayMsg && <p className="text-[11px] text-ink2 mt-1.5">{relayMsg}</p>}
-            </div>
-          )}
         </div>
 
         <div className="sticky bottom-0 bg-surface border-t border-line">
@@ -1073,6 +824,240 @@ function IdeaEditor({ initial, onClose, onSaved }: {
           <div className="flex gap-2 p-4">
             <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">Cancel</Button>
             <Button variant="gold" size="sm" onClick={save} loading={saving} className="flex-1">{initial ? 'Save' : 'Post Idea'}</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- trade message composer ---------- */
+/**
+ * Broadcasts a trade message to the Telegram/Discord rooms, and only files it
+ * as a signal on the app if the coach ticks the box.
+ *
+ * Separate from New Signal on purpose: most of what goes to the rooms is an
+ * update — "close half here", "moved to breakeven" — that shouldn't spawn a
+ * card on /ideas. The preview below the box is rendered by the same formatter
+ * the server sends with, so what a coach approves is what the rooms get.
+ */
+function TradeMessageComposer({ onClose, onPosted }: {
+  onClose: () => void
+  onPosted: (idea: TradeIdea | null) => void
+}) {
+  const [text, setText] = useState('')
+  const [rooms, setRooms] = useState<RelayRoom[]>([])
+  const [to, setTo] = useState<string[]>([])
+  const [postToApp, setPostToApp] = useState(false)
+  const [isPublic, setIsPublic] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [msg, setMsg] = useState<{ type: 'error' | 'ok'; text: string } | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/staff/relay')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (alive && d) setRooms(d.destinations ?? []) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  // What the rooms will actually receive. Parsed on every keystroke so a coach
+  // sees the reformatting — and any misread price — before sending, not after.
+  const parsed = useMemo(() => (text.trim() ? parseSignal(text) : null), [text])
+  const preview = useMemo(() => {
+    if (!parsed) return null
+    return formatSignalText(
+      {
+        symbol: parsed.symbol ?? 'Signal',
+        direction: parsed.direction ?? 'buy',
+        entryLow: parsed.entryLow,
+        entryHigh: parsed.entryHigh,
+        slLow: parsed.slLow,
+        slHigh: parsed.slHigh,
+        takeProfits: parsed.takeProfits.map(price => ({ price })),
+        notes: parsed.moreEntries.length ? `Add more: ${parsed.moreEntries.join(', ')}` : null,
+      },
+      { url: typeof window === 'undefined' ? undefined : `${window.location.origin}/ideas` },
+    )
+  }, [parsed])
+
+  // Only blocks the half that stores data — a room message needs neither.
+  const appBlockers = !parsed
+    ? ['Type a message first.']
+    : [
+        !parsed.symbol && 'No symbol found (e.g. XAUUSD).',
+        parsed.entryLow == null && parsed.entryHigh == null && 'No entry price found.',
+      ].filter((v): v is string => Boolean(v))
+
+  const canSend = text.trim() !== '' && (to.length > 0 || postToApp) && !(postToApp && appBlockers.length > 0)
+
+  async function send() {
+    setSending(true); setMsg(null)
+    try {
+      const res = await fetch('/api/signals/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, to, postToApp, isPublic }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setMsg({ type: 'error', text: d.error || 'Could not send that.' })
+        return
+      }
+      const sent = d.relay?.sent ?? 0
+      const failed: string[] = d.relay?.failures ?? []
+      setMsg({
+        type: failed.length ? 'error' : 'ok',
+        text: [
+          to.length ? `Sent to ${sent}/${to.length} room${to.length === 1 ? '' : 's'}.` : 'Not sent to any room.',
+          d.idea ? 'Posted as a signal on the app.' : null,
+          failed.length ? `Failed: ${failed.join(', ')}.` : null,
+        ].filter(Boolean).join(' '),
+      })
+      onPosted(d.idea ?? null)
+      if (!failed.length) setText('')
+    } catch {
+      setMsg({ type: 'error', text: 'Network error — check your connection and try again.' })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const inputCls = 'bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2 w-full'
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-line max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-surface flex items-center justify-between p-4 border-b border-line z-10">
+          <h2 className="font-bold text-ink flex items-center gap-1.5"><Send className="w-4 h-4 text-yellow-500" /> New Trade Message</h2>
+          <button onClick={onClose} className="text-ink3 hover:text-ink"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Message</label>
+            <textarea
+              value={text}
+              onChange={e => { setText(e.target.value); setMsg(null) }}
+              rows={7}
+              placeholder={"Sell now 4259-4254-4250\n4245\n4240\n4230\nSl 4267"}
+              className={`${inputCls} mt-1.5 resize-none font-mono text-xs`}
+            />
+          </div>
+
+          {preview && (
+            <div>
+              <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">What the rooms receive</label>
+              <pre className="mt-1.5 rounded-lg border border-line bg-sunken p-3 text-[11px] leading-relaxed text-ink2 whitespace-pre-wrap font-mono">{preview}</pre>
+            </div>
+          )}
+
+          {/* rooms */}
+          <div className="rounded-lg border border-line bg-sunken/50 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5 text-yellow-500" /> Send to
+              </label>
+              {rooms.length > 1 && (
+                <button
+                  onClick={() => setTo(to.length === rooms.length ? [] : rooms.map(r => r.id))}
+                  className="text-[10px] font-semibold text-yellow-500 hover:text-yellow-400"
+                >
+                  {to.length === rooms.length ? 'Clear all' : 'Select all'}
+                </button>
+              )}
+            </div>
+
+            {rooms.length === 0 ? (
+              <p className="text-[11px] text-ink3 leading-snug mt-1.5">
+                No rooms connected yet. An admin adds them with the{' '}
+                <code className="text-ink2">TELEGRAM_CHATS</code>,{' '}
+                <code className="text-ink2">DISCORD_WEBHOOKS</code> or{' '}
+                <code className="text-ink2">IFTTT_WEBHOOKS</code> environment variables — see{' '}
+                <code className="text-ink2">docs/signal-relay.md</code>.
+              </p>
+            ) : (
+              <div className="space-y-1 mt-1.5">
+                {rooms.map(r => {
+                  const on = to.includes(r.id)
+                  const { Icon, tint, tag } = ROOM_STYLE[r.channel]
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => setTo(s => (s.includes(r.id) ? s.filter(x => x !== r.id) : [...s, r.id]))}
+                      className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ${on ? 'bg-yellow-500/10 border border-yellow-500/40 text-ink' : 'bg-sunken border border-line text-ink3 hover:text-ink2'}`}
+                    >
+                      {on ? <CheckSquare className="w-4 h-4 shrink-0 text-yellow-500" /> : <Square className="w-4 h-4 shrink-0" />}
+                      <Icon className={`w-3.5 h-3.5 shrink-0 ${tint}`} />
+                      <span className="font-semibold truncate">{r.label}</span>
+                      <span className="ml-auto text-[10px] text-ink3 shrink-0 flex items-center gap-0.5">
+                        <Hash className="w-2.5 h-2.5" />{tag}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(preview ?? text)
+                  setMsg({ type: 'ok', text: 'Copied — paste it into the group.' })
+                } catch {
+                  setMsg({ type: 'error', text: 'Could not reach the clipboard — select the text manually.' })
+                }
+              }}
+              disabled={!text.trim()}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg border border-line bg-sunken py-2 text-xs font-semibold text-ink2 hover:text-ink transition-colors disabled:opacity-40"
+            >
+              <Copy className="w-3.5 h-3.5" /> Copy for Telegram
+            </button>
+          </div>
+
+          {/* also post as a signal on the app */}
+          <div className="rounded-lg border border-line bg-sunken/50 p-3">
+            <button
+              onClick={() => { setPostToApp(!postToApp); setMsg(null) }}
+              className="w-full flex items-center gap-2 text-left"
+            >
+              {postToApp ? <CheckSquare className="w-4 h-4 shrink-0 text-yellow-500" /> : <Square className="w-4 h-4 shrink-0 text-ink3" />}
+              <span className={`text-sm font-semibold ${postToApp ? 'text-ink' : 'text-ink3'}`}>Also post as a signal on the app</span>
+            </button>
+            <p className="text-[11px] text-ink3 leading-snug mt-1.5">
+              Creates a tracked card on /ideas with entry, targets and stop — and alerts members by push and email.
+              Leave it off for updates like &ldquo;close half here&rdquo;.
+            </p>
+
+            {postToApp && (
+              appBlockers.length > 0 ? (
+                <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-red-400/20 bg-red-400/10 px-2.5 py-1.5 text-[11px] text-red-400">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  <span>{appBlockers.join(' ')} Add it to the message above, or untick this.</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mt-2">
+                  <button onClick={() => setIsPublic(false)} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${!isPublic ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}><Lock className="w-3 h-3" /> Private</button>
+                  <button onClick={() => setIsPublic(true)} className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${isPublic ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}><Globe className="w-3 h-3" /> Public</button>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-surface border-t border-line">
+          {msg && (
+            <div className={`mx-4 mt-3 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug ${msg.type === 'error' ? 'text-red-400 bg-red-400/10 border border-red-400/20' : 'text-green-400 bg-green-400/10 border border-green-400/20'}`}>
+              {msg.type === 'error' ? <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" /> : <Check className="w-3.5 h-3.5 shrink-0 mt-px" />}
+              <span>{msg.text}</span>
+            </div>
+          )}
+          <div className="flex gap-2 p-4">
+            <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">Close</Button>
+            <Button variant="gold" size="sm" onClick={send} loading={sending} disabled={!canSend} className="flex-1">
+              {postToApp ? 'Send & post' : 'Send'}
+            </Button>
           </div>
         </div>
       </div>
@@ -1268,6 +1253,7 @@ export default function IdeasPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('community')
   const [editor, setEditor] = useState<{ open: boolean; idea: TradeIdea | null }>({ open: false, idea: null })
+  const [messenger, setMessenger] = useState(false)
   const [prices, setPrices] = useState<Record<string, number | null>>({})
   const [acct, setAcct] = useState<Acct | null>(null)
   const [showAcct, setShowAcct] = useState(false)
@@ -1421,6 +1407,10 @@ export default function IdeasPage() {
             <button onClick={() => setShowGuide(true)} title="Coach guide"
               className="flex items-center gap-1.5 text-xs font-bold text-ink2 border border-line rounded-lg px-3 py-1.5 hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
               <GraduationCap className="w-3.5 h-3.5" /> Guide
+            </button>
+            <button onClick={() => setMessenger(true)} title="Send a message to the Telegram/Discord rooms"
+              className="flex items-center gap-1.5 text-xs font-bold text-ink2 border border-line rounded-lg px-3 py-1.5 hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
+              <Send className="w-3.5 h-3.5" /> Message
             </button>
             <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
               <Plus className="w-3.5 h-3.5" /> New Signal
@@ -1582,6 +1572,14 @@ export default function IdeasPage() {
           initial={editor.idea}
           onClose={() => setEditor({ open: false, idea: null })}
           onSaved={handleSaved}
+        />
+      )}
+
+      {messenger && (
+        <TradeMessageComposer
+          onClose={() => setMessenger(false)}
+          // Only a message that also filed a signal has anything to add here.
+          onPosted={idea => { if (idea) handleSaved(idea, true) }}
         />
       )}
     </div>
