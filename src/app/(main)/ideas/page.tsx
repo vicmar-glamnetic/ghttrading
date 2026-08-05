@@ -1053,11 +1053,14 @@ function TradeMessageComposer({ onClose, onPosted }: {
               </div>
             )}
 
+            {/* For the rooms the app can't reach: Messenger, WhatsApp, Viber,
+                or a Telegram channel that blocks bots. Copies whatever the
+                preview shows, so a pasted message matches an automated one. */}
             <button
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(preview ?? text)
-                  setMsg({ type: 'ok', text: 'Copied — paste it into the group.' })
+                  setMsg({ type: 'ok', text: 'Copied — paste it into Messenger, WhatsApp or any chat.' })
                 } catch {
                   setMsg({ type: 'error', text: 'Could not reach the clipboard — select the text manually.' })
                 }
@@ -1065,8 +1068,11 @@ function TradeMessageComposer({ onClose, onPosted }: {
               disabled={!text.trim()}
               className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg border border-line bg-sunken py-2 text-xs font-semibold text-ink2 hover:text-ink transition-colors disabled:opacity-40"
             >
-              <Copy className="w-3.5 h-3.5" /> Copy for Telegram
+              <Copy className="w-3.5 h-3.5" /> Copy message
             </button>
+            <p className="text-[10px] text-ink3 mt-1 text-center">
+              Paste into Messenger, WhatsApp or any chat the app doesn&rsquo;t post to.
+            </p>
           </div>
 
           {/* also post as a signal on the app */}
