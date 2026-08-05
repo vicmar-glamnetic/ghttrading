@@ -281,14 +281,16 @@ async function sendTelegram(t: TelegramTarget, text: string, chartUrl?: string |
   })
 }
 
-async function sendDiscord(t: DiscordTarget, s: RelaySignal, text: string) {
-  // Split the header off the body: Discord renders it as the embed title.
-  const [title, ...rest] = text.split('\n\n')
+async function sendDiscord(t: DiscordTarget, s: RelaySignal, text: string, raw: boolean) {
+  // Our own formatting opens with a header line, which Discord renders nicely
+  // as the embed title. Text a coach typed has no such structure, so it goes
+  // into the body whole rather than losing its first paragraph to the title.
+  const [head, ...rest] = text.split('\n\n')
   await postJson(t.webhook, {
     embeds: [
       {
-        title,
-        description: rest.join('\n\n'),
+        ...(raw ? {} : { title: head }),
+        description: raw ? text : rest.join('\n\n'),
         color: embedColor(s.direction),
         ...(s.chartUrl ? { image: { url: s.chartUrl } } : {}),
         timestamp: new Date().toISOString(),
@@ -316,12 +318,16 @@ async function sendIfttt(t: IftttTarget, text: string, signal: RelaySignal, url?
  * on its own and is only ever logged, so one dead webhook can't stop the others
  * or the post that triggered it.
  *
- * @param opts.to  destination ids the coach ticked (from `relayDestinations()`).
- *                 Omit to send to every configured room.
+ * @param opts.to    destination ids the coach ticked (from `relayDestinations()`).
+ *                   Omit to send to every configured room.
+ * @param opts.text  the exact message body to send. Omit to render `signal`
+ *                   with `formatSignalText`.
+ * @param opts.raw   true when `text` is a coach's own words rather than our
+ *                   formatting, so nothing downstream tries to parse it apart.
  */
 export async function relaySignal(
   signal: RelaySignal,
-  opts: { url?: string; to?: string[] } = {},
+  opts: { url?: string; to?: string[]; text?: string; raw?: boolean } = {},
 ): Promise<RelayResult> {
   const out = emptyResult()
 
@@ -333,13 +339,14 @@ export async function relaySignal(
   const picked = opts.to ? configured.filter(t => opts.to!.includes(t.id)) : configured
   if (picked.length === 0) return { ...out, skipped: 'no destinations selected' }
 
-  const text = formatSignalText(signal, { url: opts.url })
+  const text = opts.text ?? formatSignalText(signal, { url: opts.url })
+  const raw = Boolean(opts.raw)
 
   await Promise.all(
     picked.map(async t => {
       try {
         if (t.channel === 'telegram') await sendTelegram(t, text, signal.chartUrl)
-        else if (t.channel === 'discord') await sendDiscord(t, signal, text)
+        else if (t.channel === 'discord') await sendDiscord(t, signal, text, raw)
         else await sendIfttt(t, text, signal, opts.url)
         out.byChannel[t.channel].sent++
         out.sent++

@@ -87,11 +87,21 @@ export async function POST(req: Request) {
     }
 
     const base = process.env.NEXT_PUBLIC_APP_URL
-    const url = base ? `${base}/ideas` : undefined
+    // The link is opt-in: IFTTT rewrites every URL it forwards through ift.tt,
+    // so on that route it arrives as a shortlink that tells a member nothing.
+    const url = base && body.includeLink ? `${base}/ideas` : undefined
+
+    // 'raw' sends the coach's words untouched; 'formatted' re-renders them with
+    // the header and disclaimer. Raw is the default — the text a coach typed is
+    // already how their room expects to read it.
+    const raw = body.format !== 'formatted'
+    const messageText = raw ? text : formatSignalText(signal, { url })
 
     // Relay inline so the coach is told which rooms actually took it — this is
     // the whole point of the screen, unlike the fire-and-forget alerts below.
-    const relay = to.length > 0 ? await relaySignal(signal, { to, url }) : null
+    const relay = to.length > 0
+      ? await relaySignal(signal, { to, url, text: messageText, raw })
+      : null
 
     // Same in-app alerts a signal posted from the composer would raise.
     if (idea?.isPublic) {
@@ -122,7 +132,7 @@ export async function POST(req: Request) {
       })
     }
 
-    return NextResponse.json({ idea, relay, preview: formatSignalText(signal, { url }) }, { status: 201 })
+    return NextResponse.json({ idea, relay, preview: messageText }, { status: 201 })
   } catch (error) {
     console.error('[SIGNAL_MESSAGE_POST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

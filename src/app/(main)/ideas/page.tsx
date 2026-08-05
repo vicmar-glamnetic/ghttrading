@@ -850,6 +850,11 @@ function TradeMessageComposer({ onClose, onPosted }: {
   const [to, setTo] = useState<string[]>([])
   const [postToApp, setPostToApp] = useState(false)
   const [isPublic, setIsPublic] = useState(true)
+  // Raw by default: what a coach types is already how their room reads it.
+  const [format, setFormat] = useState<'raw' | 'formatted'>('raw')
+  // Off by default — IFTTT rewrites links through ift.tt, so on that route the
+  // "full setup" line lands as a shortlink that tells a member nothing.
+  const [includeLink, setIncludeLink] = useState(false)
   const [sending, setSending] = useState(false)
   const [msg, setMsg] = useState<{ type: 'error' | 'ok'; text: string } | null>(null)
 
@@ -867,6 +872,7 @@ function TradeMessageComposer({ onClose, onPosted }: {
   const parsed = useMemo(() => (text.trim() ? parseSignal(text) : null), [text])
   const preview = useMemo(() => {
     if (!parsed) return null
+    if (format === 'raw') return text.trim()
     return formatSignalText(
       {
         symbol: parsed.symbol ?? DEFAULT_SYMBOL,
@@ -878,9 +884,13 @@ function TradeMessageComposer({ onClose, onPosted }: {
         takeProfits: parsed.takeProfits.map(price => ({ price })),
         notes: parsed.moreEntries.length ? `Add more: ${parsed.moreEntries.join(', ')}` : null,
       },
-      { url: typeof window === 'undefined' ? undefined : `${window.location.origin}/ideas` },
+      {
+        url: includeLink && typeof window !== 'undefined'
+          ? `${window.location.origin}/ideas`
+          : undefined,
+      },
     )
-  }, [parsed])
+  }, [parsed, format, text, includeLink])
 
   // Only blocks the half that stores data — a room message needs no entry.
   // A missing symbol isn't a blocker: it falls back to gold (see DEFAULT_SYMBOL).
@@ -902,7 +912,7 @@ function TradeMessageComposer({ onClose, onPosted }: {
       const res = await fetch('/api/signals/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, to, postToApp, isPublic }),
+        body: JSON.stringify({ text, to, postToApp, isPublic, format, includeLink }),
       })
       const d = await res.json()
       if (!res.ok) {
@@ -950,11 +960,38 @@ function TradeMessageComposer({ onClose, onPosted }: {
             />
           </div>
 
+          {/* how the message is rendered on its way out */}
+          <div>
+            <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Send it</label>
+            <div className="flex items-center gap-2 mt-1.5">
+              <button onClick={() => setFormat('raw')} className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${format === 'raw' ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}>
+                Exactly as typed
+              </button>
+              <button onClick={() => setFormat('formatted')} className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${format === 'formatted' ? 'bg-sunken border border-yellow-500/40 text-yellow-500' : 'bg-sunken border border-line text-ink3'}`}>
+                Formatted
+              </button>
+            </div>
+            <p className="text-[10px] text-ink3 mt-1.5 leading-snug">
+              {format === 'raw'
+                ? 'Your words, untouched — every entry price survives, including a third scale-in level.'
+                : 'Adds the pair/direction header and the disclaimer. The entry range collapses to its outer two prices.'}
+            </p>
+            {format === 'formatted' && (
+              <button onClick={() => setIncludeLink(!includeLink)} className="w-full flex items-center gap-2 text-left mt-2">
+                {includeLink ? <CheckSquare className="w-4 h-4 shrink-0 text-yellow-500" /> : <Square className="w-4 h-4 shrink-0 text-ink3" />}
+                <span className={`text-[11px] ${includeLink ? 'text-ink2' : 'text-ink3'}`}>
+                  Include &ldquo;Full setup →&rdquo; link
+                  <span className="text-ink3"> — IFTTT rewrites it to an ift.tt shortlink</span>
+                </span>
+              </button>
+            )}
+          </div>
+
           {preview && (
             <div>
               <label className="text-[10px] font-bold text-ink3 uppercase tracking-wider">What the rooms receive</label>
               <pre className="mt-1.5 rounded-lg border border-line bg-sunken p-3 text-[11px] leading-relaxed text-ink2 whitespace-pre-wrap font-mono">{preview}</pre>
-              {assumedSymbol && (
+              {assumedSymbol && format === 'formatted' && (
                 <p className="text-[10px] text-ink3 mt-1.5">
                   No pair named — assuming <span className="font-semibold text-ink2">{assumedSymbol}</span>.
                   Type another (e.g. EURUSD) in the message to change it.
