@@ -4,6 +4,7 @@ import { requireStaff } from '@/lib/admin'
 import { db } from '@/lib/db'
 import { sendPushToAll } from '@/lib/push'
 import { emailNewSignal, formatEntryZone } from '@/lib/signalAlerts'
+import { relaySignal } from '@/lib/signalRelay'
 
 const AUTHOR = { select: { id: true, name: true, image: true, username: true } }
 
@@ -22,7 +23,7 @@ function cleanTakeProfits(input: unknown) {
         hit: Boolean(tp?.hit),
       }
     })
-    .filter(Boolean)
+    .filter((t): t is { price: number; pips: number | null; hit: boolean } => t !== null)
 }
 
 const numOrNull = (v: unknown) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v))
@@ -102,6 +103,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Add at least one take-profit or a stop loss before posting.' }, { status: 400 })
     }
 
+    // Which Telegram/Discord rooms the coach ticked in the composer. Absent =
+    // relay nothing: mirroring a signal off-site is always an explicit choice.
+    const relayTo: string[] = Array.isArray(body.relayTo)
+      ? body.relayTo.filter((v: unknown): v is string => typeof v === 'string')
+      : []
+
     const idea = await db.tradeIdea.create({
       data: {
         symbol,
@@ -148,6 +155,29 @@ export async function POST(req: Request) {
             hasStop: slLow != null || slHigh != null,
           },
           authorId,
+        )
+      })
+    }
+
+    // Mirror it into the Telegram/Discord rooms the coach picked. Deliberately
+    // independent of isPublic — ticking a room is the explicit instruction, and
+    // a coach may broadcast a setup they don't want on the community board.
+    if (relayTo.length > 0) {
+      const base = process.env.NEXT_PUBLIC_APP_URL
+      after(async () => {
+        await relaySignal(
+          {
+            symbol: idea.symbol,
+            direction: idea.direction,
+            entryLow: idea.entryLow,
+            entryHigh: idea.entryHigh,
+            slLow: idea.slLow,
+            slHigh: idea.slHigh,
+            takeProfits,
+            notes: idea.notes,
+            chartUrl: idea.chartUrl,
+          },
+          { to: relayTo, url: base ? `${base}/ideas` : undefined },
         )
       })
     }
