@@ -857,6 +857,9 @@ function TradeMessageComposer({ onClose, onPosted }: {
   const [includeLink, setIncludeLink] = useState(false)
   const [sending, setSending] = useState(false)
   const [msg, setMsg] = useState<{ type: 'error' | 'ok'; text: string } | null>(null)
+  // Set once a send succeeds — swaps the form for a receipt naming every room
+  // that took the message, so "did that go out?" is answered on screen.
+  const [result, setResult] = useState<{ sent: string[]; failed: string[]; posted: boolean } | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -927,18 +930,13 @@ function TradeMessageComposer({ onClose, onPosted }: {
         setMsg({ type: 'error', text: d.error || 'Could not send that.' })
         return
       }
-      const sent = d.relay?.sent ?? 0
       const failed: string[] = d.relay?.failures ?? []
-      setMsg({
-        type: failed.length ? 'error' : 'ok',
-        text: [
-          to.length ? `Sent to ${sent}/${to.length} room${to.length === 1 ? '' : 's'}.` : 'Not sent to any room.',
-          d.idea ? 'Posted as a signal on the app.' : null,
-          failed.length ? `Failed: ${failed.join(', ')}.` : null,
-        ].filter(Boolean).join(' '),
-      })
+      // Name the rooms rather than count them: "sent to 2 rooms" leaves a coach
+      // wondering which two, and the answer matters when one of them is the
+      // paid channel.
+      const sent = rooms.filter(r => to.includes(r.id) && !failed.includes(r.label)).map(r => r.label)
+      setResult({ sent, failed, posted: Boolean(d.idea) })
       onPosted(d.idea ?? null)
-      if (!failed.length) setText('')
     } catch {
       setMsg({ type: 'error', text: 'Network error — check your connection and try again.' })
     } finally {
@@ -947,6 +945,80 @@ function TradeMessageComposer({ onClose, onPosted }: {
   }
 
   const inputCls = 'bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2 w-full'
+
+  // ---- receipt: what actually went where ----
+  if (result) {
+    const allFailed = result.sent.length === 0 && result.failed.length > 0
+    return (
+      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
+        <div className="bg-surface w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl border border-line" onClick={e => e.stopPropagation()}>
+          <div className="p-6 text-center">
+            <div className={`w-14 h-14 mx-auto rounded-full flex items-center justify-center ${allFailed ? 'bg-red-400/10' : 'bg-green-400/10'}`}>
+              {allFailed
+                ? <AlertTriangle className="w-7 h-7 text-red-400" />
+                : <Check className="w-7 h-7 text-green-400" />}
+            </div>
+            <h2 className="font-bold text-ink text-lg mt-3">
+              {allFailed ? 'Nothing went out' : result.failed.length ? 'Sent, with problems' : 'Signal sent'}
+            </h2>
+            <p className="text-xs text-ink3 mt-1">
+              {result.sent.length > 0
+                ? `Delivered to ${result.sent.length} ${result.sent.length === 1 ? 'room' : 'rooms'}${result.posted ? ' and posted on the app' : ''}.`
+                : result.posted
+                  ? 'Posted on the app only.'
+                  : 'No room accepted the message.'}
+            </p>
+
+            <div className="mt-4 space-y-1.5 text-left">
+              {result.sent.map(label => (
+                <div key={label} className="flex items-center gap-2 rounded-lg border border-green-400/20 bg-green-400/5 px-2.5 py-2">
+                  <Check className="w-4 h-4 shrink-0 text-green-400" />
+                  <span className="text-sm text-ink truncate">{label}</span>
+                </div>
+              ))}
+              {result.failed.map(label => (
+                <div key={label} className="flex items-center gap-2 rounded-lg border border-red-400/20 bg-red-400/5 px-2.5 py-2">
+                  <XCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span className="text-sm text-ink truncate">{label}</span>
+                  <span className="ml-auto text-[10px] text-red-400 shrink-0">failed</span>
+                </div>
+              ))}
+              {result.posted && (
+                <div className="flex items-center gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-2.5 py-2">
+                  <Lightbulb className="w-4 h-4 shrink-0 text-yellow-500" />
+                  <span className="text-sm text-ink">Posted as a signal on /ideas</span>
+                </div>
+              )}
+            </div>
+
+            {result.failed.length > 0 && (
+              <p className="text-[11px] text-ink3 mt-3 leading-snug">
+                The message is still in the box — untick the rooms that worked and send again to retry just the failures.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-2 p-4 border-t border-line">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                // Keep the text after a partial failure so it can be retried;
+                // clear it after a clean send so the next message starts fresh.
+                if (!result.failed.length) setText('')
+                setResult(null)
+                setMsg(null)
+              }}
+            >
+              Send another
+            </Button>
+            <Button variant="gold" size="sm" className="flex-1" onClick={onClose}>Done</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
