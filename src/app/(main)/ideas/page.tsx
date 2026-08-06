@@ -903,13 +903,13 @@ function TradeMessageComposer({ onClose, onPosted }: {
     )
   }, [parsed, format, text, includeLink])
 
-  // Only blocks the half that stores data — a room message needs no entry.
-  // A missing symbol isn't a blocker: it falls back to gold (see DEFAULT_SYMBOL).
-  const appBlockers = !parsed
-    ? ['Type a message first.']
-    : parsed.entryLow == null && parsed.entryHigh == null
-      ? ['No entry price found.']
-      : []
+  // Only blocks the half that stores data — a room message needs no entry, and
+  // a missing symbol falls back to gold (see DEFAULT_SYMBOL). An empty box
+  // isn't a blocker to report: there's nothing to be wrong with yet, and the
+  // Send button is already disabled.
+  const appBlockers = parsed && parsed.entryLow == null && parsed.entryHigh == null
+    ? ['No entry price found.']
+    : []
 
   // Say so when we've assumed the pair, so a EURUSD signal that never names
   // itself can't quietly post as gold.
@@ -937,6 +937,9 @@ function TradeMessageComposer({ onClose, onPosted }: {
       const sent = rooms.filter(r => to.includes(r.id) && !failed.includes(r.label)).map(r => r.label)
       setResult({ sent, failed, posted: Boolean(d.idea) })
       onPosted(d.idea ?? null)
+      // Clean send: show the receipt long enough to read, then get out of the
+      // way. A failure keeps the composer open — that one needs a decision.
+      if (failed.length === 0) setTimeout(onClose, 2500)
     } catch {
       setMsg({ type: 'error', text: 'Network error — check your connection and try again.' })
     } finally {
@@ -991,10 +994,12 @@ function TradeMessageComposer({ onClose, onPosted }: {
               )}
             </div>
 
-            {result.failed.length > 0 && (
+            {result.failed.length > 0 ? (
               <p className="text-[11px] text-ink3 mt-3 leading-snug">
                 The message is still in the box — untick the rooms that worked and send again to retry just the failures.
               </p>
+            ) : (
+              <p className="text-[11px] text-ink3 mt-3">This closes on its own.</p>
             )}
           </div>
 
@@ -1165,7 +1170,7 @@ function TradeMessageComposer({ onClose, onPosted }: {
               appBlockers.length > 0 ? (
                 <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-red-400/20 bg-red-400/10 px-2.5 py-1.5 text-[11px] text-red-400">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
-                  <span>{appBlockers.join(' ')} Add it to the message above, or untick this.</span>
+                  <span>{appBlockers.join(' ')} Add one to the message above, or untick this.</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 mt-2">
