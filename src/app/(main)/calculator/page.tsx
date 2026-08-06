@@ -1,6 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { Calculator, Info } from 'lucide-react'
+import { Calculator, Coins, Info } from 'lucide-react'
+import { GoldLotCalculator } from '@/components/trading/GoldLotCalculator'
 
 // Instrument presets: pip size (price move that equals 1 pip) and pip value
 // per 1.0 standard lot in USD. Both are editable because they vary by broker.
@@ -135,6 +136,17 @@ export default function CalculatorPage() {
           Pip size and pip value per lot vary by broker and account currency. Presets are common defaults — always
           confirm your instrument&rsquo;s contract specs in MT5. This tool is for guidance only, not financial advice.
         </p>
+      </div>
+
+      {/* Gold gets its own sizer: members trade it most and misread its pip
+          convention most, so a form with no price fields and no presets to get
+          wrong is worth the duplication. */}
+      <div className="pt-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Coins className="w-5 h-5 text-yellow-500" />
+          <h2 className="font-bold text-ink text-lg">Gold (XAUUSD) Lot Size</h2>
+        </div>
+        <GoldLotCalculator />
       </div>
     </div>
   )
