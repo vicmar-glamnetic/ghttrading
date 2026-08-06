@@ -1,6 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { Calculator, Coins, Info } from 'lucide-react'
+import { Calculator, ChartCandlestick, Coins, Info } from 'lucide-react'
 import { GoldLotCalculator } from '@/components/trading/GoldLotCalculator'
 
 // Instrument presets: pip size (price move that equals 1 pip) and pip value
@@ -62,91 +62,103 @@ export default function CalculatorPage() {
   const labelCls = 'text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5'
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Calculator className="w-5 h-5 text-yellow-500" />
         <h1 className="font-bold text-ink text-lg">Position Size Calculator</h1>
       </div>
 
-      <div className="bg-surface rounded-xl border border-line p-4 sm:p-6 space-y-4">
-        {/* Instrument */}
-        <div>
-          <label className={labelCls}>Instrument</label>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(PRESETS).map(([key, p]) => (
-              <button key={key} onClick={() => applyPreset(key as keyof typeof PRESETS)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                  preset === key ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'text-ink3 border-line hover:bg-elevated'
-                }`}>
-                {p.label}
-              </button>
-            ))}
+      {/* Two calculators, side by side once there's room for it. Gold comes first
+          in the DOM so the single-column phone layout leads with it — it's what
+          most members are sizing — and no order utilities are needed to do it. */}
+      <div className="grid xl:grid-cols-2 gap-4 xl:gap-5 items-start">
+        {/* Gold gets its own sizer: members trade it most and misread its pip
+            convention most, so a form with no price fields and no presets to get
+            wrong is worth the duplication. */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Coins className="w-5 h-5 text-yellow-500" />
+            <h2 className="font-bold text-ink">Gold (XAUUSD) Lot Size</h2>
           </div>
-        </div>
+          <GoldLotCalculator />
+        </section>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Account balance ($)</label>
-            <input type="number" inputMode="decimal" value={balance} onChange={e => setBalance(e.target.value)} className={inputCls} />
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <ChartCandlestick className="w-5 h-5 text-yellow-500" />
+            <h2 className="font-bold text-ink">Any Instrument</h2>
           </div>
-          <div>
-            <label className={labelCls}>Risk per trade (%)</label>
-            <input type="number" inputMode="decimal" value={risk} onChange={e => setRisk(e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Entry price</label>
-            <input type="number" inputMode="decimal" value={entry} onChange={e => setEntry(e.target.value)} placeholder="e.g. 2350.00" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Stop loss</label>
-            <input type="number" inputMode="decimal" value={sl} onChange={e => setSl(e.target.value)} placeholder="e.g. 2345.00" className={inputCls} />
-          </div>
-          <div className="col-span-2">
-            <label className={labelCls}>Take profit <span className="text-ink3 normal-case font-normal">(optional — for R:R)</span></label>
-            <input type="number" inputMode="decimal" value={tp} onChange={e => setTp(e.target.value)} placeholder="e.g. 2360.00" className={inputCls} />
-          </div>
-        </div>
 
-        {/* Pip config (editable) */}
-        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-line">
-          <div>
-            <label className={labelCls}>Pip size</label>
-            <input type="number" inputMode="decimal" value={pipSize} onChange={e => { setPipSize(e.target.value); setPreset('custom') }} className={inputCls} />
+          <div className="bg-surface rounded-xl border border-line p-4 sm:p-6 space-y-4">
+            {/* Instrument */}
+            <div>
+              <label className={labelCls}>Instrument</label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(PRESETS).map(([key, p]) => (
+                  <button key={key} onClick={() => applyPreset(key as keyof typeof PRESETS)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                      preset === key ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'text-ink3 border-line hover:bg-elevated'
+                    }`}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Account balance ($)</label>
+                <input type="number" inputMode="decimal" value={balance} onChange={e => setBalance(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Risk per trade (%)</label>
+                <input type="number" inputMode="decimal" value={risk} onChange={e => setRisk(e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Entry price</label>
+                <input type="number" inputMode="decimal" value={entry} onChange={e => setEntry(e.target.value)} placeholder="e.g. 2350.00" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Stop loss</label>
+                <input type="number" inputMode="decimal" value={sl} onChange={e => setSl(e.target.value)} placeholder="e.g. 2345.00" className={inputCls} />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Take profit <span className="text-ink3 normal-case font-normal">(optional — for R:R)</span></label>
+                <input type="number" inputMode="decimal" value={tp} onChange={e => setTp(e.target.value)} placeholder="e.g. 2360.00" className={inputCls} />
+              </div>
+            </div>
+
+            {/* Pip config (editable) */}
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-line">
+              <div>
+                <label className={labelCls}>Pip size</label>
+                <input type="number" inputMode="decimal" value={pipSize} onChange={e => { setPipSize(e.target.value); setPreset('custom') }} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Pip value / lot ($)</label>
+                <input type="number" inputMode="decimal" value={pipValue} onChange={e => { setPipValue(e.target.value); setPreset('custom') }} className={inputCls} />
+              </div>
+            </div>
           </div>
-          <div>
-            <label className={labelCls}>Pip value / lot ($)</label>
-            <input type="number" inputMode="decimal" value={pipValue} onChange={e => { setPipValue(e.target.value); setPreset('custom') }} className={inputCls} />
+
+          {/* Results */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Stat label="Risk amount" value={Number.isFinite(r.riskAmount) ? `$${fmt(r.riskAmount)}` : '—'} />
+            <Stat label="Stop distance" value={Number.isFinite(r.stopPips) ? `${fmt(r.stopPips, 1)} pips` : '—'} />
+            <Stat label="Position size" value={Number.isFinite(r.lots) ? `${fmt(r.lots)} lots` : '—'} highlight />
+            <Stat label="Reward (at TP)" value={Number.isFinite(r.reward) ? `$${fmt(r.reward)}` : '—'} />
+            <Stat label="Reward pips" value={Number.isFinite(r.rewardPips) ? `${fmt(r.rewardPips, 1)}` : '—'} />
+            <Stat label="Risk : Reward" value={Number.isFinite(r.rr) ? `1 : ${fmt(r.rr, 2)}` : '—'} />
           </div>
-        </div>
-      </div>
 
-      {/* Results */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <Stat label="Risk amount" value={Number.isFinite(r.riskAmount) ? `$${fmt(r.riskAmount)}` : '—'} />
-        <Stat label="Stop distance" value={Number.isFinite(r.stopPips) ? `${fmt(r.stopPips, 1)} pips` : '—'} />
-        <Stat label="Position size" value={Number.isFinite(r.lots) ? `${fmt(r.lots)} lots` : '—'} highlight />
-        <Stat label="Reward (at TP)" value={Number.isFinite(r.reward) ? `$${fmt(r.reward)}` : '—'} />
-        <Stat label="Reward pips" value={Number.isFinite(r.rewardPips) ? `${fmt(r.rewardPips, 1)}` : '—'} />
-        <Stat label="Risk : Reward" value={Number.isFinite(r.rr) ? `1 : ${fmt(r.rr, 2)}` : '—'} />
-      </div>
-
-      <div className="flex gap-2 text-xs text-ink3 bg-surface border border-line rounded-xl p-3">
-        <Info className="w-4 h-4 shrink-0 text-yellow-500/70 mt-0.5" />
-        <p>
-          Pip size and pip value per lot vary by broker and account currency. Presets are common defaults — always
-          confirm your instrument&rsquo;s contract specs in MT5. This tool is for guidance only, not financial advice.
-        </p>
-      </div>
-
-      {/* Gold gets its own sizer: members trade it most and misread its pip
-          convention most, so a form with no price fields and no presets to get
-          wrong is worth the duplication. */}
-      <div className="pt-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <Coins className="w-5 h-5 text-yellow-500" />
-          <h2 className="font-bold text-ink text-lg">Gold (XAUUSD) Lot Size</h2>
-        </div>
-        <GoldLotCalculator />
+          <div className="flex gap-2 text-xs text-ink3 bg-surface border border-line rounded-xl p-3">
+            <Info className="w-4 h-4 shrink-0 text-yellow-500/70 mt-0.5" />
+            <p>
+              Pip size and pip value per lot vary by broker and account currency. Presets are common defaults — always
+              confirm your instrument&rsquo;s contract specs in MT5. This tool is for guidance only, not financial advice.
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   )
