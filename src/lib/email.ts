@@ -492,9 +492,17 @@ export async function sendSignalAlertEmails(
  * members who never enabled push, and it stays manual so re-uploading a stream
  * (toggling live off and on again) doesn't email everyone twice.
  */
-function buildLiveAnnounceEmail(name?: string | null, title?: string | null): { subject: string; html: string } {
+function buildLiveAnnounceEmail(
+  name?: string | null,
+  title?: string | null,
+  streamUrl?: string | null,
+): { subject: string; html: string } {
   const url = `${APP_URL}/live`
   const greeting = name ? `Hey ${name},` : 'Hey trader,'
+  // The stream's own link (YouTube/Facebook/Vimeo), for members whose mail
+  // client or browser won't sign them into the site right away. Only ever a
+  // plain http(s) link — anything else is dropped rather than rendered.
+  const direct = streamUrl && isSafeUrl(streamUrl) ? escapeHtml(streamUrl.trim()) : null
   const inner = `
     <div style="text-align:center;margin:0 0 18px;">
       <span style="display:inline-block;background:#f8717120;border:1px solid #f8717150;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:800;color:#f87171;letter-spacing:1px;text-transform:uppercase;">&#128308; Live now</span>
@@ -506,6 +514,10 @@ function buildLiveAnnounceEmail(name?: string | null, title?: string | null): { 
       and trades called as they happen. Jump in now and bring your questions.
     </p>
     ${ctaButton(url, 'Watch live now →')}
+    ${direct ? `<p style="margin:18px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;word-break:break-all;">
+      Or watch the stream directly:<br>
+      <a href="${direct}" style="color:#ad9045;text-decoration:underline;">${direct}</a>
+    </p>` : ''}
     <p style="margin:22px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">
       Can't make it? The replay lands in the community afterwards.
     </p>`
@@ -518,13 +530,14 @@ function buildLiveAnnounceEmail(name?: string | null, title?: string | null): { 
 export async function sendLiveAnnounceEmails(
   recipients: { email: string; name?: string | null }[],
   title?: string | null,
+  streamUrl?: string | null,
 ): Promise<{ sent: number; failed: number }> {
   const resend = getResend()
   let sent = 0, failed = 0
   for (let i = 0; i < recipients.length; i += 100) {
     const chunk = recipients.slice(i, i + 100)
     const payload = chunk.map(r => {
-      const { subject, html } = buildLiveAnnounceEmail(r.name, title)
+      const { subject, html } = buildLiveAnnounceEmail(r.name, title, streamUrl)
       return { from: FROM, to: r.email, subject, html }
     })
     try {

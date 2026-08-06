@@ -50,8 +50,14 @@ export async function POST() {
   })
   if (recipients.length === 0) return NextResponse.json({ sent: 0, failed: 0, total: 0 })
 
+  // The stream's own link, so the email carries somewhere to watch even outside
+  // the app. Only in webinar mode — an interactive room is a Jitsi embed that
+  // needs a per-user token from /api/live/token, so its slug isn't a link
+  // anyone could open.
+  const streamUrl = webinar.mode === 'webinar' ? webinar.embedUrl : null
+
   try {
-    const { sent, failed } = await sendLiveAnnounceEmails(recipients, webinar.title)
+    const { sent, failed } = await sendLiveAnnounceEmails(recipients, webinar.title, streamUrl)
     return NextResponse.json({ sent, failed, total: recipients.length })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Failed to send emails'
