@@ -181,13 +181,13 @@ export default function SettingsPage() {
       <div className="flex border-b border-line">
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-1 py-2.5 sm:py-3 text-[11px] sm:text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'border-b-2 border-yellow-500 text-yellow-500'
                 : 'text-ink3 hover:bg-elevated hover:text-ink2'
             }`}>
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
+            <tab.icon className="w-4 h-4 shrink-0" />
+            <span className="truncate max-w-full">{tab.label}</span>
           </button>
         ))}
       </div>
