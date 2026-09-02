@@ -3,18 +3,28 @@
  * API route that writes a name. Keep this file free of server-only imports so
  * the browser can pre-validate with exactly the same rules the server enforces.
  *
- * ACCM members display "<Name> - <accmNumber>" (e.g. "Vicmar - 166738") so any
- * post, signal or journal entry can be tied back to a real trading account. The
- * legal name lives in `realName` and is shown to staff and the owner only.
+ * Partner-broker members (ACCM, VT Markets) display "<Name> - <accmNumber>"
+ * (e.g. "Vicmar - 166738") so any post, signal or journal entry can be tied back
+ * to a real trading account. The legal name lives in `realName` and is shown to
+ * staff and the owner only.
+ *
+ * `accmNumber` is the account number at whichever partner broker they signed up
+ * with — the column kept its ACCM name from before VT Markets existed. Anything
+ * a member reads says the right broker: pass their `broker` to the validators
+ * and they name it in the message (defaulting to ACCM, which is what every row
+ * predating the choice is).
  */
 
-/** Separator between the name and the ACCM number in a display name. */
+import { brokerLabel } from '@/lib/brokers'
+
+/** Separator between the name and the account number in a display name. */
 export const NAME_SEP = ' - '
 
 /**
  * Who has to follow the format. Staff are exempt (the user asked for members
- * only), and so are non-ACCM/other-broker members — they have no ACCM number to
- * put in the name, so gating them would lock them out of the app entirely.
+ * only), and so are other-broker members — they have no partner-broker account
+ * number to put in the name, so gating them would lock them out of the app
+ * entirely. `accmMember` is the stored "partner broker" flag (see lib/brokers).
  */
 export function isGatedMember(u: { role?: string | null; accmMember?: boolean | null }): boolean {
   return (u.role ?? 'member') === 'member' && u.accmMember !== false
@@ -22,39 +32,40 @@ export function isGatedMember(u: { role?: string | null; accmMember?: boolean | 
 
 /** True once this member has supplied everything the gate asks for. */
 export function hasCompleteIdentity(u: {
-  role?: string | null; accmMember?: boolean | null
+  role?: string | null; accmMember?: boolean | null; broker?: string | null
   name?: string | null; realName?: string | null; accmNumber?: string | null
 }): boolean {
   if (!isGatedMember(u)) return true
   if (!u.accmNumber || !u.realName) return false
-  return validateDisplayName(u.name ?? '', u.accmNumber) === null
+  return validateDisplayName(u.name ?? '', u.accmNumber, u.broker) === null
 }
 
-// --- ACCM number ------------------------------------------------------------
+// --- Broker account number --------------------------------------------------
 
 // No spaces or dashes: those would make "<Name> - <number>" ambiguous to parse.
 const ACCM_RE = /^[A-Za-z0-9]{4,20}$/
 
-/** Normalise a typed ACCM number (members paste it with spaces/dashes). */
+/** Normalise a typed account number (members paste it with spaces/dashes). */
 export function normalizeAccmNumber(raw: string): string {
   return raw.replace(/[\s-]/g, '').trim()
 }
 
 /** Returns a ready-to-show error, or null when the number is acceptable. */
-export function validateAccmNumber(raw: string): string | null {
+export function validateAccmNumber(raw: string, broker?: string | null): string | null {
+  const b = brokerLabel(broker)
   const v = normalizeAccmNumber(raw)
-  if (!v) return 'Please enter your ACCM account number.'
-  if (!ACCM_RE.test(v)) return 'That doesn’t look like an ACCM account number — it should be 4–20 letters or numbers.'
+  if (!v) return `Please enter your ${b} account number.`
+  if (!ACCM_RE.test(v)) return `That doesn’t look like a ${b} account number — it should be 4–20 letters or numbers.`
   return null
 }
 
 // --- Display name -----------------------------------------------------------
 
 // Letters (incl. accents), spaces, apostrophes, hyphens and dots. No digits: the
-// only number in a display name is the ACCM number after the separator.
+// only number in a display name is the account number after the separator.
 const NAME_PART_RE = /^[\p{L}][\p{L} .'-]{0,29}$/u
 
-/** Build the required display name from a first name and an ACCM number. */
+/** Build the required display name from a first name and an account number. */
 export function buildDisplayName(namePart: string, accmNumber: string): string {
   return `${namePart.trim()}${NAME_SEP}${normalizeAccmNumber(accmNumber)}`
 }
@@ -70,44 +81,48 @@ export function namePartOf(displayName: string | null | undefined): string {
 }
 
 /** Returns a ready-to-show error for the name half, or null when it's fine. */
-export function validateNamePart(raw: string): string | null {
+export function validateNamePart(raw: string, broker?: string | null): string | null {
   const v = raw.trim()
   if (!v) return 'Please enter the name you want to show.'
   if (v.length < 2) return 'That name is too short.'
   if (v.length > 30) return 'Please keep the name under 30 characters.'
-  if (/\d/.test(v)) return 'Leave the numbers out — your ACCM number is added automatically.'
+  if (/\d/.test(v)) return `Leave the numbers out — your ${brokerLabel(broker)} number is added automatically.`
   if (!NAME_PART_RE.test(v)) return 'Use letters only (spaces, apostrophes and hyphens are fine).'
   return null
 }
 
 /**
- * Full check of a stored display name against the member's ACCM number.
+ * Full check of a stored display name against the member's account number.
  * Returns a ready-to-show error, or null when the name is in the right format.
  */
-export function validateDisplayName(displayName: string, accmNumber: string | null | undefined): string | null {
+export function validateDisplayName(
+  displayName: string,
+  accmNumber: string | null | undefined,
+  broker?: string | null,
+): string | null {
   const num = accmNumber ? normalizeAccmNumber(accmNumber) : ''
-  if (!num) return 'Add your ACCM account number first.'
+  if (!num) return `Add your ${brokerLabel(broker)} account number first.`
   const name = (displayName ?? '').trim()
   const expectedSuffix = `${NAME_SEP}${num}`
   if (!name.endsWith(expectedSuffix)) {
     return `Your display name must end with “${expectedSuffix.trim()}” — for example “Vicmar${NAME_SEP}${num}”.`
   }
-  return validateNamePart(name.slice(0, name.length - expectedSuffix.length))
+  return validateNamePart(name.slice(0, name.length - expectedSuffix.length), broker)
 }
 
 // --- Real name --------------------------------------------------------------
 
 /**
  * The legal name behind the account. Two words minimum: a single first name
- * proves nothing against an ACCM account, which is what this field is for.
+ * proves nothing against a broker account, which is what this field is for.
  */
-export function validateRealName(raw: string): string | null {
+export function validateRealName(raw: string, broker?: string | null): string | null {
   const v = raw.trim().replace(/\s+/g, ' ')
   if (!v) return 'Please enter your full real name.'
   if (v.length < 4) return 'Please enter your full real name.'
   if (v.length > 60) return 'Please keep your name under 60 characters.'
   if (!/^[\p{L}][\p{L} .'-]*$/u.test(v)) return 'Use letters only (spaces, apostrophes and hyphens are fine).'
-  if (!v.includes(' ')) return 'Please enter your first and last name, as it appears on your ACCM account.'
+  if (!v.includes(' ')) return `Please enter your first and last name, as it appears on your ${brokerLabel(broker)} account.`
   return null
 }
 
@@ -124,8 +139,8 @@ export type VerifyStatus = (typeof VERIFY_STATUSES)[number]
 /**
  * Whether verification blocks app access.
  *
- * true: an ACCM member cannot use the app until a coach or admin has actually
- * approved their proof. Submitting is NOT enough — 'pending' stays blocked.
+ * true: a partner-broker member cannot use the app until a coach or admin has
+ * actually approved their proof. Submitting is NOT enough — 'pending' stays blocked.
  *
  * Consequence to keep in mind: every unverified member is waiting on the review
  * queue, so the queue is on the critical path for their access. Staff have a

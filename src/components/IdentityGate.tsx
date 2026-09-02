@@ -3,18 +3,20 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { BadgeCheck } from 'lucide-react'
 
-import { ACCM_REGISTER_URL } from '@/lib/billing'
+import { brokerLabel, brokerRegisterUrl } from '@/lib/brokers'
 import { PROOF_REQUIRED } from '@/lib/identity'
 import { IdentityForm, type IdentityState } from '@/components/identity/IdentityForm'
 import { ProofUpload } from '@/components/identity/ProofUpload'
 
 /**
- * Blocking gate for ACCM members who haven't set up their identity yet. It can't
- * be dismissed: the member must supply a display name in the required
- * "<Name> - <ACCM number>" format, their real name, and their ACCM number.
+ * Blocking gate for partner-broker members (ACCM, VT Markets) who haven't set up
+ * their identity yet. It can't be dismissed: the member must supply a display
+ * name in the required "<Name> - <account number>" format, their real name, and
+ * their broker account number. Every label names their own broker.
  *
- * Renders nothing for staff or for other-broker members — they have no ACCM
- * number, so gating them would lock them out of the app (see isGatedMember).
+ * Renders nothing for staff or for other-broker members — they have no partner
+ * account number, so gating them would lock them out of the app (see
+ * isGatedMember).
  *
  * Replaces the old AccmNumberGate, which asked for the number alone.
  */
@@ -79,6 +81,7 @@ export function IdentityGate() {
   // that bearable.
   const canDismiss = !PROOF_REQUIRED
   const awaitingReview = state.accmVerifyStatus === 'pending'
+  const brokerName = brokerLabel(state.broker)
 
   return (
     <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4">
@@ -94,14 +97,14 @@ export function IdentityGate() {
           <h2 className="text-lg font-black text-ink">
             {!showProof ? 'Set up your member name'
               : awaitingReview ? 'We’re checking your account'
-              : 'Verify your ACCM account'}
+              : `Verify your ${brokerName} account`}
           </h2>
           <p className="mt-1.5 text-xs text-ink2 leading-relaxed">
             {!showProof
-              ? 'Every ACCM member now shows their name with their ACCM number, so the community knows who they’re trading alongside.'
+              ? `Every member now shows their name with their ${brokerName} number, so the community knows who they’re trading alongside.`
               : awaitingReview
               ? 'A coach is reviewing your screenshot. This screen clears by itself the moment you’re approved — you don’t need to refresh.'
-              : 'Last step — every member verifies their ACCM account before using the community.'}
+              : `Last step — every member verifies their ${brokerName} account before using the community.`}
           </p>
         </div>
 
@@ -113,6 +116,7 @@ export function IdentityGate() {
                 status={state.accmVerifyStatus}
                 rejectReason={state.accmRejectReason}
                 accmNumber={state.accmNumber}
+                broker={state.broker}
                 autoVerify={state.accmAutoVerify}
                 onSubmitted={s => {
                   setState({ ...state, accmVerifyStatus: s })
@@ -146,8 +150,8 @@ export function IdentityGate() {
                 onSaved={next => { setState({ ...state, ...next }); setStep('proof') }}
               />
               <p className="mt-4 text-center text-xs text-ink3">
-                Don&apos;t have an ACCM account yet?{' '}
-                <a href={ACCM_REGISTER_URL} target="_blank" rel="noopener" className="font-semibold text-yellow-500 hover:underline">
+                Don&apos;t have a {brokerName} account yet?{' '}
+                <a href={brokerRegisterUrl(state.broker)} target="_blank" rel="noopener" className="font-semibold text-yellow-500 hover:underline">
                   Register here
                 </a>
               </p>

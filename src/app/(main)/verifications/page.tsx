@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { BadgeCheck, Check, X, ExternalLink, Clock, ShieldCheck } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
+import { brokerFrom, brokerLabel } from '@/lib/brokers'
 
 /**
  * Two lists, because members now arrive here two different ways.
@@ -13,8 +14,11 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox'
  * are locked out until a coach decides, so this is the one on the critical path.
  *
  * "Verified themselves" is the audit trail: accounts registered since verify
- * themselves off their own ACCM screenshot and are already inside the app. Staff
- * skim the pictures and revoke anything that doesn't hold up.
+ * themselves off their own broker screenshot and are already inside the app.
+ * Staff skim the pictures and revoke anything that doesn't hold up.
+ *
+ * Members come from either partner broker (ACCM or VT Markets), so everything
+ * shown here — and every canned rejection the member reads — names theirs.
  */
 
 /**
@@ -22,10 +26,10 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox'
  * reads this text word for word. Canned reasons keep them specific and mean a
  * coach clearing a backlog isn't tempted to type "unclear" fifty times.
  */
-const REJECT_REASONS = [
-  'Your ACCM account number isn’t visible. Please send a screenshot that includes the part of the screen showing your account number.',
+const rejectReasons = (broker: string) => [
+  `Your ${broker} account number isn’t visible. Please send a screenshot that includes the part of the screen showing your account number.`,
   'The screenshot is too blurry to read. Please send a clearer one.',
-  'The account number in the screenshot doesn’t match the ACCM number on your profile. Please check and try again.',
+  `The account number in the screenshot doesn’t match the ${broker} number on your profile. Please check and try again.`,
   'The name on the account doesn’t match the real name on your profile. Please check and try again.',
 ]
 
@@ -37,6 +41,7 @@ interface Submission {
   username: string | null
   image: string | null
   accmNumber: string | null
+  broker?: string | null
   accmProofUrl: string | null
   accmProofAt: string | null
   accmVerifiedAt?: string | null
@@ -94,7 +99,7 @@ export default function VerificationsPage() {
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2">
         <BadgeCheck className="w-5 h-5 text-yellow-500" />
-        <h1 className="font-bold text-ink text-lg">ACCM verifications</h1>
+        <h1 className="font-bold text-ink text-lg">Broker verifications</h1>
         {!loading && (
           <span className="ml-auto text-xs text-ink3 bg-surface border border-line rounded-full px-3 py-1">
             {pending.length} pending
@@ -210,7 +215,7 @@ function SubmissionCard({ u, kind, busy, zoom, decide, rejecting, setRejecting, 
             <p className="font-semibold text-ink truncate">{u.realName || '—'}</p>
           </div>
           <div className="rounded-lg bg-yellow-500/5 border border-yellow-500/30 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-wider text-ink3 font-semibold">Must appear in image</p>
+            <p className="text-[10px] uppercase tracking-wider text-ink3 font-semibold">{brokerLabel(brokerFrom(u))} # in image</p>
             <p className="font-mono font-bold text-yellow-500 truncate text-sm">{u.accmNumber || '—'}</p>
           </div>
         </div>
@@ -222,7 +227,7 @@ function SubmissionCard({ u, kind, busy, zoom, decide, rejecting, setRejecting, 
             className="block w-full relative h-44 rounded-lg overflow-hidden border border-line bg-elevated"
             title="Tap to enlarge"
           >
-            <Image src={u.accmProofUrl} alt="Proof of ACCM account" fill sizes="480px" className="object-contain" unoptimized />
+            <Image src={u.accmProofUrl} alt={`Proof of ${brokerLabel(brokerFrom(u))} account`} fill sizes="480px" className="object-contain" unoptimized />
           </button>
         ) : (
           <p className="text-xs text-ink3 italic">No screenshot attached.</p>
@@ -233,7 +238,7 @@ function SubmissionCard({ u, kind, busy, zoom, decide, rejecting, setRejecting, 
             <p className="text-[11px] font-bold text-ink">
               Pick a reason — {u.name || 'the member'} sees this word for word and is locked out until they re-upload.
             </p>
-            {REJECT_REASONS.map(r => (
+            {rejectReasons(brokerLabel(brokerFrom(u))).map(r => (
               <button
                 key={r}
                 onClick={() => decide(u, 'reject', r)}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { consumeCode } from '@/lib/securityCode'
+import { brokerLabel } from '@/lib/brokers'
 import {
   buildDisplayName, hasCompleteIdentity, isGatedMember, namePartOf, needsVerification,
   normalizeAccmNumber, normalizeRealName,
@@ -9,7 +10,7 @@ import {
 } from '@/lib/identity'
 
 const SELECT = {
-  id: true, name: true, realName: true, accmNumber: true, accmMember: true, role: true,
+  id: true, name: true, realName: true, accmNumber: true, accmMember: true, broker: true, role: true,
   accmVerifyStatus: true, accmProofUrl: true, accmRejectReason: true, accmAutoVerify: true,
 } as const
 
@@ -32,12 +33,15 @@ export async function GET() {
 
 /**
  * Set the member's public display name ("<Name> - <accmNumber>"), private real
- * name, and ACCM number. Members only — staff and other-broker members never see
- * this gate, so they have no reason to hit this route.
+ * name, and partner-broker account number. Members only — staff and other-broker
+ * members never see this gate, so they have no reason to hit this route.
+ *
+ * Every error names the member's own broker (ACCM or VT Markets), so nobody is
+ * asked for an "ACCM number" they don't have.
  *
  * Changing details that are already established requires an e-mailed code (see
  * needsCode below): a stolen session alone must not be able to repoint a trusted
- * community identity, and the ACCM number is what member rebates are keyed on.
+ * community identity, and the account number is what member rebates are keyed on.
  */
 export async function POST(req: Request) {
   const session = await auth()
@@ -46,21 +50,25 @@ export async function POST(req: Request) {
   const current = await db.user.findUnique({ where: { id: session.user.id }, select: SELECT })
   if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (!isGatedMember(current)) {
-    return NextResponse.json({ error: 'This only applies to ACCM members.' }, { status: 400 })
+    return NextResponse.json({ error: 'This only applies to partner-broker members.' }, { status: 400 })
   }
+
+  // Name the member's own broker in everything they read back.
+  const broker = current.broker
+  const brokerName = brokerLabel(broker)
 
   const body = await req.json().catch(() => ({}))
 
-  // --- ACCM number ---------------------------------------------------------
+  // --- Broker account number -----------------------------------------------
   let accmNumber = current.accmNumber
   const accmProvided = typeof body.accmNumber === 'string' && body.accmNumber.trim() !== ''
   if (accmProvided) {
-    const err = validateAccmNumber(body.accmNumber)
+    const err = validateAccmNumber(body.accmNumber, broker)
     if (err) return NextResponse.json({ error: err, field: 'accmNumber' }, { status: 400 })
     accmNumber = normalizeAccmNumber(body.accmNumber)
   }
   if (!accmNumber) {
-    return NextResponse.json({ error: 'Please enter your ACCM account number.', field: 'accmNumber' }, { status: 400 })
+    return NextResponse.json({ error: `Please enter your ${brokerName} account number.`, field: 'accmNumber' }, { status: 400 })
   }
 
   // --- Display name --------------------------------------------------------
@@ -69,12 +77,12 @@ export async function POST(req: Request) {
   const rawNamePart = typeof body.namePart === 'string' && body.namePart.trim() !== ''
     ? body.namePart
     : namePartOf(typeof body.name === 'string' ? body.name : '')
-  const nameErr = validateNamePart(rawNamePart)
+  const nameErr = validateNamePart(rawNamePart, broker)
   if (nameErr) return NextResponse.json({ error: nameErr, field: 'namePart' }, { status: 400 })
   const name = buildDisplayName(rawNamePart, accmNumber)
 
   // --- Real name -----------------------------------------------------------
-  const realErr = validateRealName(typeof body.realName === 'string' ? body.realName : '')
+  const realErr = validateRealName(typeof body.realName === 'string' ? body.realName : '', broker)
   if (realErr) return NextResponse.json({ error: realErr, field: 'realName' }, { status: 400 })
   const realName = normalizeRealName(body.realName)
 
@@ -100,8 +108,8 @@ export async function POST(req: Request) {
     if (!check.ok) return NextResponse.json({ error: check.error, field: 'code', codeRequired: true }, { status: 400 })
   }
 
-  // A different ACCM number is a different account — any prior approval and the
-  // proof behind it no longer apply, so verification restarts from scratch.
+  // A different account number is a different account — any prior approval and
+  // the proof behind it no longer apply, so verification restarts from scratch.
   const resetVerification = accmChanged && current.accmVerifyStatus !== 'unverified'
 
   try {
@@ -119,7 +127,7 @@ export async function POST(req: Request) {
   } catch (err) {
     if ((err as { code?: string })?.code === 'P2002') {
       return NextResponse.json(
-        { error: 'That ACCM number is already registered to another account.', field: 'accmNumber' },
+        { error: `That ${brokerName} number is already registered to another account.`, field: 'accmNumber' },
         { status: 409 },
       )
     }

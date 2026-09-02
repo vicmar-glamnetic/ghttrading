@@ -3,15 +3,22 @@ import bcrypt from 'bcryptjs'
 import { randomInt } from 'crypto'
 import { db } from '@/lib/db'
 import { verifyTurnstile } from '@/lib/turnstile'
+import { isPartnerBroker, normalizeBroker } from '@/lib/brokers'
 import { sendVerificationEmail } from '@/lib/email'
 
 export async function POST(req: Request) {
   try {
-    const { name, email: rawEmail, password, turnstileToken, accmMember } = await req.json()
+    const { name, email: rawEmail, password, turnstileToken, accmMember, broker: rawBroker } = await req.json()
     // Normalise email so case/spacing variants can't create duplicate accounts.
     const email = String(rawEmail || '').trim().toLowerCase()
-    // Only non-ACCM when explicitly chosen; anything else stays ACCM (free).
-    const isAccm = accmMember !== false
+    // Which broker they picked. Older clients only ever sent the accmMember
+    // boolean, so fall back to that: false meant "other broker".
+    const broker = rawBroker != null
+      ? normalizeBroker(rawBroker)
+      : accmMember === false ? 'other' : 'accm'
+    // accmMember is the derived "partner broker, so free" flag — true for both
+    // ACCM and VT Markets. Everything downstream still keys off it.
+    const isAccm = isPartnerBroker(broker)
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -42,13 +49,13 @@ export async function POST(req: Request) {
     }
 
     // Create the account unverified — they must confirm the emailed code.
-    // Give a 3-day free trial (matters only for non-ACCM/other-broker members).
+    // Give a 3-day free trial (matters only for other-broker members).
     const trialEndsAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
     await db.user.create({
       // accmAutoVerify: everyone signing up from now on is verified the moment
-      // they upload their ACCM screenshot — no coach in the way. Accounts that
+      // they upload their broker screenshot — no coach in the way. Accounts that
       // pre-date this stay at the default (false) and keep the manual review.
-      data: { name, email, password: hashedPassword, username, accmMember: isAccm, trialEndsAt, accmAutoVerify: true }, // emailVerified stays null
+      data: { name, email, password: hashedPassword, username, broker, accmMember: isAccm, trialEndsAt, accmAutoVerify: true }, // emailVerified stays null
       select: { id: true },
     })
 

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { BadgeCheck } from 'lucide-react'
 
-import { ACCM_REGISTER_URL } from '@/lib/billing'
+import { brokerLabel, brokerRegisterUrl } from '@/lib/brokers'
 import { IdentityForm, type IdentityState } from '@/components/identity/IdentityForm'
 import { ProofUpload } from '@/components/identity/ProofUpload'
 
@@ -12,12 +12,12 @@ import { ProofUpload } from '@/components/identity/ProofUpload'
  *
  * Order matters here: an unapproved member never reaches the app, so they never
  * see IdentityGate, so without this the admin on /approvals would be deciding
- * with nothing to go on — no ACCM number, no screenshot. Asking here means the
- * proof is already attached to the sign-up by the time anyone looks at it.
+ * with nothing to go on — no account number, no screenshot. Asking here means
+ * the proof is already attached to the sign-up by the time anyone looks at it.
  *
  * Unlike the gate this doesn't block anything (they're blocked already) and
  * can't be "finished" into the app — approval is a separate decision a human
- * still makes. Renders nothing for other-broker members, who have no ACCM
+ * still makes. Renders nothing for other-broker members, who have no partner
  * account to prove.
  */
 export function PendingVerification() {
@@ -40,13 +40,14 @@ export function PendingVerification() {
   if (!loaded || !state) return null
 
   const done = state.complete && state.accmVerifyStatus === 'verified'
+  const brokerName = brokerLabel(state.broker)
 
   return (
     <div className="bg-surface border border-line rounded-2xl p-5 mt-4 text-left">
       <div className="flex items-center gap-2">
         <BadgeCheck className="w-4 h-4 text-yellow-500 shrink-0" />
         <p className="text-sm font-bold text-ink">
-          {done ? 'Your ACCM account is verified' : 'Verify your ACCM account while you wait'}
+          {done ? `Your ${brokerName} account is verified` : `Verify your ${brokerName} account while you wait`}
         </p>
       </div>
       <p className="text-xs text-ink2 mt-1.5 leading-relaxed">
@@ -67,6 +68,7 @@ export function PendingVerification() {
             status={state.accmVerifyStatus}
             rejectReason={state.accmRejectReason}
             accmNumber={state.accmNumber}
+            broker={state.broker}
             autoVerify={state.accmAutoVerify}
             onSubmitted={s => setState({ ...state, accmVerifyStatus: s })}
           />
@@ -75,8 +77,8 @@ export function PendingVerification() {
 
       {!state.complete && (
         <p className="mt-3 text-center text-xs text-ink3">
-          Don&apos;t have an ACCM account yet?{' '}
-          <a href={ACCM_REGISTER_URL} target="_blank" rel="noopener" className="font-semibold text-yellow-500 hover:underline">
+          Don&apos;t have a {brokerName} account yet?{' '}
+          <a href={brokerRegisterUrl(state.broker)} target="_blank" rel="noopener" className="font-semibold text-yellow-500 hover:underline">
             Register here
           </a>
         </p>

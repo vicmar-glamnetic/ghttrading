@@ -7,7 +7,7 @@ import { VERIFY_STATUSES } from '@/lib/identity'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
-  role: true, approved: true, accmMember: true, accmNumber: true, accmVerifyStatus: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
+  role: true, approved: true, accmMember: true, broker: true, accmNumber: true, accmVerifyStatus: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
   lastSeenAt: true,
 }
 
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const params = new URL(req.url).searchParams
   const q = params.get('q')?.trim()
   const role = params.get('role')?.trim()
-  const accm = params.get('accm')?.trim() // 'true' = ACCM members, 'false' = non-ACCM (other broker)
+  const accm = params.get('accm')?.trim() // 'true' = partner-broker members (free), 'false' = other broker
   const verify = params.get('verify')?.trim() // one of VERIFY_STATUSES
 
   const where: Record<string, unknown> = {}
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     db.user.groupBy({ by: ['role'], _count: { _all: true } }),
     // Site-wide, not scoped to the current search/role filter.
     db.user.count({ where: { lastSeenAt: { gt: new Date(Date.now() - ONLINE_WINDOW_MS) } } }),
-    // Verification only applies to ACCM members, so staff and other-broker
+    // Verification only applies to partner-broker members, so staff and other-broker
     // accounts are excluded — otherwise the "verified" tile would count the
     // admins who were auto-verified by the migration and read as progress.
     db.user.groupBy({

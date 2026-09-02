@@ -30,8 +30,13 @@ model User {
 
   role               String   @default("member") // admin | coach | member
   approved           Boolean  @default(false)     // admin approval gate for new sign-ups
-  accmMember         Boolean  @default(true)      // ACCM member (free) vs other broker ($5)
-  accmNumber         String?  @unique              // ACCM (AC Capital Market) account number — required from members before using the app; must be unique
+  // Which broker the member trades with: accm | vtmarkets | other (see lib/brokers).
+  // ACCM and VT Markets are partner brokers — free access, account verified by
+  // number + screenshot. `accmMember` is the derived "is a partner broker" flag
+  // that all the older billing/gating code keys off; keep the two in step.
+  broker             String   @default("accm")
+  accmMember         Boolean  @default(true)      // partner broker (free) vs other broker ($5)
+  accmNumber         String?  @unique              // account number at the partner broker — required from members before using the app; must be unique
 
   // Identity. ACCM members must display "<Name> - <accmNumber>" so anyone in the
   // community can tie a post to a real trading account. `name` holds that public

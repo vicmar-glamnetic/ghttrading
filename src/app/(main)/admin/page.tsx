@@ -10,6 +10,7 @@ import {
 
 import { format } from 'date-fns'
 import { trialDaysLeft } from '@/lib/billing'
+import { brokerFrom, brokerLabel } from '@/lib/brokers'
 import { isOnline, lastSeenLabel, activeAgoLabel, HEARTBEAT_MS } from '@/lib/presence'
 
 interface AdminUser {
@@ -21,6 +22,7 @@ interface AdminUser {
   role: 'admin' | 'coach' | 'member'
   approved: boolean
   accmMember: boolean
+  broker?: string | null
   accmNumber: string | null
   accmVerifyStatus: string
   subscriptionStatus: string
@@ -155,7 +157,12 @@ export default function AdminPage() {
 
   async function toggleAccm(u: AdminUser) {
     const accmMember = !u.accmMember
-    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, accmMember } : x))
+    // Mirror the server's rule (see the PATCH route) so the row doesn't show a
+    // broker the DB has already moved off.
+    const broker = accmMember
+      ? (brokerFrom(u) === 'other' ? 'accm' : brokerFrom(u))
+      : 'other'
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, accmMember, broker } : x))
     await fetch(`/api/admin/users/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -415,22 +422,22 @@ export default function AdminPage() {
                     <button
                       onClick={() => toggleAccm(u)}
                       disabled={!canEdit(u)}
-                      title={canEdit(u) ? 'Toggle ACCM (free) vs Standard ($5)' : "Coaches can't edit an admin account"}
+                      title={canEdit(u) ? 'Toggle partner broker (free) vs Standard ($5)' : "Coaches can't edit an admin account"}
                       className={`text-xs font-semibold rounded-full px-2 py-1 border transition-colors disabled:opacity-40 ${
                         u.accmMember
                           ? 'bg-green-400/10 text-green-400 border-green-400/30'
                           : 'bg-elevated text-ink2 border-line'
                       }`}
                     >
-                      {u.accmMember ? 'ACCM · Free' : 'Standard · $5'}
+                      {u.accmMember ? `${brokerLabel(brokerFrom(u))} · Free` : 'Standard · $5'}
                     </button>
                     {u.accmNumber ? (
-                      <p className="mt-1 text-[10px] font-mono text-ink2" title="ACCM account number">
-                        ACCM #{u.accmNumber}
+                      <p className="mt-1 text-[10px] font-mono text-ink2" title={`${brokerLabel(brokerFrom(u))} account number`}>
+                        {brokerLabel(brokerFrom(u))} #{u.accmNumber}
                       </p>
                     ) : u.accmMember && (
-                      <p className="mt-1 text-[10px] text-ink3 italic" title="Member hasn't entered their ACCM number yet">
-                        No ACCM #
+                      <p className="mt-1 text-[10px] text-ink3 italic" title="Member hasn't entered their broker account number yet">
+                        No {brokerLabel(brokerFrom(u))} #
                       </p>
                     )}
                     {u.accmMember && u.role === 'member' && (

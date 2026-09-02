@@ -6,12 +6,16 @@ import {
   NAME_SEP, buildDisplayName, normalizeAccmNumber,
   validateAccmNumber, validateNamePart, validateRealName,
 } from '@/lib/identity'
+import { brokerLabel } from '@/lib/brokers'
 
 export interface IdentityState {
   name: string | null
   namePart: string
   realName: string | null
+  /** Their account number at whichever partner broker they signed up with. */
   accmNumber: string | null
+  /** accm | vtmarkets — decides which broker every label below names. */
+  broker?: string | null
   accmVerifyStatus: string
   accmRejectReason?: string | null
   /** Their screenshot verifies them on the spot, with no coach in between. */
@@ -23,8 +27,11 @@ const inputCls =
   'w-full text-sm bg-elevated border border-line rounded-lg px-3.5 py-2.5 text-ink placeholder:text-ink3 focus:outline-none focus:border-yellow-500/50 transition-colors'
 
 /**
- * The one place a member sets their display name, real name and ACCM number.
- * Used by the blocking gate on first run and by Settings afterwards.
+ * The one place a member sets their display name, real name and broker account
+ * number. Used by the blocking gate on first run and by Settings afterwards.
+ *
+ * Every label names the member's own broker — an ACCM member is asked for an
+ * ACCM number, a VT Markets member for a VT Markets one.
  *
  * Changing details that already exist triggers a step-up: the server answers 428
  * and we collect a code e-mailed to the account address before retrying.
@@ -38,6 +45,8 @@ export function IdentityForm({ initial, onSaved, submitLabel = 'Save' }: {
   const [realName, setRealName] = useState(initial.realName ?? '')
   const [accmNumber, setAccmNumber] = useState(initial.accmNumber ?? '')
   const [code, setCode] = useState('')
+  const broker = initial.broker
+  const brokerName = brokerLabel(broker)
 
   const [needsCode, setNeedsCode] = useState(false)
   const [sentTo, setSentTo] = useState<string | null>(null)
@@ -71,7 +80,7 @@ export function IdentityForm({ initial, onSaved, submitLabel = 'Save' }: {
 
     // Same rules the server enforces — catch mistakes before a round trip.
     const localError =
-      validateAccmNumber(accmNumber) ?? validateNamePart(namePart) ?? validateRealName(realName)
+      validateAccmNumber(accmNumber, broker) ?? validateNamePart(namePart, broker) ?? validateRealName(realName, broker)
     if (localError) { setError(localError); return }
     if (needsCode && code.replace(/\D/g, '').length !== 6) {
       setError('Enter the 6-digit code we e-mailed you.'); return
@@ -122,14 +131,14 @@ export function IdentityForm({ initial, onSaved, submitLabel = 'Save' }: {
           className={inputCls}
         />
         <p className="mt-1.5 text-[11px] text-ink3">
-          Your ACCM number is added automatically — you only type the name.
+          Your {brokerName} number is added automatically — you only type the name.
         </p>
         <div className="mt-2 flex items-center gap-2 rounded-lg bg-elevated border border-line px-3 py-2">
           <Lock className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
           <span className="text-xs text-ink2">
             Shows as{' '}
             <span className="font-bold text-ink">
-              {preview ?? `Your name${NAME_SEP}your ACCM number`}
+              {preview ?? `Your name${NAME_SEP}your ${brokerName} number`}
             </span>
           </span>
         </div>
@@ -148,15 +157,15 @@ export function IdentityForm({ initial, onSaved, submitLabel = 'Save' }: {
           className={inputCls}
         />
         <p className="mt-1.5 text-[11px] text-ink3">
-          As it appears on your ACCM account. Only you, the coaches and the admins can see this —
+          As it appears on your {brokerName} account. Only you, the coaches and the admins can see this —
           never other members.
         </p>
       </div>
 
-      {/* ACCM number */}
+      {/* Broker account number */}
       <div>
         <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">
-          ACCM account number
+          {brokerName} account number
         </label>
         <input
           value={accmNumber}

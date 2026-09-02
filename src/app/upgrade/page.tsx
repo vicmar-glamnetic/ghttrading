@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { hasAccess, BILLING, PAYPAL, CRYPTO, PAYMONGO, MANUAL_PAY, tierFor, canSubscribe, getPricePhp, ACCM_REGISTER_URL } from '@/lib/billing'
+import { hasAccess, BILLING, PAYPAL, CRYPTO, PAYMONGO, MANUAL_PAY, tierFor, canSubscribe, getPricePhp } from '@/lib/billing'
+import { PARTNER_BROKERS } from '@/lib/brokers'
 import { LogoutButton } from './LogoutButton'
 import { PayPalSubscribe } from './PayPalSubscribe'
 import { PayMongoPay } from './PayMongoPay'
@@ -26,7 +27,7 @@ export default async function UpgradePage({
   // Already a member (or paywall off) — no need to be here.
   if (!previewing && hasAccess(session.user)) redirect('/')
 
-  // Pick the price tier: everyone is ACCM ($1.99) unless an admin switched them.
+  // Pick the price tier: partner-broker members are free, everyone else pays.
   const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { accmMember: true } })
   const tier = tierFor(dbUser?.accmMember)
   const { php } = await getPricePhp(tier.usd)
@@ -67,23 +68,29 @@ export default async function UpgradePage({
           </ul>
         </div>
 
-        {/* Free path — open an ACCM account under our partner link */}
+        {/* Free path — open an account with either partner broker under our link */}
         <div className="bg-surface border border-green-500/30 rounded-2xl p-5 mb-4">
           <p className="text-[10px] font-bold text-green-400 uppercase tracking-wider mb-1">Free option</p>
-          <p className="text-sm text-ink font-semibold">Trade with AC Capital Market</p>
+          <p className="text-sm text-ink font-semibold">Trade with one of our partner brokers</p>
           <p className="text-xs text-ink3 mt-1 mb-3">
-            Open an ACCM account through our link and the community is free — no subscription, ever.
-            Once you&apos;re registered, send your ACCM account number to {BILLING.proofContact} and we&apos;ll unlock your account.
+            Open an account with {PARTNER_BROKERS.map(b => b.full).join(' or ')} through our links and the
+            community is free — no subscription, ever. Once you&apos;re registered, send your account number
+            to {BILLING.proofContact} and we&apos;ll unlock your account.
           </p>
-          <a
-            href={ACCM_REGISTER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full rounded-lg bg-green-500 hover:bg-green-400 transition-colors text-black text-sm font-bold py-2.5"
-          >
-            Register with ACCM
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+          <div className="space-y-2">
+            {PARTNER_BROKERS.map(b => (
+              <a
+                key={b.id}
+                href={b.registerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full rounded-lg bg-green-500 hover:bg-green-400 transition-colors text-black text-sm font-bold py-2.5"
+              >
+                Register with {b.label}
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-3 mb-4">

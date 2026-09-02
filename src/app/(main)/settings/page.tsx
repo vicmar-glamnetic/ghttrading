@@ -10,6 +10,7 @@ import { pushSupported, getPushState, enablePush, disablePush } from '@/lib/push
 import { IdentityForm, type IdentityState } from '@/components/identity/IdentityForm'
 import { ProofUpload } from '@/components/identity/ProofUpload'
 import { PasskeyManager } from '@/components/identity/PasskeyManager'
+import { brokerLabel } from '@/lib/brokers'
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession()
@@ -27,7 +28,7 @@ export default function SettingsPage() {
   const [shareStats, setShareStats] = useState(false)
   const [statsBusy, setStatsBusy] = useState(false)
 
-  // ACCM identity (display name / real name / ACCM number). `gated` members edit
+  // Broker identity (display name / real name / broker account number). `gated` members edit
   // it through IdentityForm only — the plain Name field below is read-only for them.
   const [identity, setIdentity] = useState<(IdentityState & { gated?: boolean }) | null>(null)
   const gated = !!identity?.gated
@@ -153,7 +154,7 @@ export default function SettingsPage() {
       const res = await fetch(`/api/users/${session?.user?.id}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        // ACCM members' display name is owned by the identity card below — sending
+        // Gated members' display name is owned by the identity card below — sending
         // it here would just be rejected by the server.
         body: JSON.stringify({ username, bio, ...(gated ? {} : { name }) }),
       })
@@ -215,7 +216,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Name — locked for ACCM members, who edit it in the identity card below. */}
+            {/* Name — locked for gated members, who edit it in the identity card below. */}
             <div>
               <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">
                 {gated ? 'Display Name' : 'Full Name'}
@@ -277,7 +278,7 @@ export default function SettingsPage() {
               {saved ? '✓ Saved!' : 'Save Changes'}
             </Button>
 
-            {/* Account identity — ACCM members only. */}
+            {/* Account identity — partner-broker members only. */}
             {identity && gated && (
               <div className="pt-5 mt-5 border-t border-line space-y-4">
                 <div>
@@ -285,8 +286,8 @@ export default function SettingsPage() {
                     <BadgeCheck className="w-4 h-4 text-yellow-500" /> Account identity
                   </h2>
                   <p className="text-xs text-ink3 mt-1 leading-relaxed">
-                    Your display name carries your ACCM number so the community can tell real
-                    members apart. Changing any of this needs a code from your e-mail.
+                    Your display name carries your {brokerLabel(identity.broker)} number so the community can
+                    tell real members apart. Changing any of this needs a code from your e-mail.
                   </p>
                 </div>
 
@@ -304,6 +305,7 @@ export default function SettingsPage() {
                   status={identity.accmVerifyStatus}
                   rejectReason={identity.accmRejectReason}
                   accmNumber={identity.accmNumber}
+                  broker={identity.broker}
                   autoVerify={identity.accmAutoVerify}
                   onSubmitted={s => setIdentity({ ...identity, accmVerifyStatus: s })}
                 />

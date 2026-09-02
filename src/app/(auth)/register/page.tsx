@@ -5,12 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Turnstile } from '@/components/Turnstile'
-import { Eye, EyeOff } from 'lucide-react'
+import { BROKERS, brokerOf, type BrokerId } from '@/lib/brokers'
+import { Check, Eye, EyeOff } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' })
-  const [accmMember, setAccmMember] = useState(true)
+  const [broker, setBroker] = useState<BrokerId>('accm')
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,7 +31,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password, accmMember, turnstileToken }),
+        body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password, broker, turnstileToken }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Registration failed'); return }
@@ -94,30 +95,38 @@ export default function RegisterPage() {
                 className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-lg px-4 py-3 text-sm outline-none text-ink placeholder-ink3 transition-colors"
               />
             </div>
-            {/* Broker — decides free (ACCM) vs 3-day trial then $5/mo (other) */}
+            {/* Broker — decides free (a partner broker) vs 3-day trial then
+                $5/mo (anyone else). Stacked rather than side by side: three
+                options in a row is unreadable on a phone. */}
             <div>
               <label className="text-xs font-semibold text-ink2 uppercase tracking-wider block mb-1.5">Your broker</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setAccmMember(true)}
-                  className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${accmMember ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-line bg-elevated hover:border-line2'}`}>
-                  <span className="block text-sm font-semibold text-ink">ACCM member</span>
-                  <span className="block text-[11px] text-ink3">Free access</span>
-                </button>
-                <button type="button" onClick={() => setAccmMember(false)}
-                  className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${!accmMember ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-line bg-elevated hover:border-line2'}`}>
-                  <span className="block text-sm font-semibold text-ink">Other broker</span>
-                  <span className="block text-[11px] text-ink3">3-day free trial</span>
-                </button>
+              <div className="space-y-2">
+                {BROKERS.map(b => {
+                  const active = broker === b.id
+                  return (
+                    <button key={b.id} type="button" onClick={() => setBroker(b.id)}
+                      aria-pressed={active}
+                      className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${active ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-line bg-elevated hover:border-line2'}`}>
+                      <span className={`w-4 h-4 shrink-0 rounded-full border grid place-items-center transition-colors ${active ? 'border-yellow-500 bg-yellow-500' : 'border-line2'}`}>
+                        {active && <Check className="w-2.5 h-2.5 text-black" strokeWidth={4} />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-ink">{b.label}</span>
+                        <span className="block text-[11px] text-ink3">{b.blurb}</span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
               <p className="text-[11px] text-ink3 mt-1.5">
-                ACCM members get full access free. Other brokers enjoy a 3-day free trial, then $5/mo.
+                ACCM and VT Markets clients get full access free. Any other broker enjoys a 3-day free trial, then $5/mo.
               </p>
               {/* Say it before they sign up, not after — the screenshot is the
                   next thing we ask for and it's what unlocks the app. */}
-              {accmMember && (
+              {brokerOf(broker).partner && (
                 <p className="text-[11px] text-ink2 mt-1.5 leading-relaxed">
-                  Have a screenshot of your ACCM account ready — one that shows your account number and your name.
-                  You&apos;ll upload it right after signing up and you&apos;re verified on the spot.
+                  Have a screenshot of your {brokerOf(broker).label} account ready — one that shows your account
+                  number and your name. You&apos;ll upload it right after signing up and you&apos;re verified on the spot.
                 </p>
               )}
             </div>

@@ -702,14 +702,14 @@ export async function sendIdentityCodeEmail(email: string, code: string, name?: 
  * in-app notification. E-mail is the only channel that reaches them to say the
  * block is lifted.
  */
-export async function sendVerifiedEmail(email: string, name?: string | null) {
+export async function sendVerifiedEmail(email: string, name?: string | null, broker = 'ACCM') {
   const loginUrl = `${APP_URL}/login`
   const greeting = name ? `You're verified, ${name}!` : "You're verified!"
 
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: 'Your ACCM account is verified ✅',
+    subject: `Your ${broker} account is verified ✅`,
     html: `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
@@ -723,7 +723,7 @@ export async function sendVerifiedEmail(email: string, name?: string | null) {
           <div style="font-size:44px;line-height:1;margin-bottom:12px;">&#9989;</div>
           <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#f0f0f8;">${greeting}</h2>
           <p style="margin:0 0 24px;font-size:14px;color:#9090a8;line-height:1.6;">
-            We&rsquo;ve checked your ACCM account and you&rsquo;re all set. Your profile now carries a
+            We&rsquo;ve checked your ${broker} account and you&rsquo;re all set. Your profile now carries a
             <strong style="color:#4ade80;">Verified</strong> badge, and you have full access to the community again.
           </p>
           <a href="${loginUrl}" style="display:inline-block;background:#ad9045;color:#0a0a0f;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;">Open the community</a>

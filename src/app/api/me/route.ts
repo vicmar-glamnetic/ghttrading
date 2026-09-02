@@ -11,7 +11,7 @@ export async function GET() {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, realName: true, username: true, image: true, role: true, acctBalance: true, acctRiskPct: true, shareStats: true, accmMember: true, accmNumber: true, accmVerifyStatus: true, accmRejectReason: true, accmAutoVerify: true, dailyLossLimit: true, maxTradesPerDay: true },
+    select: { id: true, name: true, realName: true, username: true, image: true, role: true, acctBalance: true, acctRiskPct: true, shareStats: true, accmMember: true, broker: true, accmNumber: true, accmVerifyStatus: true, accmRejectReason: true, accmAutoVerify: true, dailyLossLimit: true, maxTradesPerDay: true },
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(user)
@@ -42,13 +42,13 @@ export async function PATCH(req: Request) {
     const n = numOrNull(body.maxTradesPerDay)
     data.maxTradesPerDay = n == null ? null : Math.max(1, Math.round(Math.abs(n)))
   }
-  // The ACCM number is no longer writable here. It is half of a member's public
+  // The broker account number is no longer writable here. It is half of a member's public
   // display name and it keys their rebates, so it changes only through
   // POST /api/me/identity, which validates the format and demands an e-mailed
   // code. Leaving a second, unprotected door open would defeat that entirely.
   if ('accmNumber' in body) {
     return NextResponse.json(
-      { error: 'Change your ACCM number from Settings → Account identity.', identityLocked: true },
+      { error: 'Change your broker account number from Settings → Account identity.', identityLocked: true },
       { status: 400 },
     )
   }

@@ -3,10 +3,11 @@ import { db } from '@/lib/db'
 import { requireStaff, canManageRole, COACH_ASSIGNABLE_ROLES, ROLES, FREE_ROLES, type Role } from '@/lib/admin'
 import { sendApprovalEmail, sendVerifiedEmail } from '@/lib/email'
 import { VERIFY_STATUSES, namePartOf, needsVerification } from '@/lib/identity'
+import { isPartnerBroker, normalizeBroker } from '@/lib/brokers'
 
 const USER_SELECT = {
   id: true, name: true, email: true, username: true, image: true,
-  role: true, approved: true, accmMember: true, accmVerifyStatus: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
+  role: true, approved: true, accmMember: true, broker: true, accmVerifyStatus: true, subscriptionStatus: true, paymentRef: true, trialEndsAt: true, subscriptionEnd: true, createdAt: true,
 }
 
 const SUB_STATUSES = ['free', 'active', 'comp', 'canceled', 'past_due', 'pending']
@@ -19,7 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId } = await params
-  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true, approved: true, accmVerifyStatus: true } })
+  const target = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true, approved: true, broker: true, accmVerifyStatus: true } })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   // Coaches manage members and coaches; admin accounts stay out of their reach.
@@ -55,8 +56,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ userId
     data.subscriptionStatus = body.subscriptionStatus
   }
 
-  if (typeof body.accmMember === 'boolean') {
-    data.accmMember = body.accmMember
+  // The free/paid toggle. `broker` has to move with it or the two disagree:
+  // switching someone off a partner broker makes them "other", and switching
+  // them back on lands them at the default partner unless a broker is named
+  // outright (the UI never does, but the API accepts it).
+  if (typeof body.accmMember === 'boolean' || body.broker != null) {
+    const broker = body.broker != null
+      ? normalizeBroker(body.broker)
+      : body.accmMember
+        ? (target.broker === 'other' ? 'accm' : normalizeBroker(target.broker))
+        : 'other'
+    data.broker = broker
+    data.accmMember = isPartnerBroker(broker)
   }
 
   if (typeof body.approved === 'boolean') {

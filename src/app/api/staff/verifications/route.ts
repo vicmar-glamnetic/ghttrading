@@ -4,10 +4,11 @@ import { db } from '@/lib/db'
 import { requireStaff } from '@/lib/admin'
 import { sendVerifiedEmail } from '@/lib/email'
 import { namePartOf } from '@/lib/identity'
+import { brokerLabel } from '@/lib/brokers'
 
 const SELECT = {
   id: true, name: true, realName: true, email: true, image: true, username: true,
-  accmNumber: true, accmProofUrl: true, accmProofAt: true, createdAt: true,
+  accmNumber: true, broker: true, accmProofUrl: true, accmProofAt: true, createdAt: true,
 } as const
 
 /**
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
 
   const target = await db.user.findUnique({
     where: { id: userId },
-    select: { id: true, role: true, accmProofUrl: true, accmVerifyStatus: true, email: true, name: true },
+    select: { id: true, role: true, broker: true, accmProofUrl: true, accmVerifyStatus: true, email: true, name: true },
   })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   // Staff accounts aren't part of this flow at all.
@@ -114,6 +115,9 @@ export async function POST(req: Request) {
     }
   }
 
+  // Everything the member reads names their own broker, not always ACCM.
+  const brokerName = brokerLabel(target.broker)
+
   // Signing off on a screenshot that already verified itself changes nothing for
   // the member — they've been inside the app since they uploaded it — so telling
   // them "you're verified" now would just be confusing. Only a real change of
@@ -127,8 +131,8 @@ export async function POST(req: Request) {
         receiverId: userId,
         senderId: session.user.id,
         message: action === 'approve'
-          ? 'Your ACCM account is verified ✅'
-          : `Your ACCM verification needs another look: ${reason}`,
+          ? `Your ${brokerName} account is verified ✅`
+          : `Your ${brokerName} verification needs another look: ${reason}`,
         link: '/settings',
       },
     }).catch(err => console.error('[VERIFICATION_NOTIFY]', err))
@@ -140,7 +144,7 @@ export async function POST(req: Request) {
   // never undo a decision that's already saved.
   if (action === 'approve' && !alreadyVerified && target.email) {
     try {
-      await sendVerifiedEmail(target.email, namePartOf(target.name))
+      await sendVerifiedEmail(target.email, namePartOf(target.name), brokerName)
     } catch (err) {
       console.error('[VERIFICATION_EMAIL]', err)
     }

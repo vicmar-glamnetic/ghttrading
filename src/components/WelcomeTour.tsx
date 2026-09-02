@@ -8,7 +8,7 @@ import {
   GraduationCap,
 } from 'lucide-react'
 
-import { ACCM_REGISTER_URL } from '@/lib/billing'
+import { PARTNER_BROKERS } from '@/lib/brokers'
 
 const SEEN_KEY = 'ght:tourSeen'
 
@@ -147,13 +147,15 @@ const STEPS: Step[] = [
   },
 ]
 
-// Shown only to members who didn't register under ACCM.
+// Shown only to members who didn't register under a partner broker. Points at
+// the first one; the upgrade page lists them all with the same free offer.
+const PARTNER = PARTNER_BROKERS[0]
 const START_TRADING: Step = {
   icon: TrendingUp,
   title: 'Start Trading',
-  body: 'To take the signals for real and unlock full perks, open a funded account with our partner broker ACCM — registering under our team also gives you free community access.',
-  href: ACCM_REGISTER_URL,
-  cta: 'Open ACCM account',
+  body: `To take the signals for real and unlock full perks, open a funded account with one of our partner brokers — ${PARTNER_BROKERS.map(b => b.label).join(' or ')}. Registering under our team also gives you free community access.`,
+  href: PARTNER.registerUrl,
+  cta: `Open a ${PARTNER.label} account`,
 }
 
 export function WelcomeTour() {
@@ -162,7 +164,7 @@ export function WelcomeTour() {
   const [open, setOpen] = useState(false)
   const [i, setI] = useState(0)
 
-  // Non-ACCM members get an extra "Start Trading" step at the end.
+  // Other-broker members get an extra "Start Trading" step at the end.
   const isAccm = (session?.user as { accmMember?: boolean } | undefined)?.accmMember !== false
   const steps = useMemo(() => (isAccm ? STEPS : [...STEPS, START_TRADING]), [isAccm])
 

@@ -14,11 +14,11 @@ export async function GET() {
     where: { approved: false },
     orderBy: { createdAt: 'desc' },
     // realName + the proof screenshot come along so the sign-up can be judged
-    // here rather than approved blind and checked later. ACCM members upload
+    // here rather than approved blind and checked later. Partner-broker members upload
     // theirs from /pending, before this queue ever sees them.
     select: {
       id: true, name: true, email: true, username: true, image: true, createdAt: true,
-      accmMember: true, accmNumber: true, realName: true,
+      accmMember: true, broker: true, accmNumber: true, realName: true,
       accmProofUrl: true, accmVerifyStatus: true, accmProofAt: true,
     },
   })

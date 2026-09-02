@@ -5,9 +5,10 @@ import { Avatar } from '@/components/ui/Avatar'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { UserCheck, Check, X, BadgeCheck, ImageOff } from 'lucide-react'
 import { format } from 'date-fns'
+import { brokerFrom, brokerLabel } from '@/lib/brokers'
 
 interface Pending {
-  id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string; accmMember: boolean; accmNumber: string | null
+  id: string; name: string | null; email: string | null; username: string | null; image: string | null; createdAt: string; accmMember: boolean; broker?: string | null; accmNumber: string | null
   realName: string | null; accmProofUrl: string | null; accmVerifyStatus: string; accmProofAt: string | null
 }
 
@@ -85,13 +86,17 @@ export default function ApprovalsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <p className="font-semibold text-ink truncate">{u.name || 'Unnamed'}</p>
+                  {/* Which broker — staff need it to know what the screenshot
+                      should look like before they approve. */}
                   <span className={`self-start shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border ${u.accmMember ? 'text-yellow-500 border-yellow-500/40 bg-yellow-500/10' : 'text-ink3 border-line bg-elevated'}`}>
-                    {u.accmMember ? 'ACCM member' : 'Other broker'}
+                    {brokerLabel(brokerFrom(u))}{u.accmMember ? ' member' : ''}
                   </span>
                 </div>
                 <p className="text-xs text-ink3 truncate">{u.email}</p>
                 {u.accmNumber && (
-                  <p className="text-[10px] font-mono text-yellow-500 mt-0.5" title="ACCM account number">ACCM #{u.accmNumber}</p>
+                  <p className="text-[10px] font-mono text-yellow-500 mt-0.5" title={`${brokerLabel(brokerFrom(u))} account number`}>
+                    {brokerLabel(brokerFrom(u))} #{u.accmNumber}
+                  </p>
                 )}
                 <p className="text-[10px] text-ink3 mt-0.5">Registered {format(new Date(u.createdAt), 'MMM d, yyyy')}</p>
               </div>
@@ -114,9 +119,9 @@ export default function ApprovalsPage() {
               </div>
             </div>
 
-            {/* The proof, so this is a decision and not a guess. ACCM members
-                upload it from /pending while they wait, so it's normally here
-                before anyone opens this page. */}
+            {/* The proof, so this is a decision and not a guess. Partner-broker
+                members upload it from /pending while they wait, so it's normally
+                here before anyone opens this page. */}
             {u.accmMember && <ProofBlock u={u} onZoom={setZoom} />}
             </div>
           ))}
@@ -133,7 +138,7 @@ export default function ApprovalsPage() {
 }
 
 /**
- * What the ACCM member sent in, matched against what they claim. Deliberately
+ * What the member sent in, matched against what they claim. Deliberately
  * loud when there's nothing to check: approving an account with no proof behind
  * it is the thing this page exists to stop being accidental.
  */
@@ -145,7 +150,7 @@ function ProofBlock({ u, onZoom }: { u: Pending; onZoom: (url: string) => void }
         <p className="text-[11px] text-ink3 leading-relaxed">
           {u.accmVerifyStatus === 'verified'
             ? 'Already reviewed — the screenshot has been cleared from storage.'
-            : 'No screenshot yet. They’re asked for one on the waiting screen; approving now means nobody has checked their ACCM account.'}
+            : `No screenshot yet. They’re asked for one on the waiting screen; approving now means nobody has checked their ${brokerLabel(brokerFrom(u))} account.`}
         </p>
       </div>
     )
@@ -170,7 +175,7 @@ function ProofBlock({ u, onZoom }: { u: Pending; onZoom: (url: string) => void }
         className="block w-full relative h-44 rounded-lg overflow-hidden border border-line bg-elevated"
         title="Tap to enlarge"
       >
-        <Image src={u.accmProofUrl} alt="Proof of ACCM account" fill sizes="480px" className="object-contain" unoptimized />
+        <Image src={u.accmProofUrl} alt={`Proof of ${brokerLabel(brokerFrom(u))} account`} fill sizes="480px" className="object-contain" unoptimized />
       </button>
 
       {u.accmVerifyStatus === 'verified' && (

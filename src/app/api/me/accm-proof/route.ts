@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { isGatedMember } from '@/lib/identity'
+import { brokerLabel } from '@/lib/brokers'
 
 /**
  * Only accept URLs we minted. Staff render this image in the review queue, so an
@@ -18,10 +19,10 @@ function isOurBlobUrl(raw: string): boolean {
 }
 
 /**
- * Submit a screenshot of the member's ACCM account.
+ * Submit a screenshot of the member's partner-broker (ACCM / VT Markets) account.
  *
  * Accounts registered since self-verification shipped (`accmAutoVerify`) are
- * verified right here — they upload their verified ACCM account and the block
+ * verified right here — they upload their verified broker account and the block
  * lifts immediately, no queue. Accounts that pre-date it go to `pending` for a
  * coach to decide from /verifications, as before.
  *
@@ -34,18 +35,18 @@ export async function POST(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, role: true, accmMember: true, accmNumber: true, realName: true, accmVerifyStatus: true, accmAutoVerify: true },
+    select: { id: true, role: true, accmMember: true, broker: true, accmNumber: true, realName: true, accmVerifyStatus: true, accmAutoVerify: true },
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (!isGatedMember(user)) {
-    return NextResponse.json({ error: 'This only applies to ACCM members.' }, { status: 400 })
+    return NextResponse.json({ error: 'This only applies to partner-broker members.' }, { status: 400 })
   }
   if (user.accmVerifyStatus === 'verified') {
     return NextResponse.json({ error: 'Your account is already verified.' }, { status: 400 })
   }
   // Proof is meaningless without the details it's meant to prove.
   if (!user.accmNumber || !user.realName) {
-    return NextResponse.json({ error: 'Add your name and ACCM number first.' }, { status: 400 })
+    return NextResponse.json({ error: `Add your name and ${brokerLabel(user.broker)} number first.` }, { status: 400 })
   }
 
   const body = await req.json().catch(() => ({}))

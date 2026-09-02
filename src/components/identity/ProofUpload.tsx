@@ -3,29 +3,34 @@ import { useEffect, useRef, useState } from 'react'
 import { BadgeCheck, Clock, Loader2, ShieldAlert, Upload, X } from 'lucide-react'
 import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import { PROOF_REQUIRED } from '@/lib/identity'
+import { brokerLabel } from '@/lib/brokers'
 
 /**
- * Proof-of-account upload: a screenshot of the member's ACCM account.
+ * Proof-of-account upload: a screenshot of the member's partner-broker account
+ * — ACCM or VT Markets, named throughout by `broker`.
  *
  * `autoVerify` members (everyone who registered since self-verification shipped)
  * are verified the instant this uploads — no coach in between — so the wording
  * has to promise that rather than "we'll get back to you". Older accounts still
  * queue for staff, and their image is deleted the moment staff decides.
  *
- * The screenshot is worthless unless the ACCM account number is legible in it,
+ * The screenshot is worthless unless the broker account number is legible in it,
  * and a cropped number is by far the most common reason one gets thrown out. So
  * the member previews their own picture against a checklist and has to confirm
  * the number is visible before it uploads. That tap matters more now, not less:
  * with no coach reading it first, the checklist is the only thing standing
  * between a useless screenshot and a verified account.
  */
-export function ProofUpload({ status, rejectReason, accmNumber, autoVerify = false, onSubmitted }: {
+export function ProofUpload({ status, rejectReason, accmNumber, broker, autoVerify = false, onSubmitted }: {
   status: string
   rejectReason?: string | null
   accmNumber?: string | null
+  /** accm | vtmarkets — which broker this screenshot has to come from. */
+  broker?: string | null
   autoVerify?: boolean
   onSubmitted: (status: string) => void
 }) {
+  const brokerName = brokerLabel(broker)
   const fileRef = useRef<HTMLInputElement>(null)
   const [picked, setPicked] = useState<{ file: File; url: string } | null>(null)
   const [confirmed, setConfirmed] = useState(false)
@@ -88,8 +93,8 @@ export function ProofUpload({ status, rejectReason, accmNumber, autoVerify = fal
           <p className="text-xs font-bold text-ink">Account verified</p>
           <p className="text-[11px] text-ink3">
             {autoVerify
-              ? 'Your ACCM screenshot checked out — you have full access.'
-              : 'Your ACCM account has been confirmed by the team.'}
+              ? `Your ${brokerName} screenshot checked out — you have full access.`
+              : `Your ${brokerName} account has been confirmed by the team.`}
           </p>
         </div>
       </div>
@@ -119,7 +124,7 @@ export function ProofUpload({ status, rejectReason, accmNumber, autoVerify = fal
         </div>
       )}
       <p className="text-xs font-bold text-ink">
-        Verify your ACCM account {PROOF_REQUIRED && <span className="text-red-500">· Required</span>}
+        Verify your {brokerName} account {PROOF_REQUIRED && <span className="text-red-500">· Required</span>}
       </p>
 
       {/* Exactly what has to be legible in the picture. */}
@@ -127,7 +132,7 @@ export function ProofUpload({ status, rejectReason, accmNumber, autoVerify = fal
       <ul className="mt-1 space-y-1 text-[11px] text-ink2">
         <li className="flex items-start gap-1.5">
           <span className="text-yellow-500 font-bold leading-none mt-0.5">•</span>
-          Your <span className="font-semibold text-ink">ACCM account number</span>
+          Your <span className="font-semibold text-ink">{brokerName} account number</span>
           {accmNumber && (
             <span className="font-mono font-bold text-yellow-500">— {accmNumber}</span>
           )}
@@ -178,7 +183,7 @@ export function ProofUpload({ status, rejectReason, accmNumber, autoVerify = fal
               className="mt-0.5 w-4 h-4 shrink-0 accent-yellow-500"
             />
             <span className="text-[11px] text-ink2 leading-relaxed">
-              I can read my ACCM number
+              I can read my {brokerName} number
               {accmNumber && <span className="font-mono font-bold text-yellow-500"> {accmNumber}</span>}
               {' '}and my name in this picture.
             </span>
