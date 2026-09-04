@@ -34,3 +34,21 @@ export function toEmbed(url: string): string {
     return url
   }
 }
+
+// Meeting platforms that refuse to be framed (X-Frame-Options / frame-ancestors),
+// so a link to one can only ever be a "join" button — embedding it renders blank.
+export type MeetingProvider = 'Zoom' | 'Google Meet' | 'Microsoft Teams'
+
+export function meetingProvider(url: string | null | undefined): MeetingProvider | null {
+  if (!url) return null
+  try {
+    const host = new URL(url.trim()).hostname.toLowerCase().replace(/^www\./, '')
+    const on = (domain: string) => host === domain || host.endsWith(`.${domain}`)
+    if (on('zoom.us') || on('zoom.com') || on('zoomgov.com')) return 'Zoom'
+    if (on('meet.google.com')) return 'Google Meet'
+    if (on('teams.microsoft.com') || on('teams.live.com')) return 'Microsoft Teams'
+    return null
+  } catch {
+    return null
+  }
+}

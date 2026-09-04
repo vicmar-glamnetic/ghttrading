@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
-import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2, Maximize2, Minimize2, Mail } from 'lucide-react'
-import { toEmbed } from '@/lib/video'
+import { Radio, WifiOff, X, Settings2, Trash2, Video, Loader2, Maximize2, Minimize2, Mail, ExternalLink, Copy, Check } from 'lucide-react'
+import { toEmbed, meetingProvider, type MeetingProvider } from '@/lib/video'
 import { LiveRoom, type LiveRoomProps } from '@/components/LiveRoom'
 
 type LiveMode = 'webinar' | 'room'
@@ -96,6 +96,10 @@ export default function LivePage() {
     }
   }, [])
 
+  // Zoom / Google Meet / Teams all refuse to be framed, so those links can never
+  // be an embed — members get a join button that opens the meeting instead.
+  const meeting = webinar.mode === 'webinar' ? meetingProvider(webinar.embedUrl) : null
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -146,6 +150,8 @@ export default function LivePage() {
               <p className="text-sm text-ink2">Connecting to the live room…</p>
             </div>
           )
+        ) : webinar.isLive && meeting && webinar.embedUrl ? (
+          <MeetingJoin provider={meeting} url={webinar.embedUrl} title={webinar.title} />
         ) : webinar.isLive && webinar.mode === 'webinar' && webinar.embedUrl ? (
           <iframe
             src={toEmbed(webinar.embedUrl)}
@@ -163,7 +169,7 @@ export default function LivePage() {
         )}
 
         {/* Expand to fill the screen — lets mobile members watch large in portrait or rotate to landscape. */}
-        {webinar.isLive && (webinar.embedUrl || webinar.roomName) && (
+        {webinar.isLive && !meeting && (webinar.embedUrl || webinar.roomName) && (
           <button
             type="button"
             onClick={() => setExpanded(v => !v)}
@@ -176,7 +182,7 @@ export default function LivePage() {
           </button>
         )}
       </div>
-      {webinar.isLive && webinar.title && (
+      {webinar.isLive && webinar.title && !meeting && (
         <p className="text-center text-sm font-semibold text-ink">{webinar.title}</p>
       )}
 
@@ -191,6 +197,48 @@ export default function LivePage() {
   )
 }
 
+/* ---- a Zoom / Google Meet / Teams session: join in their app, not in an iframe ---- */
+function MeetingJoin({ provider, url, title }: { provider: MeetingProvider; url: string; title: string | null }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* clipboard blocked — the link is on screen anyway */ }
+  }, [url])
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 gap-3 overflow-y-auto">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 border border-red-500/40 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-red-400">
+        <Radio className="w-3 h-3" /> Live now
+      </span>
+      {title && <p className="text-base sm:text-lg font-bold text-ink">{title}</p>}
+      <p className="text-sm text-ink2 max-w-sm">
+        This session is running on <span className="font-semibold text-ink">{provider}</span>, which can&apos;t play inside the app.
+        Tap below to join — it opens in the {provider} app or a new tab.
+      </p>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-base font-semibold text-black bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-400 hover:to-yellow-500 shadow-lg transition-all duration-200"
+      >
+        <ExternalLink className="w-4 h-4" /> Join on {provider}
+      </a>
+      <button
+        type="button"
+        onClick={copy}
+        className="inline-flex items-center gap-1.5 text-xs text-ink3 hover:text-ink2 transition max-w-full"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+        <span className="truncate">{copied ? 'Link copied' : 'Copy meeting link'}</span>
+      </button>
+    </div>
+  )
+}
+
 /* ---- staff: manage live stream ---- */
 function WebinarSettings({ initial, onClose, onSaved }: { initial: Webinar; onClose: () => void; onSaved: (w: Webinar) => void }) {
   const [mode, setMode] = useState<LiveMode>(initial.mode ?? 'webinar')
@@ -198,6 +246,7 @@ function WebinarSettings({ initial, onClose, onSaved }: { initial: Webinar; onCl
   const [embedUrl, setEmbedUrl] = useState(initial.embedUrl ?? '')
   const [isLive, setIsLive] = useState(initial.isLive)
   const [saving, setSaving] = useState(false)
+  const typedMeeting = meetingProvider(embedUrl)
 
   async function save() {
     setSaving(true)
@@ -238,8 +287,15 @@ function WebinarSettings({ initial, onClose, onSaved }: { initial: Webinar; onCl
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Session title" className={inputCls} />
           {mode === 'webinar' ? (
             <>
-              <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Stream URL (YouTube, Facebook Live, Vimeo…)" className={inputCls} />
-              <p className="text-[10px] text-ink3">Paste a YouTube, Facebook Live, or Vimeo link. Facebook videos must be set to <span className="text-ink2 font-semibold">Public</span> to embed. Toggle live when you start.</p>
+              <input value={embedUrl} onChange={e => setEmbedUrl(e.target.value)} placeholder="Stream or meeting link (YouTube, Facebook Live, Zoom, Google Meet…)" className={inputCls} />
+              {typedMeeting ? (
+                <p className="text-[10px] text-ink3">
+                  <span className="text-ink2 font-semibold">{typedMeeting}</span> link detected. {typedMeeting} blocks embedding, so members
+                  see a <span className="text-ink2 font-semibold">Join on {typedMeeting}</span> button instead of a player. Toggle live when you start.
+                </p>
+              ) : (
+                <p className="text-[10px] text-ink3">Paste a YouTube, Facebook Live or Vimeo link to play the stream in-app, or a Zoom / Google Meet link for members to join. Facebook videos must be set to <span className="text-ink2 font-semibold">Public</span> to embed. Toggle live when you start.</p>
+              )}
             </>
           ) : (
             <p className="text-[10px] text-ink3">A free <span className="text-ink2 font-semibold">Jitsi</span> video room where <span className="text-ink2 font-semibold">coaches present</span> and members watch + chat (members can&apos;t speak). Toggle live to open it — a private room is created automatically.</p>

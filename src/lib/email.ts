@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { applyTokens, escapeHtml, isSafeUrl, renderBody, type RecipientVars } from '@/lib/broadcast'
+import { meetingProvider } from '@/lib/video'
 
 // Lazily construct the client so a missing key doesn't crash the build /
 // page-data collection — it only errors if we actually try to send an email.
@@ -503,6 +504,8 @@ function buildLiveAnnounceEmail(
   // client or browser won't sign them into the site right away. Only ever a
   // plain http(s) link — anything else is dropped rather than rendered.
   const direct = streamUrl && isSafeUrl(streamUrl) ? escapeHtml(streamUrl.trim()) : null
+  // A Zoom/Meet link is joined, not watched — say so rather than calling it a stream.
+  const provider = meetingProvider(streamUrl)
   const inner = `
     <div style="text-align:center;margin:0 0 18px;">
       <span style="display:inline-block;background:#f8717120;border:1px solid #f8717150;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:800;color:#f87171;letter-spacing:1px;text-transform:uppercase;">&#128308; Live now</span>
@@ -515,7 +518,7 @@ function buildLiveAnnounceEmail(
     </p>
     ${ctaButton(url, 'Watch live now →')}
     ${direct ? `<p style="margin:18px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;word-break:break-all;">
-      Or watch the stream directly:<br>
+      ${provider ? `Or join on ${provider} directly:` : 'Or watch the stream directly:'}<br>
       <a href="${direct}" style="color:#ad9045;text-decoration:underline;">${direct}</a>
     </p>` : ''}
     <p style="margin:22px 0 0;font-size:12px;color:#5a5a72;line-height:1.6;text-align:center;">
