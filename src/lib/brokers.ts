@@ -29,19 +29,35 @@ export interface Broker {
   /** One-liner under the option on the register form. */
   blurb: string
   /**
-   * The broker's live MT5 server names, exactly as MetaQuotes registers them.
-   * This is what a member types into MetaTrader, so a wrong name means "server
-   * not found" and nobody can log in.
-   *
-   * Verify any change against MetaQuotes' own directory rather than a support
-   * email — `GET metatraderweb.app/trade/servers?version=5` returns every MT5
-   * server it knows, and a name missing from that list does not exist.
-   *
-   * More than one entry means the broker runs several live servers and only the
-   * member's approval email says which one is theirs. Empty for "other" — we
-   * don't know where those members trade.
+   * The broker's live MT5 servers. More than one means the broker spreads
+   * accounts across several and only the member's approval email says which is
+   * theirs. Empty for "other" — we don't know where those members trade.
    */
-  mt5Servers: readonly string[]
+  mt5Servers: readonly Mt5Server[]
+}
+
+/** One live MT5 server, and the broker's own web terminal for it. */
+export interface Mt5Server {
+  /**
+   * The server name exactly as MetaQuotes registers it. This is what a member
+   * types into MetaTrader, so a wrong name means "server not found" and nobody
+   * can log in. Verify any change against MetaQuotes' own directory rather than
+   * a support email: `GET metatraderweb.app/trade/servers?version=5` returns
+   * every MT5 server it knows, and a name missing from it does not exist.
+   */
+  name: string
+  /**
+   * The broker's MetaQuotes-hosted MT5 web terminal for this server, which we
+   * embed on the Trading page. One host per server — the server is fixed
+   * server-side, so pointing a broker's terminal at a different one is not
+   * possible; each needs its own URL.
+   *
+   * To confirm one, GET it and read the `__terminal_params` in the HTML: its
+   * `trade_server_real` must equal `name` above. Do not substitute MetaQuotes'
+   * generic terminal — metatraderweb.app is MT4-only and cannot reach an MT5
+   * server at all.
+   */
+  terminalUrl: string
 }
 
 // Our AC Capital Market partner link. Registering under it makes a user an ACCM
@@ -59,14 +75,25 @@ const VT_URL =
 // MetaQuotes knows ACCM as "ACCM Intl Limited" under this one live MT5 server.
 // The MT5-ACCapitalMarket(S)-Real name it replaced is no longer registered at
 // all, which is why logins against the old name failed outright.
-const ACCM_MT5 = ['ACCMIntl-Real'] as const
-// VT Markets spreads live accounts across nine MT5 servers. Note the gap at 4:
-// that one is registered as VTMarketsLtd-Live 4, not VTMarkets-Live 4.
-const VT_MT5 = [
-  'VTMarkets-Live', 'VTMarkets-Live 2', 'VTMarkets-Live 3', 'VTMarketsLtd-Live 4',
-  'VTMarkets-Live 5', 'VTMarkets-Live 6', 'VTMarkets-Live 7', 'VTMarkets-Live 8',
-  'VTMarkets-Live 9',
-] as const
+const ACCM_MT5: readonly Mt5Server[] = [
+  { name: 'ACCMIntl-Real', terminalUrl: 'https://accm-mt5.com/terminal' },
+]
+
+// VT Markets spreads live accounts across nine MT5 servers, one terminal host
+// per server. Note the odd one out at 4: it is registered as VTMarketsLtd-Live 4
+// under "VT Markets Limited", not VTMarkets-Live 4 — VT's own web-trader page
+// mislabels it, so trust the terminal's own trade_server_real over their list.
+const VT_MT5: readonly Mt5Server[] = [
+  { name: 'VTMarkets-Live',       terminalUrl: 'https://www.vtmt5web.com/terminal'  },
+  { name: 'VTMarkets-Live 2',     terminalUrl: 'https://www2.vtmt5web.com/terminal' },
+  { name: 'VTMarkets-Live 3',     terminalUrl: 'https://www3.vtmt5web.com/terminal' },
+  { name: 'VTMarketsLtd-Live 4',  terminalUrl: 'https://www4.vtmt5web.com/terminal' },
+  { name: 'VTMarkets-Live 5',     terminalUrl: 'https://www5.vtmt5web.com/terminal' },
+  { name: 'VTMarkets-Live 6',     terminalUrl: 'https://www6.vtmt5web.com/terminal' },
+  { name: 'VTMarkets-Live 7',     terminalUrl: 'https://www7.vtmt5web.com/terminal' },
+  { name: 'VTMarkets-Live 8',     terminalUrl: 'https://www8.vtmt5web.com/terminal' },
+  { name: 'VTMarkets-Live 9',     terminalUrl: 'https://www9.vtmt5web.com/terminal' },
+]
 
 export const BROKERS: readonly Broker[] = [
   { id: 'accm', label: 'ACCM', full: 'AC Capital Market', partner: true, registerUrl: ACCM_URL, blurb: 'Free access', mt5Servers: ACCM_MT5 },
@@ -106,8 +133,8 @@ export function brokerRegisterUrl(raw: unknown): string {
   return brokerOf(raw).registerUrl
 }
 
-/** The broker's MT5 server names, default first ([] for "other"). */
-export function brokerMt5Servers(raw: unknown): readonly string[] {
+/** The broker's live MT5 servers ([] for "other"). */
+export function brokerMt5Servers(raw: unknown): readonly Mt5Server[] {
   return brokerOf(raw).mt5Servers
 }
 

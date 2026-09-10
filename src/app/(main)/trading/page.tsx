@@ -2,29 +2,24 @@ import { Monitor, Smartphone, Download, Apple } from 'lucide-react'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { CopyField } from './CopyField'
+import { WebTerminal } from './WebTerminal'
 import { brokerFrom, brokerOf } from '@/lib/brokers'
 
 export const metadata = { title: 'Trading · Gold Heist Trading' }
 
 /**
- * Why this page hands out login details instead of embedding a web terminal:
+ * Trade in the browser, or get the app.
  *
- * MetaQuotes' embeddable terminal (metatraderweb.app/trade, the one every
- * "put the WebTerminal on your site" guide points at) is MT4-only — it serves
- * one bundle, mt4.<lang>.js, still on build 240 from Sep 2023, and asking it for
- * an MT5 server logs "Web Terminal is not supported by this MetaTrader 5
- * Server" no matter which server you name (MetaQuotes-Demo included). Our
- * members' accounts are MT5, and ACCM has no MT4 server at all.
+ * The embedded terminal is the broker's OWN MetaQuotes-hosted MT5 terminal (see
+ * `Mt5Server.terminalUrl`), not MetaQuotes' generic one. That distinction is the
+ * whole reason earlier attempts at this failed: metatraderweb.app — the host
+ * every "embed the WebTerminal" guide points at — serves only the MT4 terminal,
+ * and asking it for an MT5 server logs "Web Terminal is not supported by this
+ * MetaTrader 5 Server" for every server including MetaQuotes' own demo. Our
+ * members are all on MT5.
  *
- * MT5 web trading moved to web.metatrader.app/terminal, which is provisioned
- * per broker: the server is baked into the HTML and no query parameter
- * overrides it. So embedding one for ACCM needs ACCM's own web-terminal URL,
- * which they'd have to ask MetaQuotes to issue. Until they do, the apps below
- * are the only way in, and the server names are the part members get wrong.
- *
- * (Framing isn't the obstacle, in case that's the next thing tried:
- * metatraderweb.app sends no X-Frame-Options, though trade.mql5.com sends
- * SAMEORIGIN on its redirect there.)
+ * So an MT5 embed needs a per-broker terminal, which both our partners run and
+ * iframe on their own sites. Neither sends framing headers.
  */
 
 // Official MetaTrader 5 downloads (work with any broker/server).
@@ -36,10 +31,10 @@ const DOWNLOADS = [
 ]
 
 export default async function TradingPage() {
-  // Which broker a member trades with decides the MT5 server they need and the
-  // broker named throughout the copy — a VT Markets member told to log into
-  // ACCM's server gets nowhere. The (main) layout has already required a
-  // session; fall back to the registry default if somehow there isn't one.
+  // Which broker a member trades with decides the terminal we embed and the
+  // server they need — a VT Markets member sent to ACCM's terminal gets
+  // nowhere. The (main) layout has already required a session; fall back to the
+  // registry default if somehow there isn't one.
   const session = await auth()
   const row = session?.user?.id
     ? await db.user.findUnique({ where: { id: session.user.id }, select: { broker: true, accmMember: true } })
@@ -48,44 +43,25 @@ export default async function TradingPage() {
   const servers = broker.mt5Servers
   // One server means we can hand it over outright; several means only their
   // approval email says which of them is theirs.
-  const theServer = servers.length === 1 ? servers[0] : null
+  const theServer = servers.length === 1 ? servers[0].name : null
+  const embeddable = servers.filter(s => s.terminalUrl)
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className={embeddable.length ? 'space-y-6 max-w-4xl mx-auto' : 'space-y-6 max-w-2xl mx-auto'}>
       <div className="text-center">
         <h1 className="text-2xl sm:text-3xl font-black text-ink tracking-wide">Trading</h1>
         <p className="text-ink2 text-sm mt-2">
-          Trade with your {broker.partner ? broker.full : 'broker'}&apos;s MetaTrader 5 account.
-          Install the app, then log in with the details below.
+          {embeddable.length
+            ? <>Trade your {broker.full} MetaTrader 5 account right here in your browser — or use the desktop and mobile apps.</>
+            : <>Trade with your broker&apos;s MetaTrader 5 account. Install the app, then log in with the details below.</>}
         </p>
       </div>
 
-      {/* Download MT5 */}
-      <div className="bg-surface border border-line rounded-2xl p-5">
-        <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-3">1 · Get MetaTrader 5</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {DOWNLOADS.map(({ label, icon: Icon, href }) => (
-            <a
-              key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-line bg-sunken hover:border-yellow-500/40 hover:bg-elevated transition-colors py-4"
-            >
-              <Icon className="w-6 h-6 text-yellow-500" />
-              <span className="text-xs font-semibold text-ink">{label}</span>
-            </a>
-          ))}
-        </div>
-        <p className="text-[10px] text-ink3 mt-2 flex items-center gap-1">
-          <Download className="w-3 h-3 shrink-0" />
-          Official MetaTrader 5 apps — they work with any broker.
-        </p>
-      </div>
+      {embeddable.length > 0 && <WebTerminal servers={embeddable} />}
 
       {/* Login details */}
       <div className="bg-surface border border-line rounded-2xl p-5 space-y-3">
-        <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider">2 · Log in to your account</p>
+        <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Your login details</p>
 
         {theServer && <CopyField label="Server" value={theServer} />}
 
@@ -97,7 +73,7 @@ export default async function TradingPage() {
             </p>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {servers.map(s => (
-                <span key={s} className="font-mono text-[11px] text-ink bg-elevated border border-line rounded px-1.5 py-0.5">{s}</span>
+                <span key={s.name} className="font-mono text-[11px] text-ink bg-elevated border border-line rounded px-1.5 py-0.5">{s.name}</span>
               ))}
             </div>
           </div>
@@ -119,27 +95,34 @@ export default async function TradingPage() {
         </p>
       </div>
 
-      {/* Steps */}
+      {/* Prefer the app? */}
       <div className="bg-surface border border-line rounded-2xl p-5">
-        <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-3">3 · Connect &amp; trade</p>
-        <ol className="space-y-2.5 text-sm text-ink">
-          {[
-            'Install and open MetaTrader 5.',
-            'Go to File → Login to Trade Account (desktop) or Settings → New Account (mobile).',
-            theServer
-              ? `Search for the server "${theServer}" and select it.`
-              : 'Search for the server from your approval email and select it.',
-            'Enter your login (account number) and password, then connect.',
-            'Your charts, symbols and orders load — trade directly.',
-          ].map((step, i) => (
-            <li key={i} className="flex gap-2.5">
-              <span className="shrink-0 w-5 h-5 rounded-full bg-elevated text-ink2 text-xs font-bold flex items-center justify-center">{i + 1}</span>
-              <span>{step}</span>
-            </li>
+        <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-3">
+          {embeddable.length ? 'Prefer the app? Get MetaTrader 5' : '1 · Get MetaTrader 5'}
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {DOWNLOADS.map(({ label, icon: Icon, href }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-line bg-sunken hover:border-yellow-500/40 hover:bg-elevated transition-colors py-4"
+            >
+              <Icon className="w-6 h-6 text-yellow-500" />
+              <span className="text-xs font-semibold text-ink">{label}</span>
+            </a>
           ))}
-        </ol>
-        <p className="text-[10px] text-ink3 mt-3">
-          MetaTrader has no MT5 browser terminal we can embed here — the app is the way in.
+        </div>
+        <p className="text-[10px] text-ink3 mt-2 flex items-start gap-1">
+          <Download className="w-3 h-3 mt-0.5 shrink-0" />
+          <span>
+            Official MetaTrader 5 apps — they work with any broker. In the app, go to File → Login to
+            Trade Account (desktop) or Settings → New Account (mobile), search for{' '}
+            {theServer
+              ? <span className="font-semibold text-ink">{theServer}</span>
+              : 'your server'}, then enter your login and password.
+          </span>
         </p>
       </div>
 
