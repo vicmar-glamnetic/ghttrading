@@ -14,11 +14,13 @@ import { openTour } from '@/components/WelcomeTour'
 import { useLiveStatus } from '@/lib/useLiveStatus'
 import { anyRoomUnseen, SEEN_EVENT } from '@/lib/chatSeen'
 
-const items = [
-  { href: '/ideas', label: 'Signals', icon: Zap          },
-  { href: '/feed',  label: 'Feed',    icon: Home         },
-  { href: '/chat',  label: 'Chat',    icon: MessageCircle },
-  { href: '/chart', label: 'Chart',   icon: LineChart    },
+// The four tabs, typed like `menu` below so one of them can be premium.
+// Trading View keeps its place in the More sheet, one tap away.
+const items: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [
+  { href: '/ideas',   label: 'Signals', icon: Zap             },
+  { href: '/feed',    label: 'Feed',    icon: Home            },
+  { href: '/chat',    label: 'Chat',    icon: MessageCircle   },
+  { href: '/trading', label: 'Trade',   icon: CandlestickChart, premium: true },
 ]
 
 // Full navigation shown in the "More" sheet — same priority order as the sidebar.
@@ -185,7 +187,7 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-around h-16 px-1">
-          {items.map(({ href, label, icon: Icon }) => {
+          {items.map(({ href, label, icon: Icon, premium }) => {
             const active = pathname === href
             return (
               <Link
@@ -201,6 +203,9 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
                 )}
                 {href === '/chat' && unread === 0 && roomDot && (
                   <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-yellow-500" />
+                )}
+                {premium && locked && (
+                  <Lock className="w-3 h-3 absolute top-2.5 right-[calc(50%-16px)] text-ink3" />
                 )}
                 <Icon className="w-6 h-6 shrink-0" />
                 <span className="text-[10px] font-semibold tracking-wide">{label}</span>
