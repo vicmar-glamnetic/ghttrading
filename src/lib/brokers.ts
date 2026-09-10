@@ -28,6 +28,20 @@ export interface Broker {
   registerUrl: string
   /** One-liner under the option on the register form. */
   blurb: string
+  /**
+   * The broker's live MT5 server names, exactly as MetaQuotes registers them.
+   * This is what a member types into MetaTrader, so a wrong name means "server
+   * not found" and nobody can log in.
+   *
+   * Verify any change against MetaQuotes' own directory rather than a support
+   * email — `GET metatraderweb.app/trade/servers?version=5` returns every MT5
+   * server it knows, and a name missing from that list does not exist.
+   *
+   * More than one entry means the broker runs several live servers and only the
+   * member's approval email says which one is theirs. Empty for "other" — we
+   * don't know where those members trade.
+   */
+  mt5Servers: readonly string[]
 }
 
 // Our AC Capital Market partner link. Registering under it makes a user an ACCM
@@ -42,10 +56,22 @@ const VT_URL =
   process.env.NEXT_PUBLIC_VT_REGISTER_URL ||
   'https://www.vtmarkets.com/register/'
 
+// MetaQuotes knows ACCM as "ACCM Intl Limited" under this one live MT5 server.
+// The MT5-ACCapitalMarket(S)-Real name it replaced is no longer registered at
+// all, which is why logins against the old name failed outright.
+const ACCM_MT5 = ['ACCMIntl-Real'] as const
+// VT Markets spreads live accounts across nine MT5 servers. Note the gap at 4:
+// that one is registered as VTMarketsLtd-Live 4, not VTMarkets-Live 4.
+const VT_MT5 = [
+  'VTMarkets-Live', 'VTMarkets-Live 2', 'VTMarkets-Live 3', 'VTMarketsLtd-Live 4',
+  'VTMarkets-Live 5', 'VTMarkets-Live 6', 'VTMarkets-Live 7', 'VTMarkets-Live 8',
+  'VTMarkets-Live 9',
+] as const
+
 export const BROKERS: readonly Broker[] = [
-  { id: 'accm', label: 'ACCM', full: 'AC Capital Market', partner: true, registerUrl: ACCM_URL, blurb: 'Free access' },
-  { id: 'vtmarkets', label: 'VT Markets', full: 'VT Markets', partner: true, registerUrl: VT_URL, blurb: 'Free access' },
-  { id: 'other', label: 'Other broker', full: 'another broker', partner: false, registerUrl: '', blurb: '3-day free trial' },
+  { id: 'accm', label: 'ACCM', full: 'AC Capital Market', partner: true, registerUrl: ACCM_URL, blurb: 'Free access', mt5Servers: ACCM_MT5 },
+  { id: 'vtmarkets', label: 'VT Markets', full: 'VT Markets', partner: true, registerUrl: VT_URL, blurb: 'Free access', mt5Servers: VT_MT5 },
+  { id: 'other', label: 'Other broker', full: 'another broker', partner: false, registerUrl: '', blurb: '3-day free trial', mt5Servers: [] },
 ] as const
 
 /** Every broker whose clients get in free. */
@@ -78,6 +104,11 @@ export function brokerLabel(raw: unknown): string {
 /** Our IB link for this broker ('' for "other"). */
 export function brokerRegisterUrl(raw: unknown): string {
   return brokerOf(raw).registerUrl
+}
+
+/** The broker's MT5 server names, default first ([] for "other"). */
+export function brokerMt5Servers(raw: unknown): readonly string[] {
+  return brokerOf(raw).mt5Servers
 }
 
 /** Free access + account verification? (i.e. the old `accmMember === true`). */

@@ -12,7 +12,7 @@ import { openTour } from '@/components/WelcomeTour'
 import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, Radio, MessageCircle, UserCheck, Calculator, Sparkles, Trophy,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator, Sparkles, Trophy,
   GraduationCap, BadgeCheck,
 } from 'lucide-react'
 
@@ -22,6 +22,7 @@ const primaryNav = [
   { href: '/feed',         label: 'Feed',          icon: Home            },
   { href: '/chat',         label: 'Chat',          icon: MessageCircle   },
   { href: '/chart',        label: 'Trading View',  icon: LineChart       },
+  { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
   { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
 ]
 
