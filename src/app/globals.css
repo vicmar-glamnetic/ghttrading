@@ -186,3 +186,17 @@ body {
   border-color: var(--gold);
   background: var(--gold-glow);
 }
+
+/* Full-bleed pages.
+
+   The main column is capped for readability (max-w-2xl up to max-w-7xl), which
+   is right for text but wastes half the screen on the MT5 terminal, where every
+   pixel is chart. A page opts out by marking its root element with
+   data-full-width and then fills the whole space between the two sidebars.
+
+   The attribute inside :has() gives this rule more specificity than Tailwind's
+   max-w-* utilities on <main>, so it wins at every breakpoint no matter which
+   order the two land in the stylesheet — verified from 800px to 2400px. */
+main:has(> [data-full-width]) {
+  max-width: none;
+}

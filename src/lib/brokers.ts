@@ -138,6 +138,30 @@ export function brokerMt5Servers(raw: unknown): readonly Mt5Server[] {
   return brokerOf(raw).mt5Servers
 }
 
+/** An MT5 server plus which partner runs it, for a picker spanning both. */
+export interface BrokerMt5Server extends Mt5Server {
+  /** Short broker name, to group the picker: "ACCM", "VT Markets". */
+  brokerLabel: string
+}
+
+/**
+ * Every partner broker's embeddable MT5 terminal, `preferred`'s first.
+ *
+ * The Trading page offers all of them rather than only the member's own. The
+ * broker column records the one broker they signed up under, which is not the
+ * same as the only account they hold — plenty of members trade both partners,
+ * and someone who registered as "other" may still have opened a partner account
+ * since. Ordering theirs first means the default still lands where they expect.
+ */
+export function partnerMt5Terminals(preferred?: unknown): readonly BrokerMt5Server[] {
+  const first = preferred === undefined ? undefined : normalizeBroker(preferred)
+  return [...PARTNER_BROKERS]
+    .sort((a, b) => Number(b.id === first) - Number(a.id === first))
+    .flatMap(b => b.mt5Servers
+      .filter(s => s.terminalUrl)
+      .map(s => ({ ...s, brokerLabel: b.label })))
+}
+
 /** Free access + account verification? (i.e. the old `accmMember === true`). */
 export function isPartnerBroker(raw: unknown): boolean {
   return brokerOf(raw).partner

@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { CopyField } from './CopyField'
 import { WebTerminal } from './WebTerminal'
-import { brokerFrom, brokerOf } from '@/lib/brokers'
+import { brokerFrom, brokerOf, partnerMt5Terminals } from '@/lib/brokers'
 
 export const metadata = { title: 'Trading · Gold Heist Trading' }
 
@@ -20,6 +20,10 @@ export const metadata = { title: 'Trading · Gold Heist Trading' }
  *
  * So an MT5 embed needs a per-broker terminal, which both our partners run and
  * iframe on their own sites. Neither sends framing headers.
+ *
+ * Both partners' terminals are offered to every member, whatever their own
+ * broker column says — see partnerMt5Terminals. The login details below stay
+ * specific to their own broker, since that's whose approval email they hold.
  */
 
 // Official MetaTrader 5 downloads (work with any broker/server).
@@ -44,20 +48,27 @@ export default async function TradingPage() {
   // One server means we can hand it over outright; several means only their
   // approval email says which of them is theirs.
   const theServer = servers.length === 1 ? servers[0].name : null
-  const embeddable = servers.filter(s => s.terminalUrl)
+  // Every partner's terminal, theirs first.
+  const terminals = partnerMt5Terminals(row ? brokerFrom(row) : undefined)
 
   return (
-    <div className={embeddable.length ? 'space-y-6 max-w-4xl mx-auto' : 'space-y-6 max-w-2xl mx-auto'}>
+    // With a terminal to show, take the full width between the sidebars (see
+    // data-full-width in globals.css); without one it's all text, so keep it
+    // narrow and centred.
+    <div
+      className={terminals.length ? 'space-y-6' : 'space-y-6 max-w-2xl mx-auto'}
+      data-full-width={terminals.length ? '' : undefined}
+    >
       <div className="text-center">
         <h1 className="text-2xl sm:text-3xl font-black text-ink tracking-wide">Trading</h1>
         <p className="text-ink2 text-sm mt-2">
-          {embeddable.length
-            ? <>Trade your {broker.full} MetaTrader 5 account right here in your browser — or use the desktop and mobile apps.</>
+          {terminals.length
+            ? <>Trade your MetaTrader 5 account right here in your browser — or use the desktop and mobile apps.</>
             : <>Trade with your broker&apos;s MetaTrader 5 account. Install the app, then log in with the details below.</>}
         </p>
       </div>
 
-      {embeddable.length > 0 && <WebTerminal servers={embeddable} />}
+      {terminals.length > 0 && <WebTerminal servers={terminals} />}
 
       {/* Login details */}
       <div className="bg-surface border border-line rounded-2xl p-5 space-y-3">
@@ -98,7 +109,7 @@ export default async function TradingPage() {
       {/* Prefer the app? */}
       <div className="bg-surface border border-line rounded-2xl p-5">
         <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider mb-3">
-          {embeddable.length ? 'Prefer the app? Get MetaTrader 5' : '1 · Get MetaTrader 5'}
+          {terminals.length ? 'Prefer the app? Get MetaTrader 5' : '1 · Get MetaTrader 5'}
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {DOWNLOADS.map(({ label, icon: Icon, href }) => (
