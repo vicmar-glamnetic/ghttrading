@@ -6,13 +6,16 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { ReactorsModal } from '@/components/posts/ReactorsModal'
+import { RichText } from '@/components/posts/RichText'
+import { MentionInput } from '@/components/posts/MentionInput'
+import { SharePostModal, SharedPostEmbed } from '@/components/posts/SharePost'
 import { timeAgo, formatNumber, cn } from '@/lib/utils'
 import { REACTIONS, getReaction } from '@/lib/reactions'
 import { useReactionPicker } from '@/lib/useReactionPicker'
 import {
   ThumbsUp, MessageCircle, MoreHorizontal,
   TrendingUp, TrendingDown, BarChart2, BookOpen,
-  Globe, Lock, Users, Play, Trash2, Flag, BadgeCheck, Pencil,
+  Globe, Lock, Users, Play, Trash2, Flag, BadgeCheck, Pencil, Share2,
 } from 'lucide-react'
 import type { PostWithDetails, ReactionSummary } from '@/types'
 
@@ -31,6 +34,8 @@ interface PostCardProps {
   post: PostWithDetails
   currentUserId: string
   onDelete?: (postId: string) => void
+  /** Called with the new post after this one is shared (e.g. to add it to the feed). */
+  onShared?: (post: PostWithDetails) => void
 }
 
 const categoryConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -152,7 +157,7 @@ function CommentReactions({
     <div ref={ref} className="relative inline-flex items-center gap-1 select-none" {...triggerProps}>
       {open && (
         <div
-          className="absolute bottom-full left-0 mb-1 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
+          className="picker-in absolute bottom-full left-0 mb-1 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
           {...pickerProps}
         >
           {REACTIONS.map(r => (
@@ -178,12 +183,63 @@ function CommentReactions({
       </button>
       {total > 0 && (
         <span className="flex items-center gap-0.5 text-ink3">
-          <span className="text-[11px] leading-none">{getReaction(myReaction ?? 'like').emoji}</span>
+          <span key={myReaction ?? 'like'} className="react-pop text-[11px] leading-none">{getReaction(myReaction ?? 'like').emoji}</span>
           {formatNumber(total)}
         </span>
       )}
     </div>
   )
+}
+
+// ---------- Comment/reply text, editable in place by its author ----------
+const wasEdited = (c: { createdAt: Date | string; updatedAt: Date | string }) =>
+  new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime() > 2000
+
+function useCommentEdit(postId: string, item: { id: string; content: string; createdAt: Date | string; updatedAt: Date | string }) {
+  const [text, setText] = useState(item.content)
+  const [edited, setEdited] = useState(wasEdited(item))
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(item.content)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function start() { setDraft(text); setError(''); setEditing(true) }
+
+  async function save(e?: React.FormEvent) {
+    e?.preventDefault()
+    const t = draft.trim()
+    if (!t || saving) return
+    if (t === text) { setEditing(false); return }
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments/${item.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: t }),
+      })
+      if (!res.ok) { setError((await res.json().catch(() => ({}))).error || 'Couldn’t save. Try again.'); return }
+      setText(t); setEdited(true); setEditing(false)
+    } finally { setSaving(false) }
+  }
+
+  const editor = (
+    <form onSubmit={save} className="space-y-1.5">
+      <MentionInput
+        multiline
+        value={draft}
+        onChange={setDraft}
+        rows={2}
+        autoFocus
+        className="w-full bg-elevated border border-yellow-500/40 rounded-2xl px-3 py-2 text-sm outline-none text-ink resize-none"
+      />
+      <div className="flex items-center gap-3 pl-3 text-[11px]">
+        <button type="submit" disabled={saving || !draft.trim()} className="font-semibold text-yellow-500 hover:text-yellow-400 disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button type="button" onClick={() => setEditing(false)} className="font-semibold text-ink3 hover:text-ink2">Cancel</button>
+        {error && <span className="text-red-400">{error}</span>}
+      </div>
+    </form>
+  )
+  return { text, edited, editing, start, editor }
 }
 
 // ---------- Reply row (one level deep, no further nesting) ----------
@@ -200,6 +256,7 @@ function ReplyRow({
 }) {
   const [deleting, setDeleting] = useState(false)
   const isOwner = reply.author.id === currentUserId
+  const edit = useCommentEdit(postId, reply)
 
   async function handleDelete() {
     if (!confirm('Delete this reply?')) return
@@ -218,16 +275,21 @@ function ReplyRow({
         <Avatar src={reply.author.image} name={reply.author.name} size="xs" />
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="bg-elevated rounded-2xl px-3 py-2 border border-line">
-          <Link href={`/profile/${reply.author.id}`} className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
-            {reply.author.name}
-          </Link>
-          <p className="text-sm text-ink mt-0.5 wrap-break-word">{reply.content}</p>
-        </div>
-        <div className="flex items-center gap-3 mt-1 pl-3 text-[11px]">
-          <CommentReactions postId={postId} commentId={reply.id} likes={reply.likes} count={reply._count.likes} />
-          <span className="text-ink3">{timeAgo(reply.createdAt)}</span>
-        </div>
+        {edit.editing ? edit.editor : (
+          <>
+            <div className="bg-elevated rounded-2xl px-3 py-2 border border-line">
+              <Link href={`/profile/${reply.author.id}`} className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
+                {reply.author.name}
+              </Link>
+              <p className="text-sm text-ink mt-0.5 wrap-break-word whitespace-pre-wrap"><RichText text={edit.text} /></p>
+            </div>
+            <div className="flex items-center gap-3 mt-1 pl-3 text-[11px]">
+              <CommentReactions postId={postId} commentId={reply.id} likes={reply.likes} count={reply._count.likes} />
+              {isOwner && <button onClick={edit.start} className="font-semibold text-ink3 hover:text-ink2 transition-colors">Edit</button>}
+              <span className="text-ink3">{timeAgo(reply.createdAt)}{edit.edited && ' · Edited'}</span>
+            </div>
+          </>
+        )}
       </div>
       {isOwner && (
         <button
@@ -262,6 +324,7 @@ function CommentRow({
   const [submitting, setSubmitting] = useState(false)
   const [replies, setReplies] = useState<ReplyType[]>(comment.replies ?? [])
   const isOwner = comment.author.id === currentUserId
+  const edit = useCommentEdit(postId, comment)
 
   async function handleDelete() {
     if (!confirm('Delete this comment?')) return
@@ -305,34 +368,40 @@ function CommentRow({
         <Avatar src={comment.author.image} name={comment.author.name} size="xs" />
       </Link>
       <div className="flex-1 min-w-0">
-        <div className="bg-elevated rounded-2xl px-3 py-2 border border-line">
-          <Link href={`/profile/${comment.author.id}`} className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
-            {comment.author.name}
-          </Link>
-          <p className="text-sm text-ink mt-0.5 wrap-break-word">{comment.content}</p>
-        </div>
+        {edit.editing ? edit.editor : (
+          <>
+            <div className="bg-elevated rounded-2xl px-3 py-2 border border-line">
+              <Link href={`/profile/${comment.author.id}`} className="text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors">
+                {comment.author.name}
+              </Link>
+              <p className="text-sm text-ink mt-0.5 wrap-break-word whitespace-pre-wrap"><RichText text={edit.text} /></p>
+            </div>
 
-        {/* Meta actions: react · reply · timestamp */}
-        <div className="flex items-center gap-3 mt-1 pl-3 text-[11px]">
-          <CommentReactions postId={postId} commentId={comment.id} likes={comment.likes} count={comment._count.likes} />
-          <button
-            onClick={() => setShowReplyBox(v => !v)}
-            className="font-semibold text-ink3 hover:text-ink2 transition-colors"
-          >
-            Reply
-          </button>
-          <span className="text-ink3">{timeAgo(comment.createdAt)}</span>
-        </div>
+            {/* Meta actions: react · reply · edit · timestamp */}
+            <div className="flex items-center gap-3 mt-1 pl-3 text-[11px]">
+              <CommentReactions postId={postId} commentId={comment.id} likes={comment.likes} count={comment._count.likes} />
+              <button
+                onClick={() => setShowReplyBox(v => !v)}
+                className="font-semibold text-ink3 hover:text-ink2 transition-colors"
+              >
+                Reply
+              </button>
+              {isOwner && <button onClick={edit.start} className="font-semibold text-ink3 hover:text-ink2 transition-colors">Edit</button>}
+              <span className="text-ink3">{timeAgo(comment.createdAt)}{edit.edited && ' · Edited'}</span>
+            </div>
+          </>
+        )}
 
         {/* Reply composer */}
         {showReplyBox && (
           <form onSubmit={handleReply} className="flex gap-2 mt-2">
-            <input
+            <MentionInput
               value={replyText}
-              onChange={e => setReplyText(e.target.value)}
+              onChange={setReplyText}
               placeholder={`Reply to ${comment.author.name}…`}
               autoFocus
-              className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-1.5 text-sm outline-none text-ink placeholder-ink3 transition-colors"
+              wrapperClassName="flex-1"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-1.5 text-sm outline-none text-ink placeholder-ink3 transition-colors"
             />
             <Button type="submit" variant="gold" size="sm" loading={submitting} disabled={!replyText.trim()}>
               Reply
@@ -370,7 +439,7 @@ function CommentRow({
 }
 
 // ---------- Main PostCard ----------
-export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
+export function PostCard({ post, currentUserId, onDelete, onShared }: PostCardProps) {
   const [myReaction, setMyReaction] = useState<string | null>((post.likes ?? [])[0]?.type ?? null)
   const [reactions, setReactions] = useState<ReactionSummary[]>(post.reactions ?? [])
   const [totalReactions, setTotalReactions] = useState(post._count?.likes ?? 0)
@@ -394,6 +463,14 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(post.content)
   const [savingEdit, setSavingEdit] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [shareCount, setShareCount] = useState(post._count?.shares ?? 0)
+
+  // Shares point at the original, so sharing a share shares the original.
+  // Only public posts outside groups can be shared.
+  const shareTarget = post.isShare
+    ? (post.sharedPost && post.sharedPost.privacy === 'public' && !post.sharedPost.groupId ? post.sharedPost.id : null)
+    : (post.privacy === 'public' && !post.groupId ? post.id : null)
 
   // Only images go into the lightbox; videos stay inline
   const imageUrls = (post.images ?? []).filter(m => !isVideo(m))
@@ -537,6 +614,9 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
                 </span>
               )}
             </div>
+            {post.isShare && !post.group && !post.page && (
+              <p className="text-[11px] text-ink3">shared a post</p>
+            )}
             {(post.group || post.page) && (
               <p className="text-[11px] text-ink3">
                 by{' '}
@@ -563,9 +643,10 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
       <div className="px-4 pb-3">
         {editing ? (
           <div className="space-y-2">
-            <textarea
+            <MentionInput
+              multiline
               value={draft}
-              onChange={e => setDraft(e.target.value)}
+              onChange={setDraft}
               rows={3}
               autoFocus
               className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
@@ -579,9 +660,10 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
               </Button>
             </div>
           </div>
-        ) : (
-          <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">{content}</p>
-        )}
+        ) : content ? (
+          <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap"><RichText text={content} /></p>
+        ) : null}
+        {post.isShare && <SharedPostEmbed post={post.sharedPost ?? null} />}
       </div>
 
       {/* Media */}
@@ -646,7 +728,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
       )}
 
       {/* Stats */}
-      {(totalReactions > 0 || commentCount > 0) && (
+      {(totalReactions > 0 || commentCount > 0 || shareCount > 0) && (
         <div className="flex items-center justify-between px-4 py-2 border-t border-line">
           {totalReactions > 0 && (
             <button
@@ -668,11 +750,16 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
               {formatNumber(totalReactions)}
             </button>
           )}
-          {commentCount > 0 && (
-            <button onClick={() => setShowComments(!showComments)} className="text-xs text-ink3 hover:text-yellow-500 transition-colors ml-auto">
-              {formatNumber(commentCount)} comment{commentCount !== 1 ? 's' : ''}
-            </button>
-          )}
+          <div className="ml-auto flex items-center gap-3">
+            {commentCount > 0 && (
+              <button onClick={() => setShowComments(!showComments)} className="text-xs text-ink3 hover:text-yellow-500 transition-colors">
+                {formatNumber(commentCount)} comment{commentCount !== 1 ? 's' : ''}
+              </button>
+            )}
+            {shareCount > 0 && (
+              <span className="text-xs text-ink3">{formatNumber(shareCount)} share{shareCount !== 1 ? 's' : ''}</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -686,7 +773,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
         >
           {pickerOpen && (
             <div
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
+              className="picker-in absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-40 flex items-center gap-1 px-2 py-1.5 bg-elevated border border-line rounded-full shadow-2xl"
               {...pickerProps}
             >
               {REACTIONS.map(r => (
@@ -715,7 +802,7 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
                 )}
               >
                 {current ? (
-                  <span className="text-base leading-none">{current.emoji}</span>
+                  <span key={current.type} className="react-pop text-base leading-none">{current.emoji}</span>
                 ) : (
                   <ThumbsUp className="w-4 h-4" fill="none" />
                 )}
@@ -736,7 +823,31 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
           <MessageCircle className="w-4 h-4" />
           Comment
         </button>
+
+        {/* Share */}
+        {shareTarget && (
+          <button
+            onClick={() => setSharing(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-ink3 hover:text-ink2 hover:bg-elevated transition-colors"
+          >
+            <Share2 className="w-4 h-4" />
+            Share
+          </button>
+        )}
       </div>
+
+      {sharing && shareTarget && (
+        <SharePostModal
+          postId={shareTarget}
+          preview={post.isShare ? post.sharedPost ?? null : post}
+          onClose={() => setSharing(false)}
+          onShared={newPost => {
+            setSharing(false)
+            if (shareTarget === post.id) setShareCount(c => c + 1)
+            onShared?.(newPost)
+          }}
+        />
+      )}
 
       {/* Who reacted modal */}
       {showReactors && (
@@ -745,13 +856,14 @@ export function PostCard({ post, currentUserId, onDelete }: PostCardProps) {
 
       {/* Comments section */}
       {showComments && (
-        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-line bg-[#12121a]">
+        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-line bg-sunken">
           <form onSubmit={handleComment} className="flex gap-2">
-            <input
+            <MentionInput
               value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              placeholder="Add a comment…"
-              className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-4 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors"
+              onChange={setCommentText}
+              placeholder="Add a comment… (type @ to mention)"
+              wrapperClassName="flex-1"
+              className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-4 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors"
             />
             <Button type="submit" variant="gold" size="sm" loading={submittingComment} disabled={!commentText.trim()}>
               Post

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { USER_LITE } from '@/lib/chat'
+import { after } from 'next/server'
+import { USER_LITE, chatImage, messagePreview } from '@/lib/chat'
+import { sendPushToUsers } from '@/lib/push'
 
 // Messages in a conversation (+ marks it read for me). GET recent or since.
 export async function GET(req: Request, { params }: { params: Promise<{ conversationId: string }> }) {
@@ -51,19 +53,30 @@ export async function POST(req: Request, { params }: { params: Promise<{ convers
   if (!convo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (convo.user1Id !== me && convo.user2Id !== me) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { content } = await req.json()
+  const { content, image: rawImage } = await req.json()
   const text = (content ?? '').toString().trim()
-  if (!text) return NextResponse.json({ error: 'Message is empty' }, { status: 400 })
+  const image = chatImage(rawImage)
+  if (rawImage && !image) return NextResponse.json({ error: 'Upload the photo again.' }, { status: 400 })
+  if (!text && !image) return NextResponse.json({ error: 'Message is empty' }, { status: 400 })
 
   const now = new Date()
   const message = await db.directMessage.create({
-    data: { conversationId, senderId: me, content: text.slice(0, 4000) },
+    data: { conversationId, senderId: me, content: text.slice(0, 4000), image },
     include: { sender: USER_LITE },
   })
   await db.conversation.update({
     where: { id: conversationId },
     data: { lastMessageAt: now, ...(convo.user1Id === me ? { user1ReadAt: now } : { user2ReadAt: now }) },
   })
+
+  // Push to the other person; one alert per conversation (newer replaces older).
+  const otherId = convo.user1Id === me ? convo.user2Id : convo.user1Id
+  after(() => sendPushToUsers([otherId], {
+    title: session.user?.name || 'New message',
+    body: messagePreview({ content: text, image }).slice(0, 140),
+    url: `/chat?dm=${me}`,
+    tag: `dm:${conversationId}`,
+  }).catch(err => console.error('[DM_PUSH]', err)))
 
   return NextResponse.json(message, { status: 201 })
 }

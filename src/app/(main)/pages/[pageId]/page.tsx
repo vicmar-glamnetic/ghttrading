@@ -1,4 +1,5 @@
 'use client'
+import { MentionInput } from '@/components/posts/MentionInput'
 import { useState, useEffect, useCallback, use } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -68,12 +69,14 @@ function ComposeBox({ pageId, onPost }: { pageId: string; onPost: (post: PostWit
     <form onSubmit={handleSubmit} className="bg-surface rounded-xl border border-line p-4 space-y-3">
       <div className="flex gap-3">
         <Avatar src={me.image} name={me.name || session?.user?.name} size="sm" className="shrink-0" />
-        <textarea
+        <MentionInput
+          multiline
           value={content}
-          onChange={e => setContent(e.target.value)}
+          onChange={setContent}
           placeholder="Post as this page…"
           rows={2}
-          className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
+          wrapperClassName="flex-1"
+          className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
         />
       </div>
       {images.length > 0 && (
@@ -240,7 +243,9 @@ export default function PageDetailPage({ params }: { params: Promise<{ pageId: s
               </div>
               {page.description && <p className="text-sm text-ink2 leading-relaxed">{page.description}</p>}
               <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line">
-                <Avatar src={page.owner.image} name={page.owner.name} size="xs" />
+                <Link href={`/profile/${page.owner.id}`} className="shrink-0">
+                  <Avatar src={page.owner.image} name={page.owner.name} size="xs" />
+                </Link>
                 <span className="text-xs text-ink3">Page by</span>
                 <Link href={`/profile/${page.owner.id}`} className="text-xs text-ink hover:text-yellow-500 transition-colors font-medium">
                   {page.owner.name || 'Trader'}

@@ -25,9 +25,15 @@ export type CommentWithReplies = Comment & {
   replies: CommentReply[]
 }
 
+export type SharedPost = Pick<Post, 'id' | 'content' | 'images' | 'feeling' | 'privacy' | 'createdAt' | 'authorId' | 'groupId'> & {
+  author: Pick<User, 'id' | 'name' | 'image' | 'username'>
+  page: { id: string; name: string; image: string | null; verified: boolean } | null
+}
+
 export type PostWithDetails = Post & {
   author: Pick<User, 'id' | 'name' | 'image' | 'username'>
-  _count: { likes: number; comments: number }
+  _count: { likes: number; comments: number; shares?: number }
+  sharedPost?: SharedPost | null
   likes: Pick<Like, 'userId' | 'type'>[]
   reactions?: ReactionSummary[]
   comments: CommentWithReplies[]

@@ -94,6 +94,8 @@ model User {
   enrollments       Enrollment[]
   lessonProgress    LessonProgress[]
   coachingOffers    CoachingOffer[]   @relation("CoachingOffers")
+  stories           Story[]             @relation("StoryAuthor")
+  storyViews        StoryView[]         @relation("StoryViewer")
 
   // Trader prefs
   acctBalance       Float?    // saved account size for auto position-sizing
@@ -170,10 +172,18 @@ model Post {
   comments  Comment[]
   likes     Like[]
 
+  // A share of another post. isShare stays true if the original is deleted,
+  // so the share can say the post is no longer available.
+  isShare      Boolean @default(false)
+  sharedPostId String?
+  sharedPost   Post?   @relation("PostShares", fields: [sharedPostId], references: [id], onDelete: SetNull)
+  shares       Post[]  @relation("PostShares")
+
   @@index([authorId, createdAt])
   @@index([privacy, createdAt])
   @@index([groupId, createdAt])
   @@index([pageId, createdAt])
+  @@index([sharedPostId])
   @@map("posts")
 }
 
@@ -298,7 +308,8 @@ model JournalEntry {
 model ChatMessage {
   id        String   @id @default(cuid())
   room      String   @default("community")
-  content   String
+  content   String                      // "" for a photo-only message
+  image     String?                     // photo on Vercel Blob
   authorId  String
   author    User     @relation("ChatMessages", fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -332,7 +343,8 @@ model DirectMessage {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
   sender         User     @relation("SentDMs", fields: [senderId], references: [id], onDelete: Cascade)
-  content        String
+  content        String                 // "" for a photo-only message
+  image          String?                // photo on Vercel Blob
   createdAt      DateTime @default(now())
 
   @@index([conversationId, createdAt])
@@ -674,4 +686,40 @@ model AppSetting {
   updatedAt DateTime @updatedAt
 
   @@map("app_settings")
+}
+
+// Facebook-style stories on the feed: a photo, a short video or a text card
+// on a gradient. Each one lives for 24 hours (expiresAt), then drops out of
+// every query. Rows are left in place; nothing reads them after they expire.
+model Story {
+  id        String   @id @default(cuid())
+  authorId  String
+  author    User     @relation("StoryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  mediaUrl  String?  // photo or video on Vercel Blob; null for a text story
+  mediaType String?  // image | video
+  text      String?  // caption on a media story, or the whole of a text story
+  bg        String?  // gradient key for a text story (see lib/stories)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  views StoryView[]
+
+  @@index([expiresAt])
+  @@index([authorId, createdAt])
+  @@map("stories")
+}
+
+model StoryView {
+  id        String   @id @default(cuid())
+  storyId   String
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewerId  String
+  viewer    User     @relation("StoryViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  reaction  String?  // like | love | haha … (lib/reactions); null when they only watched
+  reactedAt DateTime?
+
+  @@unique([storyId, viewerId])
+  @@index([viewerId])
+  @@map("story_views")
 }

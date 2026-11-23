@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { USER_LITE } from '@/lib/chat'
+import { USER_LITE, chatImage, messagePreview } from '@/lib/chat'
 import { sendPushToUsers } from '@/lib/push'
 
 const cleanRoom = (r: string | null) => (r || 'community').toString().slice(0, 64)
@@ -28,13 +28,15 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { content, room } = await req.json()
+  const { content, room, image: rawImage } = await req.json()
   const text = (content ?? '').toString().trim()
-  if (!text) return NextResponse.json({ error: 'Message is empty' }, { status: 400 })
+  const image = chatImage(rawImage)
+  if (rawImage && !image) return NextResponse.json({ error: 'Upload the photo again.' }, { status: 400 })
+  if (!text && !image) return NextResponse.json({ error: 'Message is empty' }, { status: 400 })
 
   const cleaned = cleanRoom(room)
   const message = await db.chatMessage.create({
-    data: { room: cleaned, content: text.slice(0, 2000), authorId: session.user.id },
+    data: { room: cleaned, content: text.slice(0, 2000), image, authorId: session.user.id },
     include: { author: USER_LITE },
   })
 
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
     try {
       const coach = await db.user.findUnique({ where: { id: coachId }, select: { role: true } })
       if (coach?.role === 'coach') {
-        const preview = text.slice(0, 120)
+        const preview = messagePreview({ content: text, image }).slice(0, 120)
         const notifMessage = `${session.user.name || 'A member'} messaged your room: ${preview}`
         // Coalesce: bump the coach's existing unread room notification instead
         // of stacking one per message, so a busy room doesn't flood the bell.

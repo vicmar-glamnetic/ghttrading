@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { TrendingUp, Target, Activity, Trophy } from 'lucide-react'
@@ -147,8 +148,10 @@ export function PerformancePanel() {
             {s.coaches.map((c, i) => (
               <div key={c.id} className="flex items-center gap-3">
                 <span className="text-xs font-bold text-ink3 w-4 tabular-nums">{i + 1}</span>
-                <Avatar src={c.image} name={c.name} size="xs" />
-                <span className="text-sm text-ink truncate flex-1">{c.name || 'Coach'}</span>
+                <Link href={`/profile/${c.id}`} className="flex min-w-0 flex-1 items-center gap-3 group">
+                  <Avatar src={c.image} name={c.name} size="xs" />
+                  <span className="text-sm text-ink truncate flex-1 group-hover:text-yellow-500 transition-colors">{c.name || 'Coach'}</span>
+                </Link>
                 <span className="text-xs text-ink3 tabular-nums">{c.wins}W/{c.losses}L</span>
                 <span className="text-sm font-bold text-yellow-500 tabular-nums w-12 text-right">{c.winRate}%</span>
               </div>

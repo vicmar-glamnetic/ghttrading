@@ -1,14 +1,17 @@
 'use client'
+import Link from 'next/link'
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
-import { MessageCircle, Users, Send, Search, ChevronLeft, Plus, X } from 'lucide-react'
+import { MessageCircle, Users, Send, Search, ChevronLeft, Plus, X, ImagePlus, Loader2 } from 'lucide-react'
+import { ImageLightbox } from '@/components/ui/ImageLightbox'
+import { uploadToBlob, validateImage, friendlyUploadError } from '@/lib/upload'
 import { markRoomSeen, isRoomUnseen, SEEN_EVENT } from '@/lib/chatSeen'
 
 interface Lite { id: string; name: string | null; image: string | null; username: string | null }
-interface RoomMsg { id: string; content: string; createdAt: string; author: Lite }
-interface DM { id: string; content: string; createdAt: string; senderId: string; sender: Lite }
+interface RoomMsg { id: string; content: string; image?: string | null; createdAt: string; author: Lite }
+interface DM { id: string; content: string; image?: string | null; createdAt: string; senderId: string; sender: Lite }
 interface Convo { id: string; other: Lite; lastMessage: { content: string; createdAt: string; senderId: string } | null; unread: boolean }
 
 type Tab = 'room' | 'dm'
@@ -21,11 +24,88 @@ function ago(iso: string) {
   return `${Math.round(h / 24)}d`
 }
 
+/* ================= Shared: message box with a photo button ================= */
+function Composer({ placeholder, onSend }: { placeholder: string; onSend: (content: string, image: string | null) => Promise<boolean> }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [text, setText] = useState('')
+  const [image, setImage] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+
+  // The photo uploads as soon as it's picked, so Send is instant.
+  async function pick(file: File | undefined) {
+    if (fileRef.current) fileRef.current.value = ''
+    if (!file) return
+    const invalid = validateImage(file)
+    if (invalid) { setError(invalid); return }
+    setError('')
+    setUploading(true)
+    try { setImage((await uploadToBlob(file)).url) }
+    catch (e) { setError(friendlyUploadError(e)) }
+    finally { setUploading(false) }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    const t = text.trim()
+    if ((!t && !image) || sending || uploading) return
+    setSending(true)
+    try {
+      if (await onSend(t, image)) { setText(''); setImage(null); setError('') }
+      else setError('Message not sent. Try again.')
+    } finally { setSending(false) }
+  }
+
+  return (
+    <div className="border-t border-line">
+      {(image || uploading || error) && (
+        <div className="flex items-center gap-2 px-3 pt-2">
+          {uploading && <span className="grid h-14 w-14 place-items-center rounded-lg bg-sunken border border-line"><Loader2 className="h-4 w-4 animate-spin text-ink3" /></span>}
+          {image && (
+            <span className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- Blob upload preview */}
+              <img src={image} alt="" className="h-14 w-14 rounded-lg object-cover border border-line" />
+              <button type="button" onClick={() => setImage(null)} aria-label="Remove photo"
+                className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-black/80 text-white">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+      )}
+      <form onSubmit={submit} className="flex items-center gap-2 p-3">
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => pick(e.target.files?.[0])} />
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} aria-label="Add a photo" title="Add a photo"
+          className="shrink-0 grid place-items-center w-10 h-10 rounded-full text-ink3 hover:text-yellow-500 hover:bg-elevated disabled:opacity-50 transition-colors">
+          <ImagePlus className="w-5 h-5" />
+        </button>
+        <input value={text} onChange={e => setText(e.target.value)} placeholder={placeholder}
+          className="flex-1 min-w-0 bg-sunken border border-line rounded-full px-4 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-ink3" />
+        <button type="submit" disabled={sending || uploading || (!text.trim() && !image)} aria-label="Send"
+          className="shrink-0 grid place-items-center w-10 h-10 rounded-full bg-yellow-500 text-black disabled:opacity-50">
+          <Send className="w-4 h-4" />
+        </button>
+      </form>
+    </div>
+  )
+}
+
+/** A photo in a message bubble; tap to view full size. */
+function MessagePhoto({ src, onOpen }: { src: string; onOpen: (src: string) => void }) {
+  return (
+    <button type="button" onClick={() => onOpen(src)} className="block overflow-hidden rounded-xl cursor-zoom-in">
+      {/* eslint-disable-next-line @next/next/no-img-element -- Blob upload */}
+      <img src={src} alt="Photo" loading="lazy" className="max-h-64 w-auto max-w-full object-cover" />
+    </button>
+  )
+}
+
 /* ================= Chat room (community or coach room) ================= */
 function RoomChat({ meId, room }: { meId: string; room: string }) {
   const [messages, setMessages] = useState<RoomMsg[]>([])
-  const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
+  const [zoom, setZoom] = useState<string | null>(null)
   const lastAt = useRef<string | null>(null)
   const bottom = useRef<HTMLDivElement>(null)
 
@@ -59,14 +139,11 @@ function RoomChat({ meId, room }: { meId: string; room: string }) {
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault()
-    const t = text.trim(); if (!t || sending) return
-    setSending(true)
-    try {
-      const res = await fetch('/api/chat/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: t, room }) })
-      if (res.ok) { setText(''); merge([await res.json()]) }
-    } finally { setSending(false) }
+  async function send(content: string, image: string | null) {
+    const res = await fetch('/api/chat/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, image, room }) })
+    if (!res.ok) return false
+    merge([await res.json()])
+    return true
   }
 
   return (
@@ -76,29 +153,29 @@ function RoomChat({ meId, room }: { meId: string; room: string }) {
         {messages.map(m => {
           const mine = m.author.id === meId
           return (
-            <div key={m.id} className={`flex gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
-              <Avatar src={m.author.image} name={m.author.name} size="xs" />
+            <div key={m.id} className={`msg-in flex gap-2 ${mine ? 'mine flex-row-reverse' : ''}`}>
+              <Link href={`/profile/${m.author.id}`} className="shrink-0 self-start" aria-label={`${m.author.name || 'Trader'}'s profile`}>
+                <Avatar src={m.author.image} name={m.author.name} size="xs" />
+              </Link>
               <div className={`max-w-[75%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
                 <div className="flex items-center gap-1.5">
-                  {!mine && <span className="text-xs font-semibold text-ink">{m.author.name || 'Trader'}</span>}
+                  {!mine && <Link href={`/profile/${m.author.id}`} className="text-xs font-semibold text-ink hover:text-yellow-500 transition-colors">{m.author.name || 'Trader'}</Link>}
                   <span className="text-[10px] text-ink3">{ago(m.createdAt)}</span>
                 </div>
-                <div className={`mt-0.5 rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap ${mine ? 'bg-yellow-500 text-black' : 'bg-elevated text-ink'}`}>
-                  {m.content}
-                </div>
+                {m.image && <div className="mt-0.5"><MessagePhoto src={m.image} onOpen={setZoom} /></div>}
+                {m.content && (
+                  <div className={`mt-0.5 rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap ${mine ? 'bg-yellow-500 text-black' : 'bg-elevated text-ink'}`}>
+                    {m.content}
+                  </div>
+                )}
               </div>
             </div>
           )
         })}
         <div ref={bottom} />
       </div>
-      <form onSubmit={send} className="flex items-center gap-2 p-3 border-t border-line">
-        <input value={text} onChange={e => setText(e.target.value)} placeholder="Message the community…"
-          className="flex-1 bg-sunken border border-line rounded-full px-4 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-ink3" />
-        <button type="submit" disabled={sending || !text.trim()} className="shrink-0 grid place-items-center w-10 h-10 rounded-full bg-yellow-500 text-black disabled:opacity-50">
-          <Send className="w-4 h-4" />
-        </button>
-      </form>
+      <Composer placeholder="Message the community…" onSend={send} />
+      {zoom && <ImageLightbox images={[zoom]} startIndex={0} onClose={() => setZoom(null)} />}
     </div>
   )
 }
@@ -109,8 +186,7 @@ function DMs({ meId, initialUserId }: { meId: string; initialUserId?: string | n
   const [activeId, setActiveId] = useState<string | null>(null)
   const [other, setOther] = useState<Lite | null>(null)
   const [msgs, setMsgs] = useState<DM[]>([])
-  const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
+  const [zoom, setZoom] = useState<string | null>(null)
   const [showNew, setShowNew] = useState(false)
   const [coaches, setCoaches] = useState<Lite[]>([])
   const lastAt = useRef<string | null>(null)
@@ -163,20 +239,15 @@ function DMs({ meId, initialUserId }: { meId: string; initialUserId?: string | n
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs])
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault()
-    const t = text.trim(); if (!t || sending || !activeId) return
-    setSending(true)
-    try {
-      const res = await fetch(`/api/chat/conversations/${activeId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: t }) })
-      if (res.ok) {
-        const m: DM = await res.json()
-        setText('')
-        setMsgs(prev => prev.some(x => x.id === m.id) ? prev : [...prev, m])
-        lastAt.current = m.createdAt
-        loadConvos()
-      }
-    } finally { setSending(false) }
+  async function send(content: string, image: string | null) {
+    if (!activeId) return false
+    const res = await fetch(`/api/chat/conversations/${activeId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, image }) })
+    if (!res.ok) return false
+    const m: DM = await res.json()
+    setMsgs(prev => prev.some(x => x.id === m.id) ? prev : [...prev, m])
+    lastAt.current = m.createdAt
+    loadConvos()
+    return true
   }
 
   const openWith = useCallback(async (userId: string) => {
@@ -252,35 +323,39 @@ function DMs({ meId, initialUserId }: { meId: string; initialUserId?: string | n
           <>
             <div className="flex items-center gap-2 p-3 border-b border-line">
               <button onClick={() => setActiveId(null)} className="sm:hidden p-1 text-ink3"><ChevronLeft className="w-5 h-5" /></button>
-              {other && <Avatar src={other.image} name={other.name} size="sm" />}
-              <span className="text-sm font-bold text-ink truncate">{other?.name || 'Conversation'}</span>
+              {other ? (
+                <Link href={`/profile/${other.id}`} className="flex min-w-0 items-center gap-2 group">
+                  <Avatar src={other.image} name={other.name} size="sm" />
+                  <span className="text-sm font-bold text-ink truncate group-hover:text-yellow-500 transition-colors">{other.name || 'Conversation'}</span>
+                </Link>
+              ) : (
+                <span className="text-sm font-bold text-ink truncate">Conversation</span>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {msgs.map(m => {
                 const mine = m.senderId === meId
                 return (
-                  <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap ${mine ? 'bg-yellow-500 text-black' : 'bg-elevated text-ink'}`}>
-                      {m.content}
-                      <span className={`block text-[10px] mt-0.5 ${mine ? 'text-black/60' : 'text-ink3'}`}>{ago(m.createdAt)}</span>
+                  <div key={m.id} className={`msg-in flex ${mine ? 'mine justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[78%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
+                      {m.image && <MessagePhoto src={m.image} onOpen={setZoom} />}
+                      <div className={`rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap ${mine ? 'bg-yellow-500 text-black' : 'bg-elevated text-ink'}`}>
+                        {m.content}
+                        <span className={`block text-[10px] ${m.content ? 'mt-0.5' : ''} ${mine ? 'text-black/60' : 'text-ink3'}`}>{ago(m.createdAt)}</span>
+                      </div>
                     </div>
                   </div>
                 )
               })}
               <div ref={bottom} />
             </div>
-            <form onSubmit={send} className="flex items-center gap-2 p-3 border-t border-line">
-              <input value={text} onChange={e => setText(e.target.value)} placeholder="Write a message…"
-                className="flex-1 bg-sunken border border-line rounded-full px-4 py-2 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-ink3" />
-              <button type="submit" disabled={sending || !text.trim()} className="shrink-0 grid place-items-center w-10 h-10 rounded-full bg-yellow-500 text-black disabled:opacity-50">
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
+            <Composer key={activeId} placeholder="Write a message…" onSend={send} />
           </>
         )}
       </div>
 
       {showNew && <NewMessage meId={meId} onClose={() => setShowNew(false)} onPick={openWith} />}
+      {zoom && <ImageLightbox images={[zoom]} startIndex={0} onClose={() => setZoom(null)} />}
     </div>
   )
 }

@@ -1,48 +1,73 @@
 'use client'
+/* eslint-disable @next/next/no-img-element */
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { useSession, signOut } from 'next-auth/react'
-import { cn } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
 import {
-  Home, LineChart, Zap, Newspaper, Menu, X, Lock, MessageCircle,
-  CandlestickChart, Radio, BookOpen, NotebookPen, CalendarDays, ShieldCheck, Users, Bell, Settings,
-  Shield, User, LogOut, Smartphone, UserCheck, Calculator, Sparkles, Trophy,
-  GraduationCap, BadgeCheck,
+  Home, LineChart, Zap, Newspaper, X, Lock, MessageCircle, NotebookPen, CalendarDays, Users, Bell, Settings,
+  Shield, ShieldCheck, User, LogOut, Smartphone, Calculator, Sparkles, Trophy, GraduationCap, CandlestickChart,
+  Radio, BookOpen, UserCheck, BadgeCheck,
 } from 'lucide-react'
 import { openTour } from '@/components/WelcomeTour'
 import { useLiveStatus } from '@/lib/useLiveStatus'
 import { anyRoomUnseen, SEEN_EVENT } from '@/lib/chatSeen'
+import { useMyProfile } from '@/lib/useMyProfile'
 
-// The four tabs, typed like `menu` below so one of them can be premium.
-// Trading View keeps its place in the More sheet, one tap away.
-const items: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [
-  { href: '/ideas',   label: 'Signals', icon: Zap             },
-  { href: '/feed',    label: 'Feed',    icon: Home            },
-  { href: '/chat',    label: 'Chat',    icon: MessageCircle   },
-  { href: '/trading', label: 'Trade',   icon: CandlestickChart, premium: true },
-]
+/** Fired by the ☰ button in the top bar (phones and tablets). */
+export const OPEN_DRAWER_EVENT = 'ght:open-drawer'
+/** Fired by the drawer so the ☰ button can show a badge: { count, live }. */
+export const DRAWER_BADGE_EVENT = 'ght:drawer-badge'
+/** Fired by the Navbar whenever the unread-notification count changes. */
+export const NOTIF_COUNT_EVENT = 'ght:notif-count'
 
-// Full navigation shown in the "More" sheet — same priority order as the sidebar.
-const allNav = [
-  { href: '/ideas',         label: 'Signals',       icon: Zap             },
-  { href: '/feed',          label: 'Feed',          icon: Home            },
-  { href: '/chat',          label: 'Chat',          icon: MessageCircle   },
-  { href: '/chart',         label: 'Trading View',  icon: LineChart       },
-  { href: '/trading',       label: 'Trading',       icon: CandlestickChart, premium: true },
-  { href: '/journal',       label: 'Journal',       icon: NotebookPen,     premium: true },
-  { href: '/live',          label: 'Live',          icon: Radio,           premium: true },
-  { href: '/courses',       label: 'Courses',       icon: GraduationCap,   premium: true },
-  { href: '/education',     label: 'Education',     icon: BookOpen,        premium: true },
-  { href: '/calendar',      label: 'Calendar',      icon: CalendarDays,    premium: true },
-  { href: '/calculator',    label: 'Calculator',    icon: Calculator      },
-  { href: '/leaderboard',   label: 'Leaderboard',   icon: Trophy          },
-  { href: '/news',          label: 'Forex News',    icon: Newspaper       },
-  { href: '/friends',       label: 'Traders',       icon: Users           },
-  { href: '/anti-hacking',  label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
-  { href: '/install',       label: 'Install App',   icon: Smartphone      },
-  { href: '/notifications', label: 'Notifications', icon: Bell            },
-  { href: '/settings',      label: 'Settings',      icon: Settings        },
+export function openDrawer() {
+  window.dispatchEvent(new Event(OPEN_DRAWER_EVENT))
+}
+
+type NavItem = { href: string; label: string; icon: typeof Home; premium?: boolean }
+
+// Side drawer sections, same grouping as the desktop rail.
+const SECTIONS: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Trade',
+    items: [
+      { href: '/feed',     label: 'Feed',         icon: Home },
+      { href: '/ideas',    label: 'Signals',      icon: Zap },
+      { href: '/chat',     label: 'Chat',         icon: MessageCircle },
+      { href: '/chart',    label: 'Trading View', icon: LineChart },
+      { href: '/trading',  label: 'Trading',      icon: CandlestickChart, premium: true },
+      { href: '/journal',  label: 'Journal',      icon: NotebookPen,      premium: true },
+    ],
+  },
+  {
+    title: 'Learn & tools',
+    items: [
+      { href: '/live',         label: 'Live',         icon: Radio,         premium: true },
+      { href: '/courses',      label: 'Courses',      icon: GraduationCap, premium: true },
+      { href: '/education',    label: 'Education',    icon: BookOpen,      premium: true },
+      { href: '/calendar',     label: 'Calendar',     icon: CalendarDays,  premium: true },
+      { href: '/calculator',   label: 'Calculator',   icon: Calculator },
+      { href: '/news',         label: 'Forex News',   icon: Newspaper },
+      { href: '/anti-hacking', label: 'Anti-Hacking', icon: ShieldCheck,   premium: true },
+    ],
+  },
+  {
+    title: 'Community',
+    items: [
+      { href: '/friends',     label: 'Traders',     icon: Users },
+      { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+    ],
+  },
+  {
+    title: 'App',
+    items: [
+      { href: '/notifications', label: 'Notifications', icon: Bell },
+      { href: '/settings',      label: 'Settings',      icon: Settings },
+      { href: '/install',       label: 'Install App',   icon: Smartphone },
+    ],
+  },
 ]
 
 function isLockedOut(user?: {
@@ -57,11 +82,22 @@ function isLockedOut(user?: {
   return true
 }
 
+const Badge = ({ n }: { n: number }) => (
+  <span className="min-w-5 h-5 px-1.5 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{n > 99 ? '99+' : n}</span>
+)
+
+/**
+ * Phones and tablets: a five-tab bar at the bottom (Feed, Signals, Chat, Trade,
+ * Profile) and everything else in a side drawer that slides in from the left,
+ * opened from the ☰ in the top bar. Notifications stay on the top bar's bell.
+ */
 export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: boolean }) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const me = useMyProfile({ image: session?.user?.image, name: session?.user?.name })
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
+  const [notifs, setNotifs] = useState(0)
   const [roomDot, setRoomDot] = useState(false)
   const rooms = useRef<Record<string, string>>({})
   const [pending, setPending] = useState(0)
@@ -95,138 +131,200 @@ export function MobileBottomNav({ paywallEnabled = false }: { paywallEnabled?: b
     return () => window.removeEventListener(SEEN_EVENT, recompute)
   }, [])
 
+  // Open from the top bar's ☰; unread notifications come from the Navbar.
+  useEffect(() => {
+    const onOpen = () => setOpen(true)
+    const onNotifs = (e: Event) => setNotifs((e as CustomEvent<number>).detail ?? 0)
+    window.addEventListener(OPEN_DRAWER_EVENT, onOpen)
+    window.addEventListener(NOTIF_COUNT_EVENT, onNotifs)
+    return () => {
+      window.removeEventListener(OPEN_DRAWER_EVENT, onOpen)
+      window.removeEventListener(NOTIF_COUNT_EVENT, onNotifs)
+    }
+  }, [])
+
+  // Tell the ☰ button what's waiting inside the drawer.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(DRAWER_BADGE_EVENT, { detail: { count: pending + verifying, live: isLive } }))
+  }, [pending, verifying, isLive])
+
+  // Close on navigation and on Escape; keep the page from scrolling behind it.
+  useEffect(() => { setOpen(false) }, [pathname])
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [open])
+
   const locked = paywallEnabled && isLockedOut(session?.user)
-  const role = session?.user?.role
-  const menu: { href: string; label: string; icon: typeof Home; premium?: boolean }[] = [...allNav]
-  if (session?.user?.id) menu.push({ href: `/profile/${session.user.id}`, label: 'Profile', icon: User })
-  if (role === 'admin' || role === 'coach') menu.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
-  if (role === 'admin' || role === 'coach') menu.push({ href: '/verifications', label: 'Verifications', icon: BadgeCheck })
-  if (role === 'admin' || role === 'coach') menu.push({ href: '/admin', label: 'Admin', icon: Shield })
+  const staff: NavItem[] = []
+  if (isStaff) {
+    staff.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
+    staff.push({ href: '/verifications', label: 'Verifications', icon: BadgeCheck })
+    staff.push({ href: '/admin', label: 'Admin', icon: Shield })
+  }
+
+  const profileHref = session?.user?.id ? `/profile/${session.user.id}` : '/settings'
+  const tabs: NavItem[] = [
+    { href: '/feed',          label: 'Feed',    icon: Home },
+    { href: '/ideas',         label: 'Signals', icon: Zap },
+    { href: '/chat',          label: 'Chat',    icon: MessageCircle },
+    { href: '/trading',       label: 'Trade',   icon: CandlestickChart, premium: true },
+    { href: profileHref,      label: 'Profile', icon: User },
+  ]
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+
+  const badgeFor = (href: string) =>
+    href === '/chat' ? unread : href === '/approvals' ? pending : href === '/verifications' ? verifying : href === '/notifications' ? notifs : 0
+
+  // A plain function, not a component, so links aren't remounted on every render.
+  const drawerLink = ({ href, label, icon: Icon, premium }: NavItem) => {
+    const active = isActive(href)
+    const count = badgeFor(href)
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={() => setOpen(false)}
+        aria-current={active ? 'page' : undefined}
+        className={cn(
+          'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+          active ? 'bg-yellow-500/10 text-yellow-500' : 'text-ink2 active:bg-elevated hover:bg-elevated hover:text-ink',
+        )}
+      >
+        {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-yellow-500" aria-hidden />}
+        <Icon className="h-5 w-5 shrink-0" />
+        <span className="flex-1 truncate">{label}</span>
+        {href === '/live' && isLive && <span className="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-black text-red-500">LIVE</span>}
+        {count > 0 && <Badge n={count} />}
+        {href === '/chat' && count === 0 && roomDot && <span className="h-2 w-2 rounded-full bg-yellow-500" />}
+        {premium && locked && !(href === '/live' && isLive) && <Lock className="h-3.5 w-3.5 text-ink3" />}
+      </Link>
+    )
+  }
 
   return (
     <>
-      {/* Full-nav sheet */}
+      {/* Side drawer */}
       {open && (
-        <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setOpen(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-[color:var(--c-app)] border-t border-line rounded-t-2xl p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
-            onClick={e => e.stopPropagation()}
+        <div className="fixed inset-0 z-[70] md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="drawer-backdrop absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
+          <aside
+            className="drawer-panel absolute inset-y-0 left-0 flex w-[84%] max-w-[320px] flex-col bg-[color:var(--c-app)] border-r border-line shadow-2xl"
+            style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-bold text-ink">Menu</p>
-              <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg text-ink3 hover:text-ink hover:bg-elevated">
-                <X className="w-5 h-5" />
+            {/* Who you are */}
+            <div className="flex items-center gap-3 border-b border-line px-4 py-4">
+              <Link href={profileHref} onClick={() => setOpen(false)} className="flex min-w-0 flex-1 items-center gap-3">
+                <span className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-line bg-elevated">
+                  {me.image
+                    ? <img src={me.image} alt="" className="h-full w-full object-cover" />
+                    : <span className="grid h-full w-full place-items-center text-sm font-bold text-ink2">{getInitials(me.name || session?.user?.name || 'Me')}</span>}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-ink">{me.name || session?.user?.name || 'Member'}</span>
+                  <span className="block truncate text-xs text-yellow-500">
+                    @{(session?.user as { username?: string } | undefined)?.username || 'trader'}
+                  </span>
+                </span>
+              </Link>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-lg p-1.5 text-ink3 hover:bg-elevated hover:text-ink">
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {menu.map(({ href, label, icon: Icon, premium }) => {
-                const active = pathname === href
-                return (
-                  <Link
-                    key={href + label}
-                    href={href}
-                    onClick={() => setOpen(false)}
-                    className={cn(
-                      'relative flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-colors',
-                      active
-                        ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
-                        : 'border-line bg-surface text-ink2 active:bg-elevated'
-                    )}
-                  >
-                    {href === '/live' && isLive && (
-                      <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-full bg-red-500/15 text-red-500 px-1 py-0.5 text-[8px] font-black tracking-wide">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> LIVE
-                      </span>
-                    )}
-                    {premium && locked && !(href === '/live' && isLive) && <Lock className="w-3 h-3 absolute top-2 right-2 text-ink3" />}
-                    {href === '/approvals' && pending > 0 && (
-                      <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending}</span>
-                    )}
-                    {href === '/verifications' && verifying > 0 && (
-                      <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{verifying}</span>
-                    )}
-                    <Icon className="w-5 h-5" />
-                    <span className="text-[11px] font-medium text-center leading-tight">{label}</span>
-                  </Link>
-                )
-              })}
+
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-3">
+              {staff.length > 0 && (
+                <div className="mb-3">
+                  <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink3">Staff</p>
+                  {staff.map(drawerLink)}
+                </div>
+              )}
+              {SECTIONS.map(section => (
+                <div key={section.title} className="mb-3">
+                  <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink3">{section.title}</p>
+                  {section.items.map(drawerLink)}
+                </div>
+              ))}
+            </nav>
+
+            <div className="space-y-1 border-t border-line p-3">
               <Link
                 href="/journal?compose=blank"
                 onClick={() => setOpen(false)}
-                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-500 active:bg-yellow-500/15 p-3"
+                className="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 py-2.5 text-sm font-bold text-black active:bg-yellow-400"
               >
-                <NotebookPen className="w-5 h-5" />
-                <span className="text-[11px] font-medium">Log Trade</span>
+                <NotebookPen className="h-4 w-4" /> Log a trade
               </Link>
-              <button
-                onClick={() => { setOpen(false); openTour() }}
-                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-ink2 active:bg-elevated p-3"
-              >
-                <Sparkles className="w-5 h-5" />
-                <span className="text-[11px] font-medium">App Tour</span>
-              </button>
-              <button
-                onClick={() => { setOpen(false); signOut({ callbackUrl: '/login' }) }}
-                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-line bg-surface text-red-400 active:bg-elevated p-3"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="text-[11px] font-medium">Log out</span>
-              </button>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); openTour() }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold text-ink2 hover:bg-elevated"
+                >
+                  <Sparkles className="h-4 w-4" /> App tour
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); signOut({ callbackUrl: '/login' }) }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold text-red-400 hover:bg-elevated"
+                >
+                  <LogOut className="h-4 w-4" /> Sign out
+                </button>
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
       )}
 
       {/* Opaque, no backdrop-filter: a fixed element with backdrop-filter gets its
           own compositing layer that iOS Safari intermittently fails to reposition
-          while scrolling, leaving the bar painted mid-screen. The bar was already
-          95% opaque, so there was nothing to blur through it anyway. */}
+          while scrolling, leaving the bar painted mid-screen. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-app border-t border-line"
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-app border-t border-line"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="flex items-center justify-around h-16 px-1">
-          {items.map(({ href, label, icon: Icon, premium }) => {
-            const active = pathname === href
+        <div className="flex items-stretch justify-around h-14">
+          {tabs.map(({ href, label, icon: Icon, premium }) => {
+            const active = isActive(href)
+            const count = badgeFor(href)
+            const isProfile = label === 'Profile'
             return (
               <Link
-                key={href}
+                key={label}
                 href={href}
                 className={cn(
-                  'relative flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl transition-colors',
+                  'relative flex flex-col items-center justify-center gap-1 flex-1 transition-colors',
                   active ? 'text-yellow-500' : 'text-ink3 active:text-ink2'
                 )}
               >
-                {href === '/chat' && unread > 0 && (
-                  <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{unread}</span>
+                {active && <span className="absolute top-0 inset-x-5 h-[2px] bg-yellow-500" aria-hidden />}
+                {count > 0 && (
+                  <span className="absolute top-1.5 right-[calc(50%-20px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{count > 99 ? '99+' : count}</span>
                 )}
-                {href === '/chat' && unread === 0 && roomDot && (
+                {href === '/chat' && count === 0 && roomDot && (
                   <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-yellow-500" />
                 )}
                 {premium && locked && (
                   <Lock className="w-3 h-3 absolute top-2.5 right-[calc(50%-16px)] text-ink3" />
                 )}
-                <Icon className="w-6 h-6 shrink-0" />
-                <span className="text-[10px] font-semibold tracking-wide">{label}</span>
+                {isProfile ? (
+                  <span className={cn('h-6 w-6 overflow-hidden rounded-full border bg-elevated', active ? 'border-yellow-500' : 'border-line')}>
+                    {me.image
+                      ? <img src={me.image} alt="" className="h-full w-full object-cover" />
+                      : <span className="grid h-full w-full place-items-center text-[9px] font-bold text-ink2">{getInitials(me.name || 'Me')}</span>}
+                  </span>
+                ) : (
+                  <Icon className="w-5 h-5 shrink-0" />
+                )}
+                <span className="text-[10px] font-medium">{label}</span>
               </Link>
             )
           })}
-          <button
-            onClick={() => setOpen(true)}
-            className="relative flex flex-col items-center justify-center gap-1 flex-1 h-full rounded-xl text-ink3 active:text-ink2 transition-colors"
-          >
-            {/* Approvals and Verifications both live inside this sheet, so the
-                tab badge carries their combined backlog. */}
-            {pending + verifying > 0 && (
-              <span className="absolute top-2.5 right-[calc(50%-18px)] min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{pending + verifying}</span>
-            )}
-            {pending + verifying === 0 && isLive && (
-              <span className="absolute top-2.5 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-red-500 animate-pulse ring-2 ring-app" />
-            )}
-            <Menu className="w-6 h-6 shrink-0" />
-            <span className="text-[10px] font-semibold tracking-wide">More</span>
-          </button>
         </div>
       </nav>
     </>

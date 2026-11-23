@@ -8,41 +8,43 @@ import { useEffect, useRef, useState } from 'react'
 import { useMyProfile } from '@/lib/useMyProfile'
 import { useLiveStatus } from '@/lib/useLiveStatus'
 import { anyRoomUnseen, SEEN_EVENT } from '@/lib/chatSeen'
-import { openTour } from '@/components/WelcomeTour'
 import {
   Home, Bell, Settings, Users,
   BookOpen, NotebookPen, CalendarDays, ShieldCheck, Newspaper, Shield, Lock,
-  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator, Sparkles, Trophy,
+  LineChart, Zap, CandlestickChart, Radio, MessageCircle, UserCheck, Calculator, Trophy,
   GraduationCap, BadgeCheck,
 } from 'lucide-react'
 
-// Core, daily-use features — kept at the top.
-const primaryNav = [
-  { href: '/ideas',        label: 'Signals',       icon: Zap             },
-  { href: '/feed',         label: 'Feed',          icon: Home            },
-  { href: '/chat',         label: 'Chat',          icon: MessageCircle   },
-  { href: '/chart',        label: 'Trading View',  icon: LineChart       },
-  { href: '/trading',      label: 'Trading',       icon: CandlestickChart, premium: true },
-  { href: '/journal',      label: 'Journal',       icon: NotebookPen,     premium: true },
+type RailItem = { href: string; label: string; icon: typeof Home; premium?: boolean }
+
+// Core, daily-use features — kept at the top. Labels are short: they sit under
+// the icon in a 76px rail.
+const primaryNav: RailItem[] = [
+  { href: '/ideas',        label: 'Signals',    icon: Zap             },
+  { href: '/feed',         label: 'Feed',       icon: Home            },
+  { href: '/chat',         label: 'Chat',       icon: MessageCircle   },
+  { href: '/chart',        label: 'Chart',      icon: LineChart       },
+  { href: '/trading',      label: 'Trade',      icon: CandlestickChart, premium: true },
+  { href: '/journal',      label: 'Journal',    icon: NotebookPen,     premium: true },
 ]
 
 // Secondary features — shown below a divider.
-const moreNav = [
-  { href: '/live',         label: 'Live',          icon: Radio,           premium: true },
-  { href: '/courses',      label: 'Courses',       icon: GraduationCap,   premium: true },
-  { href: '/education',    label: 'Education',     icon: BookOpen,        premium: true },
-  { href: '/calendar',     label: 'Calendar',      icon: CalendarDays,    premium: true },
-  { href: '/calculator',   label: 'Calculator',    icon: Calculator      },
-  { href: '/leaderboard',  label: 'Leaderboard',   icon: Trophy          },
-  { href: '/news',         label: 'Forex News',    icon: Newspaper       },
-  { href: '/friends',      label: 'Traders',       icon: Users           },
-  { href: '/anti-hacking', label: 'Anti-Hacking',  icon: ShieldCheck,     premium: true },
+const moreNav: RailItem[] = [
+  { href: '/live',         label: 'Live',       icon: Radio,           premium: true },
+  { href: '/courses',      label: 'Courses',    icon: GraduationCap,   premium: true },
+  { href: '/education',    label: 'Education',  icon: BookOpen,        premium: true },
+  { href: '/calendar',     label: 'Calendar',   icon: CalendarDays,    premium: true },
+  { href: '/calculator',   label: 'Lot size',   icon: Calculator      },
+  { href: '/leaderboard',  label: 'Ranks',      icon: Trophy          },
+  { href: '/news',         label: 'News',       icon: Newspaper       },
+  { href: '/friends',      label: 'Traders',    icon: Users           },
+  { href: '/anti-hacking', label: 'Security',   icon: ShieldCheck,     premium: true },
 ]
 
 // Utility — always last.
-const utilityNav = [
-  { href: '/notifications',label: 'Notifications', icon: Bell            },
-  { href: '/settings',     label: 'Settings',      icon: Settings        },
+const utilityNav: RailItem[] = [
+  { href: '/notifications',label: 'Alerts',     icon: Bell            },
+  { href: '/settings',     label: 'Settings',   icon: Settings        },
 ]
 
 // Mirrors hasAccess(): ACCM members are free, staff are free, active/comp are
@@ -99,76 +101,64 @@ export function LeftSidebar({ paywallEnabled = false }: { paywallEnabled?: boole
   }, [])
 
   const locked = paywallEnabled && isLockedOut(session?.user)
-  const role = session?.user?.role
-  const utility = [...utilityNav]
-  if (role === 'admin' || role === 'coach') utility.push({ href: '/approvals', label: 'Approvals', icon: UserCheck })
-  if (role === 'admin' || role === 'coach') utility.push({ href: '/verifications', label: 'Verifications', icon: BadgeCheck })
-  if (role === 'admin' || role === 'coach') utility.push({ href: '/admin', label: 'Admin', icon: Shield })
+  // Staff tools sit at the very top of the rail.
+  const staff: RailItem[] = isStaff ? [
+    { href: '/approvals',     label: 'Approvals', icon: UserCheck  },
+    { href: '/verifications', label: 'Verify',    icon: BadgeCheck },
+    { href: '/admin',         label: 'Admin',     icon: Shield     },
+  ] : []
 
-  const NavLink = ({ href, label, icon: Icon, premium }: { href: string; label: string; icon: typeof Home; premium?: boolean }) => (
-    <Link key={href} href={href}
-      className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium',
-        pathname === href
-          ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-          : 'text-ink2 hover:bg-elevated hover:text-ink'
-      )}>
-      <Icon className="w-4 h-4 shrink-0" />
-      {label}
-      {href === '/chat' && unread > 0 && (
-        <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{unread}</span>
-      )}
-      {href === '/chat' && unread === 0 && roomDot && (
-        <span className="ml-auto shrink-0 w-2 h-2 rounded-full bg-yellow-500" />
-      )}
-      {href === '/approvals' && pending > 0 && (
-        <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{pending}</span>
-      )}
-      {href === '/verifications' && verifying > 0 && (
-        <span className="ml-auto shrink-0 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[10px] font-bold grid place-items-center">{verifying}</span>
-      )}
-      {href === '/live' && isLive && (
-        <span className="ml-auto shrink-0 flex items-center gap-1 rounded-full bg-red-500/15 text-red-500 px-1.5 py-0.5 text-[9px] font-black tracking-wide">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> LIVE
+  // Icon over a tiny label, gold edge on the active page, badges and locks
+  // pinned to the icon's corner. A plain function, not a component, so the links
+  // aren't remounted on every render.
+  const railLink = ({ href, label, icon: Icon, premium }: RailItem) => {
+    const active = pathname === href || pathname.startsWith(href + '/')
+    const count = href === '/chat' ? unread : href === '/approvals' ? pending : href === '/verifications' ? verifying : 0
+    const live = href === '/live' && isLive
+    return (
+      <Link
+        key={href}
+        href={href}
+        title={label}
+        aria-current={active ? 'page' : undefined}
+        className={cn(
+          'relative flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-center transition-colors',
+          active ? 'text-yellow-500 bg-yellow-500/10' : 'text-ink2 hover:text-ink hover:bg-elevated',
+        )}
+      >
+        {active && <span className="absolute -left-2 top-1.5 bottom-1.5 w-[3px] rounded-r bg-yellow-500" aria-hidden />}
+        <span className="relative">
+          <Icon className="w-[18px] h-[18px]" />
+          {count > 0 && (
+            <span className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{count > 99 ? '99+' : count}</span>
+          )}
+          {href === '/chat' && count === 0 && roomDot && <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-yellow-500" />}
+          {live && <span title="Live now" className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+          {premium && locked && !live && <Lock className="absolute -top-1 -right-2 w-2.5 h-2.5 text-ink3" />}
         </span>
-      )}
-      {premium && locked && href !== '/live' && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
-      {premium && locked && href === '/live' && !isLive && <Lock className="w-3 h-3 ml-auto shrink-0 text-ink3" />}
-    </Link>
-  )
+        <span className="text-[10px] leading-tight font-medium">{label}</span>
+      </Link>
+    )
+  }
+
+  const divider = <div className="my-2 mx-2 shrink-0 border-t border-line" />
 
   return (
-    <aside className="hidden lg:flex flex-col gap-1 w-56 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-4 scrollbar-none">
+    <aside
+      className="hidden md:flex flex-col w-[76px] shrink-0 sticky self-start overflow-y-auto scrollbar-none border-r border-line py-3 px-2 gap-0.5"
+      style={{ top: 'calc(3.5rem + env(safe-area-inset-top, 0px))', height: 'calc(100dvh - 3.5rem - env(safe-area-inset-top, 0px))' }}
+    >
+      {staff.length > 0 && <>{staff.map(railLink)}{divider}</>}
+      {primaryNav.map(railLink)}
+      {divider}
+      {moreNav.map(railLink)}
+      {divider}
+      {utilityNav.map(railLink)}
       {session?.user && (
-        <Link
-          href={`/profile/${session.user.id}`}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-elevated transition-colors mb-2 border border-line bg-surface"
-        >
+        <Link href={`/profile/${session.user.id}`} title="Your profile" className="mt-auto flex justify-center pt-3">
           <Avatar src={me.image} name={me.name || session.user.name} size="sm" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink truncate">{me.name || session.user.name}</p>
-            <p className="text-xs text-yellow-500 truncate">@{(session.user as { username?: string }).username || 'trader'}</p>
-          </div>
         </Link>
       )}
-
-      <button onClick={openTour} className="mb-2 flex items-center gap-2 rounded-xl border border-yellow-500/25 bg-yellow-500/5 px-3 py-2 text-xs font-semibold text-yellow-500 hover:bg-yellow-500/10 transition-colors">
-        <Sparkles className="w-4 h-4" /> Take a tour
-      </button>
-
-      <div className="space-y-0.5">
-        {primaryNav.map(item => <NavLink key={item.href} {...item} />)}
-      </div>
-
-      <div className="my-2 mx-3 border-t border-line" />
-
-      <div className="space-y-0.5">
-        <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink3">More</p>
-        {moreNav.map(item => <NavLink key={item.href} {...item} />)}
-        {utility.map(item => <NavLink key={item.href} {...item} />)}
-      </div>
-
-      <p className="text-xs text-ink3 px-3 mt-4">© 2026 Gold Heist Trading</p>
     </aside>
   )
 }

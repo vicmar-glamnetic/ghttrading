@@ -10,6 +10,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const q = searchParams.get('q')
     if (!q) return NextResponse.json([])
+    // The Traders page passes traders=1 so admins aren't listed there; mentions
+    // and new chats still find them.
+    const tradersOnly = searchParams.get('traders') === '1'
 
     const users = await db.user.findMany({
       where: {
@@ -18,6 +21,7 @@ export async function GET(req: Request) {
           { username: { contains: q, mode: 'insensitive' } },
         ],
         NOT: { id: session.user.id },
+        ...(tradersOnly ? { role: { not: 'admin' } } : {}),
       },
       select: { id: true, name: true, image: true, username: true, bio: true },
       take: 10,

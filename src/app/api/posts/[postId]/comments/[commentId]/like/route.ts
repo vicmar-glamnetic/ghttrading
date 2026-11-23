@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { notify } from '@/lib/notify'
 import { isReactionType } from '@/lib/reactions'
 
 export async function POST(
@@ -42,7 +43,7 @@ export async function POST(
     // Notify the comment author only on a brand-new reaction.
     const comment = await db.comment.findUnique({ where: { id: commentId }, select: { authorId: true } })
     if (comment && comment.authorId !== session.user.id) {
-      await db.notification.create({
+      await notify({
         data: {
           type: 'like',
           message: `${session.user.name} reacted to your comment`,

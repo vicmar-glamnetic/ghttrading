@@ -174,7 +174,12 @@ export function JournalAnalytics({ entries }: { entries: Entry[] }) {
               <div key={p.sym} className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-ink w-20 shrink-0 truncate">{p.sym}</span>
                 <span className="text-xs text-ink3 w-24 shrink-0">{p.winRate}% · {p.trades} trade{p.trades !== 1 ? 's' : ''}</span>
-                <div className="flex-1" />
+                <div className="flex-1 h-1.5 rounded-full bg-elevated overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${p.pnl >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                    style={{ width: `${(Math.abs(p.pnl) / Math.max(1, ...a.pairs.map(q => Math.abs(q.pnl)))) * 100}%` }}
+                  />
+                </div>
                 <span className={`text-sm font-bold tabular-nums ${p.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{money(p.pnl)}</span>
               </div>
             ))}

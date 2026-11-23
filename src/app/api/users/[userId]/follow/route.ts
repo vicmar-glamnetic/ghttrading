@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { notify } from '@/lib/notify'
 
 export async function POST(req: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
@@ -23,7 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ userId:
 
     await db.follow.create({ data: { followerId: session.user.id, followingId: userId } })
 
-    await db.notification.create({
+    await notify({
       data: {
         type: 'follow',
         message: `${session.user.name} started following you`,

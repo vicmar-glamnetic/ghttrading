@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { BookOpen, Plus, Trash2, Edit3, X, Check, ChevronLeft, CalendarDays, BarChart3, Pin, PinOff, Flame, Sparkles, TrendingUp, TrendingDown, ClipboardList, Lightbulb, Share2, AlertCircle } from 'lucide-react'
@@ -11,6 +11,29 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox'
 import { ScrollArea } from '@/components/ui/ScrollArea'
 import { SETUPS_AZ, setupLabel, setupLabels, setupMatches, parseSetups } from '@/lib/setups'
 import { deriveTrade } from '@/lib/journal'
+import { pipConfig, pipUnit } from '@/lib/trading'
+
+/**
+ * Signed pips from entry to exit (1 gold point = 10 pips); points on crypto
+ * and indices. Null until symbol, direction, entry and exit are all set.
+ */
+function tradeMove(t: { symbol?: string | null; direction?: string | null; entryPrice?: number | string | null; exitPrice?: number | string | null }) {
+  const entry = Number(t.entryPrice), exit = Number(t.exitPrice)
+  if (!t.symbol || !t.direction || t.entryPrice == null || t.exitPrice == null || t.entryPrice === '' || t.exitPrice === '') return null
+  if (!Number.isFinite(entry) || !Number.isFinite(exit)) return null
+  const move = t.direction === 'sell' ? entry - exit : exit - entry
+  const value = Math.round((move / pipConfig(t.symbol).pipSize) * 10) / 10
+  return { value, unit: pipUnit(t.symbol) }
+}
+
+function PipsBadge({ move }: { move: { value: number; unit: string } | null }) {
+  if (!move) return null
+  return (
+    <span className={`text-xs font-bold tabular-nums rounded px-1.5 py-0.5 ${move.value >= 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+      {move.value > 0 ? '+' : ''}{move.value} {move.unit}
+    </span>
+  )
+}
 import { JOURNAL_TEMPLATES, getTemplate, promptForDay, journalingStreak, type JournalTemplate } from '@/lib/journalTemplates'
 
 const DRAFT_KEY = 'ght:journalDraft'
@@ -102,7 +125,7 @@ function buildShareContent(entry: JournalEntry): string {
   ].filter(Boolean).join('\n')
 }
 
-const fieldCls = 'bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2'
+const fieldCls = 'h-[38px] bg-sunken border border-line rounded-lg px-3 text-sm text-ink outline-none focus:border-yellow-500/50 placeholder-ink3/60'
 
 function PriceStat({ label, value }: { label: string; value: number | null }) {
   if (value == null) return null
@@ -121,8 +144,8 @@ function PriceField({ label, value, onChange, placeholder }: {
   placeholder?: string
 }) {
   return (
-    <label className="block">
-      <span className="text-[10px] text-ink3">{label}</span>
+    <label className="block min-w-0">
+      <span className="block text-xs text-ink3 mb-1">{label}</span>
       <input
         type="number"
         step="any"
@@ -130,9 +153,61 @@ function PriceField({ label, value, onChange, placeholder }: {
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? '—'}
-        className={`${fieldCls} mt-0.5 w-full tabular-nums`}
+        className={`${fieldCls} w-full tabular-nums`}
       />
     </label>
+  )
+}
+
+function FormSection({ title, hint, required, action, children }: {
+  title: string; hint?: string; required?: boolean; action?: React.ReactNode; children: React.ReactNode
+}) {
+  return (
+    <section>
+      <div className="flex items-baseline gap-2 mb-2">
+        <h3 className="text-sm font-semibold text-ink">
+          {title}{required && <span className="text-red-400 ml-0.5" aria-label="required">*</span>}
+        </h3>
+        {hint && <span className="text-xs text-ink3 truncate">{hint}</span>}
+        {action && <span className="ml-auto shrink-0">{action}</span>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block min-w-0">
+      <span className="block text-xs text-ink3 mb-1">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" aria-pressed={active} onClick={onClick}
+      className={`text-xs px-3 py-1.5 min-h-8 rounded-full border transition-colors ${active ? 'bg-yellow-500/15 border-yellow-500/50 text-yellow-400' : 'border-line text-ink2 hover:border-line2 hover:text-ink'}`}>
+      {children}
+    </button>
+  )
+}
+
+/** One-of choice (tap again to clear), sized like the inputs beside it. */
+function Segmented({ value, onChange, options }: {
+  value: string; onChange: (v: string) => void; options: { value: string; label: string; activeCls: string }[]
+}) {
+  return (
+    <div role="radiogroup" className="flex h-[38px] rounded-lg border border-line bg-sunken p-0.5">
+      {options.map(o => (
+        <button key={o.value} type="button" role="radio" aria-checked={value === o.value}
+          onClick={() => onChange(value === o.value ? '' : o.value)}
+          className={`flex-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${value === o.value ? o.activeCls : 'text-ink3 hover:text-ink2'}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -163,6 +238,7 @@ export default function JournalPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [mobileShowEditor, setMobileShowEditor] = useState(false)
+  const notesRef = useRef<HTMLTextAreaElement>(null)
   const [view, setView] = useState<'entries' | 'analytics'>('entries')
   const [chartOpen, setChartOpen] = useState(false)
   const [shareEntry, setShareEntry] = useState<JournalEntry | null>(null)
@@ -354,7 +430,12 @@ export default function JournalPage() {
 
   async function handleSave() {
     const problem = validate()
-    if (problem) { setError(problem); return }
+    if (problem) {
+      setError(problem)
+      // Take them to the field that needs fixing.
+      if (!content.trim()) { notesRef.current?.focus(); notesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }
+      return
+    }
     setError(null)
 
     const tradePayload = {
@@ -610,8 +691,10 @@ export default function JournalPage() {
            bigger mobile subtraction also reserves room for the fixed bottom nav. */
         className="flex gap-4 h-[calc(100dvh-20rem)] min-h-104 lg:h-[calc(100vh-13rem)] lg:min-h-0"
       >
-        {/* Entry list */}
-        <div className={`flex flex-col w-full lg:w-72 shrink-0 bg-surface rounded-xl border border-line overflow-hidden ${mobileShowEditor ? 'hidden lg:flex' : 'flex'}`}>
+        {/* Entry list. With no entries yet, desktop hides it — the main pane
+            already shows the "Start your journal" templates, so showing them in
+            both columns doubled up. Phones keep it (it's their only view). */}
+        <div className={`flex flex-col w-full lg:w-72 shrink-0 bg-surface rounded-xl border border-line overflow-hidden ${mobileShowEditor ? 'hidden' : 'flex'} ${!loading && entries.length === 0 ? 'lg:hidden' : 'lg:flex'}`}>
           <div className="p-3 border-b border-line">
             <p className="text-xs text-ink3">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} · visible only to you</p>
           </div>
@@ -639,9 +722,12 @@ export default function JournalPage() {
                       {entry.pinned && <Pin className="w-3 h-3 text-yellow-500 shrink-0 fill-yellow-500" />}
                       <span className="truncate">{entry.title || 'Untitled'}</span>
                     </p>
-                    {entry.pnl != null && (
-                      <span className={`text-xs font-bold shrink-0 ${entry.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(entry.pnl)}</span>
-                    )}
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <PipsBadge move={tradeMove(entry)} />
+                      {entry.pnl != null && (
+                        <span className={`text-xs font-bold ${entry.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(entry.pnl)}</span>
+                      )}
+                    </span>
                   </div>
                   <p className="text-xs text-ink3 truncate mt-0.5">
                     {entry.symbol ? <span className="text-ink2 font-medium">{entry.symbol} · </span> : null}{entry.content}
@@ -679,240 +765,177 @@ export default function JournalPage() {
 
           {(mode === 'new' || mode === 'edit') ? (
             <div className="flex flex-col flex-1 overflow-hidden">
-              {/* Stacked on a phone: side by side, the title box shrank to a few
-                  characters and the two actions came out different widths. */}
-              <div className="p-3 sm:p-4 border-b border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+              {/* Title */}
+              <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-line">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-yellow-500">{mode === 'new' ? 'New entry' : 'Edit entry'}</p>
                 <input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
-                  placeholder="Entry title (optional)"
-                  className="w-full sm:flex-1 min-w-0 bg-transparent text-ink font-semibold text-lg outline-none placeholder-line2"
+                  placeholder="Give it a title (optional)"
+                  className="mt-1 w-full min-w-0 bg-transparent text-ink font-bold text-xl outline-none placeholder-ink3/60"
                 />
-                <div className="flex items-stretch gap-2 sm:gap-1.5 shrink-0">
-                  <Button variant="secondary" size="sm" onClick={cancelEdit} className="flex-1 sm:flex-none min-h-10 text-xs gap-1">
-                    <X className="w-3 h-3" /> Cancel
-                  </Button>
-                  <Button
-                    variant="gold"
-                    size="sm"
-                    onClick={handleSave}
-                    loading={saving}
-                    disabled={!content.trim()}
-                    title={!content.trim() ? 'Add a note before saving' : undefined}
-                    className="flex-1 sm:flex-none min-h-10 text-xs gap-1"
-                  >
-                    <Check className="w-3 h-3" /> Save
-                  </Button>
-                </div>
               </div>
-              {error && (
-                <div className="px-3 sm:px-4 py-2.5 bg-red-500/10 border-b border-red-500/20 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-px" />
-                  <span className="text-xs text-red-400 leading-snug">{error}</span>
-                </div>
-              )}
+
               <div className="flex-1 overflow-y-auto">
-                {/* Notes — the one required field, kept at the top so it's never
-                    missed. Everything below it is optional. */}
-                <div className="px-3 sm:px-4 py-3 border-b border-line">
-                  <label className="block">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">
-                      Notes <span className="text-red-400">*</span>
-                      <span className="ml-1 font-normal normal-case tracking-normal text-line2">· required</span>
-                    </span>
+                <div className="px-4 sm:px-5 py-4 space-y-5">
+                  {/* Notes — the one required field */}
+                  <FormSection title="Notes" required hint="What happened, why you took it, how it felt">
                     <textarea
+                      ref={notesRef}
                       value={content}
                       onChange={e => { setContent(e.target.value); if (error) setError(null) }}
-                      placeholder="What happened? Your setup, why you took it, how it felt…"
-                      className={`mt-1.5 w-full min-h-32 sm:min-h-40 bg-sunken text-ink text-sm outline-none resize-none rounded-lg p-3 placeholder-line2 leading-relaxed border ${error && !content.trim() ? 'border-red-500/50' : 'border-line focus:border-yellow-500/40'}`}
+                      placeholder="e.g. Waited for the London sweep of the Asia low, entered on the break of structure…"
+                      className={`w-full min-h-36 sm:min-h-44 bg-sunken text-ink text-sm outline-none resize-y rounded-xl p-3 placeholder-ink3/70 leading-relaxed border transition-colors ${error && !content.trim() ? 'border-red-500/60' : 'border-line focus:border-yellow-500/50'}`}
                     />
-                  </label>
-                  {error && !content.trim() && (
-                    <p className="mt-1 text-[11px] text-red-400 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" /> {error}
-                    </p>
-                  )}
-                </div>
-                {/* Mood picker (optional) */}
-                <div className="px-3 sm:px-4 py-2 border-b border-line">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">How did you feel? <span className="font-normal normal-case tracking-normal text-line2">· optional</span></span>
-                  <div className="flex gap-2 flex-wrap mt-1.5">
-                  {moods.map(m => (
-                    <button
-                      key={m.value}
-                      onClick={() => setMood(mood === m.value ? '' : m.value)}
-                      className={`text-xs px-3 py-1.5 min-h-8 rounded-full border transition-colors ${mood === m.value ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                  </div>
-                </div>
-                {/* Trade details (optional) — powers the trading calendar */}
-                <div className="px-3 sm:px-4 py-3 pb-6 border-b border-line space-y-3">
-                  <p className="text-[10px] font-bold text-ink3 uppercase tracking-wider">Trade details (optional) · shown on your calendar</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input
-                      value={symbol}
-                      onChange={e => setSymbol(e.target.value)}
-                      placeholder="Symbol (e.g. XAUUSD)"
-                      className={`${fieldCls} uppercase`}
-                    />
-                    <input
-                      type="date"
-                      value={tradedAt}
-                      onChange={e => setTradedAt(e.target.value)}
-                      className={`${fieldCls} scheme-dark`}
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button onClick={() => setDirection(direction === 'buy' ? '' : 'buy')}
-                      className={`text-xs px-3 py-1.5 min-h-8 whitespace-nowrap rounded-full border transition-colors ${direction === 'buy' ? 'bg-green-400/10 border-green-400/50 text-green-400' : 'border-line text-ink3 hover:text-ink2'}`}>
-                      ▲ Buy
-                    </button>
-                    <button onClick={() => setDirection(direction === 'sell' ? '' : 'sell')}
-                      className={`text-xs px-3 py-1.5 min-h-8 whitespace-nowrap rounded-full border transition-colors ${direction === 'sell' ? 'bg-red-400/10 border-red-400/50 text-red-400' : 'border-line text-ink3 hover:text-ink2'}`}>
-                      ▼ Sell
-                    </button>
-                    <span className="w-px self-stretch bg-line mx-1" />
-                    {results.map(r => (
-                      <button key={r.value} onClick={() => setResult(result === r.value ? '' : r.value)}
-                        className={`text-xs px-3 py-1.5 min-h-8 whitespace-nowrap rounded-full border transition-colors ${result === r.value ? `bg-sunken border-line2 ${r.cls}` : 'border-line text-ink3 hover:text-ink2'}`}>
-                        {r.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Setups — the shared vocabulary that makes the analytics
-                      comparable. Tag as many as applied; a real trade is often a
-                      confluence, and each one is scored on its own. */}
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[10px] font-semibold text-ink3">Setups</span>
-                      <span className="text-[10px] text-line2">
-                        {setups.length ? `${setups.length} tagged` : 'tap all that apply'}
-                      </span>
-                      {setups.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setSetups([])}
-                          className="text-[10px] text-ink3 hover:text-ink2 underline decoration-line2 ml-auto"
-                        >
-                          Clear
-                        </button>
-                      )}
+                    <div className="mt-2.5">
+                      <p className="text-xs text-ink3 mb-1.5">How did you feel?</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {moods.map(m => (
+                          <Chip key={m.value} active={mood === m.value} onClick={() => setMood(mood === m.value ? '' : m.value)}>{m.label}</Chip>
+                        ))}
+                      </div>
                     </div>
-                    {/* Search first, then an A–Z list: 35 chips is too many to
-                        scan, and traders know their setup by name or by its
-                        abbreviation ("fvg", "choch"). */}
-                    <div className="relative mt-1.5">
-                      <input
-                        value={setupQuery}
-                        onChange={e => setSetupQuery(e.target.value)}
-                        placeholder="Search setups (fvg, ob, ote…)"
-                        className={`w-full bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-xs text-ink outline-none focus:border-yellow-500/40 placeholder-line2 ${setupQuery ? 'pr-8' : ''}`}
-                      />
-                      {setupQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setSetupQuery('')}
-                          aria-label="Clear setup search"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink3 hover:text-ink2 text-sm leading-none"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                    {/* Capped height so the picker can't push the rest of the
-                        composer off-screen on a phone; ScrollArea draws the rail
-                        that tells you it scrolls, which a phone's overlay
-                        scrollbar never does at rest. */}
-                    <ScrollArea className="max-h-40 sm:max-h-44 mt-1.5" contentClassName="flex flex-wrap gap-1.5">
-                      {visibleSetups.map(s => {
-                        const active = setups.includes(s.value)
-                        return (
-                          <button
-                            key={s.value}
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() => toggleSetup(s.value)}
-                            className={`text-xs px-3 py-1.5 min-h-8 rounded-full border transition-colors ${active ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-line text-ink3 hover:border-line2 hover:text-ink2'}`}
-                          >
-                            {active && <span className="mr-1">✓</span>}
-                            {s.label}
-                          </button>
-                        )
-                      })}
-                      {visibleSetups.length === 0 && (
-                        <p className="text-[11px] text-ink3 py-1">
-                          No setup matches “{setupQuery.trim()}” — clear the search and pick{' '}
-                          <button type="button" onClick={() => { setSetupQuery(''); toggleSetup('other') }} className="text-yellow-400 hover:underline">
-                            {setupLabel('other')}
-                          </button>{' '}
-                          if none fit.
-                        </p>
-                      )}
-                    </ScrollArea>
-                  </div>
+                  </FormSection>
 
-                  {/* Prices — fill entry, exit and lots and the P&L computes itself */}
-                  <div>
-                    <p className="text-[10px] font-semibold text-ink3 mb-1">
-                      Prices <span className="text-line2">· entry + exit + lots ⇒ P&amp;L; add a stop for R</span>
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {/* The trade */}
+                  <FormSection title="Trade" hint="Optional · fills your calendar and analytics">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <FieldLabel label="Symbol">
+                        <input value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="XAUUSD"
+                          className={`${fieldCls} w-full uppercase`} />
+                      </FieldLabel>
+                      <FieldLabel label="Trade date">
+                        <input type="date" value={tradedAt} onChange={e => setTradedAt(e.target.value)}
+                          className={`${fieldCls} w-full scheme-dark`} />
+                      </FieldLabel>
+                      <FieldLabel label="Direction">
+                        <Segmented
+                          value={direction}
+                          onChange={setDirection}
+                          options={[
+                            { value: 'buy', label: '▲ Buy', activeCls: 'bg-green-400/15 text-green-400' },
+                            { value: 'sell', label: '▼ Sell', activeCls: 'bg-red-400/15 text-red-400' },
+                          ]}
+                        />
+                      </FieldLabel>
+                      <FieldLabel label="Result">
+                        <Segmented
+                          value={result}
+                          onChange={setResult}
+                          options={[
+                            { value: 'win', label: 'Win', activeCls: 'bg-green-400/15 text-green-400' },
+                            { value: 'loss', label: 'Loss', activeCls: 'bg-red-400/15 text-red-400' },
+                            { value: 'breakeven', label: 'B/E', activeCls: 'bg-elevated text-ink' },
+                          ]}
+                        />
+                      </FieldLabel>
+                    </div>
+                  </FormSection>
+
+                  {/* Prices and P&L */}
+                  <FormSection title="Prices & P&L" hint="Entry + exit + lots work out the P&L; add a stop to see R">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       <PriceField label="Entry"  value={entryPrice}  onChange={setEntryPrice} />
                       <PriceField label="Exit"   value={exitPrice}   onChange={setExitPrice} />
                       <PriceField label="Lots"   value={lots}        onChange={setLots} placeholder="0.10" />
                       <PriceField label="Stop"   value={stopPrice}   onChange={setStopPrice} />
                       <PriceField label="Target" value={targetPrice} onChange={setTargetPrice} />
+                      {!trade.derived && (
+                        <FieldLabel label="P&L ($)">
+                          <input type="number" step="any" inputMode="decimal" value={pnl} onChange={e => setPnl(e.target.value)}
+                            placeholder="250 or -80" className={`${fieldCls} w-full tabular-nums`} />
+                        </FieldLabel>
+                      )}
                     </div>
-                  </div>
 
-                  {/* P&L — derived from the prices when we have them, else typed */}
-                  {trade.derived ? (
-                    <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-ink3">P&amp;L</span>
-                        <span className={`text-base font-black tabular-nums ${(trade.pnl ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {fmtMoney(trade.pnl ?? 0)}
-                        </span>
-                        {trade.rMultiple != null && (
-                          <span className={`text-xs font-bold tabular-nums rounded px-1.5 py-0.5 ${trade.rMultiple >= 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
-                            {fmtR(trade.rMultiple)}
+                    {(trade.derived || tradeMove({ symbol, direction, entryPrice, exitPrice }) || pnl.trim()) && (
+                      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-3 py-2.5">
+                        {trade.derived ? (
+                          <span className={`text-lg font-black tabular-nums ${(trade.pnl ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(trade.pnl ?? 0)}</span>
+                        ) : pnl.trim() && !Number.isNaN(Number(pnl)) ? (
+                          <span className={`text-lg font-black tabular-nums ${result === 'loss' || (result !== 'win' && Number(pnl) < 0) ? 'text-red-400' : 'text-green-400'}`}>
+                            {fmtMoney(result === 'loss' ? -Math.abs(Number(pnl)) : result === 'win' ? Math.abs(Number(pnl)) : Number(pnl))}
                           </span>
+                        ) : null}
+                        {trade.rMultiple != null && (
+                          <span className={`text-xs font-bold tabular-nums rounded px-1.5 py-0.5 ${trade.rMultiple >= 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>{fmtR(trade.rMultiple)}</span>
                         )}
+                        <PipsBadge move={tradeMove({ symbol, direction, entryPrice, exitPrice })} />
+                        <span className="text-[11px] text-ink3 basis-full">
+                          {trade.derived
+                            ? (trade.rMultiple == null ? 'Worked out from your prices. Add a stop to see it in R.' : 'Worked out from your prices.')
+                            : result === 'loss' || result === 'win' ? `Saved as a ${result}.` : 'Use a minus sign for a loss.'}
+                        </span>
                       </div>
-                      <p className="text-[11px] text-ink3 mt-1">
-                        Calculated from your prices.{' '}
-                        {trade.rMultiple == null && 'Add a stop price to see this in R.'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-ink3">P&L $</span>
-                      <input
-                        type="number"
-                        step="any"
-                        value={pnl}
-                        onChange={e => setPnl(e.target.value)}
-                        placeholder="e.g. 250 or -80"
-                        className="w-32 bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink outline-none focus:border-yellow-500/40 placeholder-line2"
-                      />
-                      {result === 'loss' && (
-                        <span className="text-[11px] text-red-400">Recorded as a loss ({fmtMoney(-Math.abs(Number(pnl) || 0))})</span>
-                      )}
-                      {result === 'win' && (
-                        <span className="text-[11px] text-green-400">Recorded as a win ({fmtMoney(Math.abs(Number(pnl) || 0))})</span>
-                      )}
-                      {result !== 'loss' && result !== 'win' && (
-                        <span className="text-[11px] text-ink3">Use a minus sign for a loss, e.g. -80</span>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </FormSection>
 
-                  <ChartUpload value={chartUrl} onChange={setChartUrl} label="Add chart screenshot (optional)" />
+                  {/* Setups */}
+                  <FormSection
+                    title="Setups"
+                    hint={setups.length ? `${setups.length} tagged` : 'Tap all that apply'}
+                    action={setups.length > 0 ? <button type="button" onClick={() => setSetups([])} className="text-xs text-ink3 hover:text-ink2 underline">Clear</button> : null}
+                  >
+                    {setups.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {setups.map(v => (
+                          <button key={v} type="button" onClick={() => toggleSetup(v)} aria-label={`Remove ${setupLabel(v)}`}
+                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-yellow-500/15 border border-yellow-500/50 text-yellow-400">
+                            {setupLabel(v)} <X className="w-3 h-3" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="relative">
+                      <input
+                        value={setupQuery}
+                        onChange={e => setSetupQuery(e.target.value)}
+                        placeholder="Search setups (fvg, ob, ote…)"
+                        className={`${fieldCls} w-full ${setupQuery ? 'pr-8' : ''}`}
+                      />
+                      {setupQuery && (
+                        <button type="button" onClick={() => setSetupQuery('')} aria-label="Clear setup search"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink3 hover:text-ink2 text-sm leading-none">×</button>
+                      )}
+                    </div>
+                    <ScrollArea className="max-h-40 sm:max-h-44 mt-2" contentClassName="flex flex-wrap gap-1.5">
+                      {visibleSetups.filter(s => !setups.includes(s.value)).map(s => (
+                        <Chip key={s.value} active={false} onClick={() => toggleSetup(s.value)}>{s.label}</Chip>
+                      ))}
+                      {visibleSetups.length === 0 && (
+                        <p className="text-xs text-ink3 py-1">
+                          No setup matches “{setupQuery.trim()}”. Pick{' '}
+                          <button type="button" onClick={() => { setSetupQuery(''); toggleSetup('other') }} className="text-yellow-400 hover:underline">{setupLabel('other')}</button>{' '}
+                          if none fit.
+                        </p>
+                      )}
+                    </ScrollArea>
+                  </FormSection>
+
+                  {/* Chart */}
+                  <FormSection title="Chart" hint="Optional screenshot of the setup">
+                    <ChartUpload value={chartUrl} onChange={setChartUrl} label="Add chart screenshot" />
+                  </FormSection>
                 </div>
+              </div>
+
+              {/* Actions stay at the bottom, where you finish the form */}
+              {error && (
+                <div className="px-4 sm:px-5 py-2 bg-red-500/10 border-t border-red-500/20 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-px" />
+                  <span className="text-xs text-red-400 leading-snug">{error}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-t border-line bg-surface">
+                <span className="hidden sm:block text-[11px] text-ink3 mr-auto">
+                  {mode === 'new' ? 'Your draft is kept if you leave' : 'Editing'}
+                </span>
+                <Button variant="secondary" size="sm" onClick={cancelEdit} className="flex-1 sm:flex-none min-h-10 gap-1">
+                  <X className="w-3.5 h-3.5" /> Cancel
+                </Button>
+                <Button variant="gold" size="sm" onClick={handleSave} loading={saving} className="flex-1 sm:flex-none sm:min-w-32 min-h-10 gap-1">
+                  <Check className="w-3.5 h-3.5" /> {mode === 'new' ? 'Save entry' : 'Save changes'}
+                </Button>
               </div>
             </div>
           ) : selected ? (
@@ -940,6 +963,7 @@ export default function JournalPage() {
                         </span>
                       ))}
                       {selected.result && <span className="text-xs text-ink2">{results.find(r => r.value === selected.result)?.label}</span>}
+                      <PipsBadge move={tradeMove(selected)} />
                       {selected.pnl != null && (
                         <span className={`text-xs font-bold ${selected.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtMoney(selected.pnl)}</span>
                       )}

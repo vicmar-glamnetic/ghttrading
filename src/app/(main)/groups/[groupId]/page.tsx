@@ -1,4 +1,5 @@
 'use client'
+import { MentionInput } from '@/components/posts/MentionInput'
 import { useState, useEffect, useCallback, use } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -76,12 +77,14 @@ function ComposeBox({ groupId, onPost }: { groupId: string; onPost: (post: PostW
     <form onSubmit={handleSubmit} className="bg-surface rounded-xl border border-line p-4 space-y-3">
       <div className="flex gap-3">
         <Avatar src={me.image} name={me.name || session?.user?.name} size="sm" className="shrink-0" />
-        <textarea
+        <MentionInput
+          multiline
           value={content}
-          onChange={e => setContent(e.target.value)}
+          onChange={setContent}
           placeholder="Share something with the group…"
           rows={2}
-          className="flex-1 bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
+          wrapperClassName="flex-1"
+          className="w-full bg-elevated border border-line focus:border-yellow-500/50 rounded-xl px-3 py-2 text-sm outline-none text-ink placeholder-ink3 transition-colors resize-none"
         />
       </div>
       {images.length > 0 && (
@@ -245,7 +248,9 @@ export default function GroupPage({ params }: { params: Promise<{ groupId: strin
             <div className="px-4 pb-4 pt-3 flex items-center justify-between gap-3">
               <div className="flex -space-x-2">
                 {group.members.slice(0, 5).map(m => (
-                  <Avatar key={m.userId} src={m.user.image} name={m.user.name} size="xs" className="border-2 border-surface" />
+                  <Link key={m.userId} href={`/profile/${m.userId}`} title={m.user.name || undefined} className="rounded-full hover:z-10 hover:scale-110 transition-transform">
+                    <Avatar src={m.user.image} name={m.user.name} size="xs" className="border-2 border-surface" />
+                  </Link>
                 ))}
                 {group._count.members > 5 && (
                   <div className="w-6 h-6 rounded-full bg-line border-2 border-surface flex items-center justify-center">

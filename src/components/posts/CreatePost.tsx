@@ -1,4 +1,5 @@
 'use client'
+import { MentionInput } from '@/components/posts/MentionInput'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { Avatar } from '@/components/ui/Avatar'
@@ -73,7 +74,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
           <div className="flex gap-3 items-center">
             <Avatar src={me.image} name={me.name || session?.user?.name} size="md" />
             <button onClick={() => setExpanded(true)}
-              className="flex-1 bg-elevated hover:bg-[#24243a] border border-line hover:border-yellow-500/30 rounded-xl px-4 py-3 text-left text-sm text-ink3 transition-all">
+              className="flex-1 bg-elevated hover:bg-sunken border border-line hover:border-yellow-500/30 rounded-xl px-4 py-3 text-left text-sm text-ink3 transition-all">
               Share analysis, signals, or insights...
             </button>
           </div>
@@ -111,10 +112,11 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
                 ))}
               </div>
 
-              <textarea
+              <MentionInput
+                multiline
                 autoFocus
                 value={content}
-                onChange={e => setContent(e.target.value)}
+                onChange={setContent}
                 placeholder={
                   category === 'signal-buy' ? 'Share your BUY signal details: pair, entry, TP, SL...' :
                   category === 'signal-sell' ? 'Share your SELL signal details: pair, entry, TP, SL...' :

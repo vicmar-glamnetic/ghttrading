@@ -219,10 +219,12 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
     <div className="bg-surface rounded-xl border border-line p-4 flex flex-col">
       {/* post header */}
       <div className="flex items-center gap-3">
-        <Avatar src={idea.author.image} name={idea.author.name} size="md" />
+        <Link href={`/profile/${idea.author.id}`} className="shrink-0">
+          <Avatar src={idea.author.image} name={idea.author.name} size="md" />
+        </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-ink text-sm truncate">{idea.author.name || 'Coach'}</span>
+            <Link href={`/profile/${idea.author.id}`} className="font-semibold text-ink text-sm truncate hover:text-yellow-500 transition-colors">{idea.author.name || 'Coach'}</Link>
             <span className="text-[9px] font-black uppercase tracking-wider bg-yellow-500 text-black rounded px-1.5 py-0.5 shrink-0">Signal</span>
           </div>
           <p className="text-xs text-ink3">
@@ -273,7 +275,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
       {/* rows */}
       <div className="mt-3 divide-y divide-line border-t border-line">
         {/* entry */}
-        <div className="flex items-center gap-3 py-2.5">
+        <div className="flex items-center gap-3 py-2.5 lg:py-1.5">
           <ArrowRight className="w-4 h-4 text-ink2 shrink-0" />
           <span className="text-sm font-semibold text-ink w-14 shrink-0">Entry</span>
           <span className="text-sm text-ink flex-1 tabular-nums">{fmtRange(idea.entryLow, idea.entryHigh)}</span>
@@ -281,7 +283,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
         </div>
         {/* take profits */}
         {idea.takeProfits.map((tp, i) => (
-          <div key={i} className="flex items-center gap-3 py-2.5">
+          <div key={i} className="flex items-center gap-3 py-2.5 lg:py-1.5">
             {tp.hit
               ? <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
               : <Circle className="w-4 h-4 text-line2 shrink-0" />}
@@ -294,7 +296,7 @@ function IdeaCard({ idea, canManage, onEdit, onDelete, onClose, price, acct }: {
         ))}
         {/* stop loss */}
         {(idea.slLow != null || idea.slHigh != null) && (
-          <div className="flex items-center gap-3 py-2.5">
+          <div className="flex items-center gap-3 py-2.5 lg:py-1.5">
             <XCircle className="w-4 h-4 text-red-400 shrink-0" />
             <span className="text-sm font-semibold text-ink w-14 shrink-0">SL</span>
             <span className="text-sm text-ink flex-1 tabular-nums">{fmtRange(idea.slLow, idea.slHigh)}</span>
@@ -1533,22 +1535,24 @@ export default function IdeasPage() {
           the next trade, not buried in the journal after the damage is done. */}
       <RiskGuard />
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-yellow-500" />
+      {/* Title + staff actions. On a phone Guide and Message go icon-only so the
+          row never runs off the screen. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Lightbulb className="w-5 h-5 text-yellow-500 shrink-0" />
           <h1 className="font-bold text-ink text-lg">Signals</h1>
         </div>
         {isStaff && (
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowGuide(true)} title="Coach guide"
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setShowGuide(true)} title="Coach guide" aria-label="Coach guide"
               className="flex items-center gap-1.5 text-xs font-bold text-ink2 border border-line rounded-lg px-3 py-1.5 hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
-              <GraduationCap className="w-3.5 h-3.5" /> Guide
+              <GraduationCap className="w-3.5 h-3.5" /><span className="hidden sm:inline">Guide</span>
             </button>
-            <button onClick={() => setMessenger(true)} title="Send a message to the Telegram/Discord rooms"
+            <button onClick={() => setMessenger(true)} title="Send a message to the Telegram/Discord rooms" aria-label="Message the rooms"
               className="flex items-center gap-1.5 text-xs font-bold text-ink2 border border-line rounded-lg px-3 py-1.5 hover:text-yellow-500 hover:border-yellow-500/40 hover:bg-elevated transition-colors">
-              <Send className="w-3.5 h-3.5" /> Message
+              <Send className="w-3.5 h-3.5" /><span className="hidden sm:inline">Message</span>
             </button>
-            <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs">
+            <Button variant="gold" size="sm" onClick={() => setEditor({ open: true, idea: null })} className="gap-1.5 text-xs whitespace-nowrap">
               <Plus className="w-3.5 h-3.5" /> New Signal
             </Button>
           </div>
@@ -1632,7 +1636,7 @@ export default function IdeasPage() {
       {tab === 'stats' ? (
         <PerformancePanel />
       ) : loading ? (
-        <div className="space-y-4 max-w-xl mx-auto">
+        <div className="space-y-4 max-w-xl mx-auto lg:max-w-none lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
           {[1, 2, 3].map(i => <div key={i} className="h-72 bg-surface rounded-xl border border-line animate-pulse" />)}
         </div>
       ) : ideas.length === 0 ? (
@@ -1648,11 +1652,12 @@ export default function IdeasPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-4 max-w-xl mx-auto">
+        // Desktop: signals sit two to a row instead of one narrow centred column.
+        <div className="space-y-4 max-w-xl mx-auto lg:max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
           {/* auto position-size account bar */}
-          <AccountBar acct={acct} open={showAcct} setOpen={setShowAcct} onSave={saveAcct} onClear={() => saveAcct(null)} />
+          <div className="lg:col-span-2"><AccountBar acct={acct} open={showAcct} setOpen={setShowAcct} onSave={saveAcct} onClear={() => saveAcct(null)} /></div>
           {filteredIdeas.length === 0 && (
-            <div className="bg-surface rounded-xl border border-line p-10 text-center">
+            <div className="bg-surface rounded-xl border border-line p-10 text-center lg:col-span-2">
               <Lightbulb className="w-10 h-10 text-yellow-500/30 mx-auto mb-3" />
               <p className="text-ink3 text-sm">No signals match these filters.</p>
               <button
@@ -1677,7 +1682,7 @@ export default function IdeasPage() {
           ))}
 
           {ideas.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 lg:col-span-2">
               <p className="text-[11px] text-ink3">
                 Showing {(pageSafe - 1) * PAGE_SIZE + 1}–{Math.min(pageSafe * PAGE_SIZE, ideas.length)} of {ideas.length}
               </p>

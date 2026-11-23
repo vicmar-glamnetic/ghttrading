@@ -24,11 +24,28 @@ export function validateImage(file: File, maxMB = IMAGE_MAX_MB): string | null {
   return null
 }
 
+const isHeicName = (name: string) => /\.(heic|heif)$/i.test(name)
+
+/**
+ * iPhone photos are often HEIC, which Chrome, Firefox and Android can't display.
+ * Convert them to JPEG in the browser; any other file is returned unchanged.
+ * The converter is loaded only when a HEIC file is actually picked.
+ */
+export async function toWebImage(file: File): Promise<File> {
+  const heicType = /image\/hei[cf]/i.test(file.type)
+  if (!heicType && !isHeicName(file.name)) return file
+  const { heicTo } = await import('heic-to/next')
+  const jpeg = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.85 })
+  const name = isHeicName(file.name) ? file.name.replace(/\.(heic|heif)$/i, '.jpg') : `${file.name}.jpg`
+  return new File([jpeg], name, { type: 'image/jpeg' })
+}
+
 /**
  * Upload a file directly to Vercel Blob (bypasses the 4.5 MB serverless body
  * limit, so videos work) and return its public URL. The DB stores only the URL.
  */
-export async function uploadToBlob(file: File): Promise<UploadedFile> {
+export async function uploadToBlob(input: File): Promise<UploadedFile> {
+  const file = await toWebImage(input)
   const blob = await upload(file.name, file, {
     access: 'public',
     handleUploadUrl: '/api/upload',

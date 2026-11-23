@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { notify } from '@/lib/notify'
 
 export async function POST(req: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
@@ -20,7 +21,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ userId:
         data: { senderId: session.user.id, receiverId: userId },
       })
 
-      await db.notification.create({
+      await notify({
         data: {
           type: 'friend_request',
           message: `${session.user.name} sent you a friend request`,
@@ -53,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ userId:
         skipDuplicates: true,
       })
 
-      await db.notification.create({
+      await notify({
         data: {
           type: 'friend_accept',
           message: `${session.user.name} accepted your friend request`,

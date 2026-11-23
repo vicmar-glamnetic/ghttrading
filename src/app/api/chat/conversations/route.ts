@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { USER_LITE } from '@/lib/chat'
+import { USER_LITE, messagePreview } from '@/lib/chat'
 
 // List my DM conversations (most recent first) with the other user, last
 // message preview, and an unread flag.
@@ -28,7 +28,7 @@ export async function GET() {
     return {
       id: c.id,
       other,
-      lastMessage: last ? { content: last.content, createdAt: last.createdAt, senderId: last.senderId } : null,
+      lastMessage: last ? { content: messagePreview(last), createdAt: last.createdAt, senderId: last.senderId } : null,
       unread,
     }
   })

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Image from 'next/image'
+import { UserRound } from 'lucide-react'
 import { getInitials, cn } from '@/lib/utils'
 
 interface AvatarProps {
@@ -52,7 +53,9 @@ export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
           />
         )
       ) : (
-        <span className="select-none">{name ? getInitials(name) : '?'}</span>
+        name
+          ? <span className="select-none">{getInitials(name)}</span>
+          : <UserRound aria-hidden className="w-[55%] h-[55%]" />
       )}
     </div>
   )

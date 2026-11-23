@@ -1,10 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Users } from 'lucide-react'
 import { OnlineAvatar } from '@/components/ui/OnlineAvatar'
 import { HEARTBEAT_MS } from '@/lib/presence'
-import { CARD_H } from '@/components/layout/RightSidebar'
+import { PanelSection } from '@/components/layout/PanelSection'
 
 interface OnlineUser {
   id: string
@@ -49,37 +48,32 @@ export function OnlineNow() {
   if (!loaded || total === 0) return null
 
   return (
-    <div className={`bg-surface rounded-xl border border-line overflow-hidden flex flex-col ${CARD_H}`}>
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line shrink-0">
-        <Users className="w-4 h-4 text-green-400" />
-        <span className="text-sm font-bold text-ink">Online now</span>
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-green-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> {total}
+    <PanelSection
+      label="Online now"
+      meta={
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-green-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /> {total}
         </span>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-none p-2 space-y-0.5">
+      }
+    >
+      <div className="max-h-56 overflow-y-auto scrollbar-none pb-2">
         {users.map(u => (
           <Link
             key={u.id}
             href={`/profile/${u.id}`}
-            className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-elevated transition-colors"
+            className="flex items-center gap-2.5 px-4 py-1.5 hover:bg-elevated transition-colors"
           >
             <OnlineAvatar src={u.image} name={u.name} size="xs" lastSeenAt={u.lastSeenAt} />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-ink truncate">{u.name || 'Unnamed'}</p>
-              {u.username && <p className="text-[10px] text-ink3 truncate">@{u.username}</p>}
-            </div>
+            <span className="min-w-0 truncate text-xs font-medium text-ink">{u.name || 'Unnamed'}</span>
             {u.role !== 'member' && (
-              <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-yellow-500 shrink-0">
-                {u.role}
-              </span>
+              <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wide text-yellow-500">{u.role}</span>
             )}
           </Link>
         ))}
         {total > users.length && (
-          <p className="px-1.5 pt-1 text-[10px] text-ink3">+{total - users.length} more online</p>
+          <p className="px-4 pt-1 text-[10px] text-ink3">+{total - users.length} more</p>
         )}
       </div>
-    </div>
+    </PanelSection>
   )
 }

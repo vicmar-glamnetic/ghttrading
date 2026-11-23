@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { notify } from '@/lib/notify'
+import { notifyMentions } from '@/lib/mentions'
 
 export async function GET(req: Request, { params }: { params: Promise<{ postId: string }> }) {
   try {
@@ -66,10 +68,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ postId:
     })
 
     // Notify the parent comment's author on a reply, else the post author.
+    // Whoever gets that notification isn't also told they were mentioned.
+    let notified: string | null = null
     if (comment.parentId) {
       const parent = await db.comment.findUnique({ where: { id: comment.parentId }, select: { authorId: true } })
       if (parent && parent.authorId !== session.user.id) {
-        await db.notification.create({
+        notified = parent.authorId
+        await notify({
           data: {
             type: 'comment',
             message: `${session.user.name} replied to your comment`,
@@ -82,7 +87,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ postId:
     } else {
       const post = await db.post.findUnique({ where: { id: postId }, select: { authorId: true } })
       if (post && post.authorId !== session.user.id) {
-        await db.notification.create({
+        notified = post.authorId
+        await notify({
           data: {
             type: 'comment',
             message: `${session.user.name} commented on your post`,
@@ -94,7 +100,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ postId:
       }
     }
 
-    return NextResponse.json(comment, { status: 201 })
+    const { groupId } = (await db.post.findUnique({ where: { id: postId }, select: { groupId: true } })) ?? {}
+    await notifyMentions({
+      text: comment.content, senderId: session.user.id, senderName: session.user.name,
+      link: `/posts/${postId}`, where: 'comment', groupId, skip: notified ? [notified] : [],
+    })
+
+        return NextResponse.json(comment, { status: 201 })
   } catch (error) {
     console.error('[COMMENTS_POST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

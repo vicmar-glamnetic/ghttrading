@@ -24,15 +24,15 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       <SessionGuard />
       <PresenceHeartbeat />
       <Navbar />
-      <div
-        className="w-full px-4 sm:px-6 lg:px-8 2xl:px-12"
-        style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
-      >
-        <div className="flex gap-5 py-5">
-          <LeftSidebar paywallEnabled={PAYWALL_ENABLED} />
-          <main className="flex-1 min-w-0 max-w-2xl lg:max-w-3xl xl:max-w-5xl 2xl:max-w-7xl mx-auto space-y-4 pb-28 lg:pb-0">{children}</main>
-          <RightSidebar />
-        </div>
+      {/* Icon rail on the left, workspace in the middle, market panel on the
+          right (wide desktops only). Phones get the full width plus the tab bar
+          and side drawer. */}
+      <div className="flex w-full" style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}>
+        <LeftSidebar paywallEnabled={PAYWALL_ENABLED} />
+        <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-5 pb-28 md:pb-8">
+          <div className="mx-auto max-w-6xl space-y-4">{children}</div>
+        </main>
+        <RightSidebar />
       </div>
       <MobileBottomNav paywallEnabled={PAYWALL_ENABLED} />
       <WelcomeTour />

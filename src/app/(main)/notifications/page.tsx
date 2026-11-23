@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Avatar } from '@/components/ui/Avatar'
 import { timeAgo } from '@/lib/utils'
 import { Bell, CheckCheck } from 'lucide-react'
@@ -9,9 +10,11 @@ import type { NotificationWithSender } from '@/types'
 
 const notifIcons: Record<string, string> = {
   like: '👍', comment: '💬', friend_request: '👥', friend_accept: '🤝', follow: '📈', post_tag: '🏷️', coach_room: '📨',
+  mention: '💬', share: '🔁', story_reaction: '✨',
 }
 
 export default function NotificationsPage() {
+  const router = useRouter()
   const [notifications, setNotifications] = useState<NotificationWithSender[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -107,7 +110,18 @@ export default function NotificationsPage() {
               className={`flex items-start gap-3 p-4 hover:bg-elevated transition-colors ${!notif.read ? 'bg-yellow-500/5' : ''}`}
             >
               <div className="relative shrink-0">
-                <Avatar src={notif.sender?.image} name={notif.sender?.name} size="md" />
+                {notif.sender ? (
+                  // The whole row is a link already, so this can't be a nested <a>.
+                  <span role="link" tabIndex={0} aria-label={`${notif.sender.name || 'Member'}'s profile`}
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); router.push(`/profile/${notif.sender!.id}`) }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); router.push(`/profile/${notif.sender!.id}`) } }}
+                    className="block rounded-full cursor-pointer hover:opacity-80">
+                    <Avatar src={notif.sender.image} name={notif.sender.name} size="md" />
+                  </span>
+                ) : (
+                  // No sender (system notices, reminders): plain account icon.
+                  <Avatar src={null} name={null} size="md" />
+                )}
                 <span className="absolute -bottom-1 -right-1 text-sm">{notifIcons[notif.type] || '🔔'}</span>
               </div>
               <div className="flex-1 min-w-0">

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { withReactionSummaries } from '@/lib/postReactions'
+import { notify } from '@/lib/notify'
+import { postInclude, finalizePosts } from '@/lib/postInclude'
+import { notifyMentions } from '@/lib/mentions'
 
 export async function GET(req: Request) {
   try {
@@ -45,30 +47,7 @@ export async function GET(req: Request) {
 
     const posts = await db.post.findMany({
       where: whereClause,
-      include: {
-        author: { select: { id: true, name: true, image: true, username: true } },
-        page: { select: { id: true, name: true, image: true, verified: true } },
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-        comments: {
-          where: { parentId: null },
-          take: 3,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            author: { select: { id: true, name: true, image: true, username: true } },
-            _count: { select: { likes: true, replies: true } },
-            likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-            replies: {
-              orderBy: { createdAt: 'asc' },
-              include: {
-                author: { select: { id: true, name: true, image: true, username: true } },
-                _count: { select: { likes: true } },
-                likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-              },
-            },
-          },
-        },
-      },
+      include: postInclude(session.user.id),
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -80,7 +59,7 @@ export async function GET(req: Request) {
       nextCursor = next?.id
     }
 
-    const postsWithReactions = await withReactionSummaries(posts)
+    const postsWithReactions = await finalizePosts(posts, session.user.id)
 
     return NextResponse.json({ posts: postsWithReactions, nextCursor }, {
       headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
@@ -98,47 +77,50 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { content, images, feeling, location, privacy } = await req.json()
+    const { content, images, feeling, location, privacy, sharedPostId } = await req.json()
+    const uid = session.user.id
 
-    if (!content?.trim()) {
+    // Sharing: point at the original (sharing a share shares what it shared),
+    // and only public, non-group posts can be shared.
+    let shareOf: { id: string; authorId: string } | null = null
+    if (sharedPostId) {
+      const target = await db.post.findUnique({
+        where: { id: String(sharedPostId) },
+        select: { id: true, authorId: true, privacy: true, groupId: true, sharedPost: { select: { id: true, authorId: true, privacy: true, groupId: true } } },
+      })
+      const original = target?.sharedPost ?? target
+      if (!original || original.privacy !== 'public' || original.groupId) {
+        return NextResponse.json({ error: 'This post can’t be shared.' }, { status: 400 })
+      }
+      shareOf = { id: original.id, authorId: original.authorId }
+    }
+
+    if (!shareOf && !content?.trim()) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
 
     const post = await db.post.create({
       data: {
-        content,
-        images: images || [],
-        feeling,
+        content: String(content ?? '').trim(),
+        images: shareOf ? [] : images || [],
+        feeling: shareOf ? null : feeling,
         location,
         privacy: privacy || 'public',
-        authorId: session.user.id,
+        authorId: uid,
+        ...(shareOf ? { isShare: true, sharedPostId: shareOf.id } : {}),
       },
-      include: {
-        author: { select: { id: true, name: true, image: true, username: true } },
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-        comments: {
-          where: { parentId: null },
-          take: 3,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            author: { select: { id: true, name: true, image: true, username: true } },
-            _count: { select: { likes: true, replies: true } },
-            likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-            replies: {
-              orderBy: { createdAt: 'asc' },
-              include: {
-                author: { select: { id: true, name: true, image: true, username: true } },
-                _count: { select: { likes: true } },
-                likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-              },
-            },
-          },
-        },
-      },
+      include: postInclude(uid),
     })
 
-    return NextResponse.json({ ...post, reactions: [] }, { status: 201 })
+    if (shareOf && shareOf.authorId !== uid) {
+      await notify({
+        data: { type: 'share', message: `${session.user.name} shared your post`, receiverId: shareOf.authorId, senderId: uid, link: `/posts/${post.id}` },
+      })
+    }
+    await notifyMentions({ text: post.content, senderId: uid, senderName: session.user.name, link: `/posts/${post.id}`, where: 'post' })
+
+    const [shaped] = await finalizePosts([post], uid)
+    return NextResponse.json(shaped, { status: 201 })
   } catch (error) {
     console.error('[POSTS_POST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

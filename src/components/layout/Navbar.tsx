@@ -4,7 +4,10 @@ import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Avatar } from '@/components/ui/Avatar'
-import { Bell, Home, Users, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon } from 'lucide-react'
+import { Bell, LogOut, Settings, User, ChevronDown, CheckCheck, Sun, Moon, Sparkles, Menu } from 'lucide-react'
+import { MarketStrip } from './MarketStrip'
+import { openDrawer, DRAWER_BADGE_EVENT, NOTIF_COUNT_EVENT } from './MobileBottomNav'
+import { openTour } from '@/components/WelcomeTour'
 import { timeAgo } from '@/lib/utils'
 import { useTheme } from '@/components/ThemeProvider'
 import { useMyProfile } from '@/lib/useMyProfile'
@@ -30,6 +33,7 @@ interface Notification {
 
 const notifIcons: Record<string, string> = {
   like: '👍', comment: '💬', friend_request: '👥', friend_accept: '🤝', follow: '📈', post_tag: '🏷️',
+  mention: '💬', share: '🔁', story_reaction: '✨', coach_room: '📨',
 }
 
 export function Navbar() {
@@ -43,6 +47,17 @@ export function Navbar() {
   const [markingRead, setMarkingRead] = useState(false)
 
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [drawerBadge, setDrawerBadge] = useState<{ count: number; live: boolean }>({ count: 0, live: false })
+
+  // Phones: the drawer lists the unread count; the ☰ shows what's waiting in it.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(NOTIF_COUNT_EVENT, { detail: unreadCount }))
+  }, [unreadCount])
+  useEffect(() => {
+    const on = (e: Event) => setDrawerBadge((e as CustomEvent<{ count: number; live: boolean }>).detail)
+    window.addEventListener(DRAWER_BADGE_EVENT, on)
+    return () => window.removeEventListener(DRAWER_BADGE_EVENT, on)
+  }, [])
 
   const notifsRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -104,26 +119,36 @@ export function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 border-b border-line bg-sunken"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
-      <div className="w-full px-4 sm:px-6 lg:px-8 2xl:px-12 h-14 flex items-center gap-3">
+      <div className="w-full px-3 sm:pr-5 h-14 flex items-center gap-2 sm:gap-4">
 
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 mr-4 shrink-0">
+        {/* ☰ — phones open the side menu */}
+        <button
+          type="button"
+          onClick={openDrawer}
+          aria-label="Open menu"
+          className="md:hidden relative -ml-1 p-2 rounded-lg text-ink2 hover:text-yellow-500 hover:bg-elevated transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+          {drawerBadge.count > 0 ? (
+            <span className="absolute top-1 right-0.5 min-w-4 h-4 px-1 rounded-full bg-yellow-500 text-black text-[9px] font-bold grid place-items-center">{drawerBadge.count}</span>
+          ) : drawerBadge.live ? (
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-sunken" />
+          ) : null}
+        </button>
+
+        {/* Logo — sits over the icon rail */}
+        <Link href="/" className="flex items-center gap-2 shrink-0 md:w-[52px] md:justify-center lg:w-auto lg:justify-start">
           <img src="/logo.png" alt="Gold Heist Trading" className="w-9 h-9 object-contain" />
-          <span className="hidden sm:block truncate text-sm font-bold tracking-wide text-ink">
+          <span className="hidden lg:block truncate text-sm font-bold tracking-wide text-ink">
             GOLD HEIST<span className="text-yellow-500"> TRADING</span>
           </span>
         </Link>
 
-        {/* Right nav icons */}
-        <div className="flex items-center gap-1 ml-auto">
-          {/* Feed + Traders — hidden on mobile (available in the bottom nav) */}
-          <Link href="/feed" className="hidden sm:block p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
-            <Home className="w-5 h-5" />
-          </Link>
-          <Link href="/friends" className="hidden sm:block p-2 hover:bg-elevated rounded-lg text-ink2 hover:text-yellow-500 transition-colors">
-            <Users className="w-5 h-5" />
-          </Link>
+        <span className="hidden sm:block h-5 w-px bg-line" aria-hidden />
+        <MarketStrip />
 
+        {/* Right side */}
+        <div className="flex items-center gap-1 ml-auto">
           {/* Light / dark toggle */}
           <ThemeToggle />
 
@@ -142,7 +167,7 @@ export function Navbar() {
             </button>
 
             {showNotifs && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-surface rounded-xl shadow-2xl border border-line overflow-hidden z-50">
+              <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1.5rem)] bg-surface rounded-xl shadow-2xl border border-line overflow-hidden z-50">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-line">
                   <span className="font-bold text-sm text-ink">Notifications</span>
@@ -191,7 +216,7 @@ export function Navbar() {
 
           {/* User menu */}
           {session?.user && (
-            <div ref={userMenuRef} className="relative ml-1">
+            <div ref={userMenuRef} className="relative ml-1 hidden md:block">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 px-2 py-1 hover:bg-elevated rounded-lg transition-colors"
@@ -213,6 +238,10 @@ export function Navbar() {
                     className="flex items-center gap-3 p-3 hover:bg-elevated text-sm text-ink2 hover:text-ink transition-colors">
                     <Settings className="w-4 h-4" /> Settings
                   </Link>
+                  <button onClick={() => { setShowUserMenu(false); openTour() }}
+                    className="flex w-full items-center gap-3 p-3 hover:bg-elevated text-sm text-ink2 hover:text-ink transition-colors">
+                    <Sparkles className="w-4 h-4" /> Take a tour
+                  </button>
                   <button onClick={() => signOut({ callbackUrl: '/login' })}
                     className="flex items-center gap-3 p-3 hover:bg-elevated text-sm text-red-400 hover:text-red-300 w-full text-left transition-colors border-t border-line">
                     <LogOut className="w-4 h-4" /> Sign Out

@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { CreatePost } from '@/components/posts/CreatePost'
 import { PostCard } from '@/components/posts/PostCard'
 import { TrendingUp, Zap } from 'lucide-react'
+import { StoriesBar } from '@/components/stories/StoriesBar'
 import type { PostWithDetails } from '@/types'
 
 type Filter = 'all' | 'signals' | 'analysis'
@@ -29,9 +30,10 @@ interface FeedClientProps {
   initialPosts: PostWithDetails[]
   initialNextCursor: string | undefined
   currentUserId: string
+  me: { id: string; name: string | null; image: string | null }
 }
 
-export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: FeedClientProps) {
+export function FeedClient({ initialPosts, initialNextCursor, currentUserId, me }: FeedClientProps) {
   const [posts, setPosts] = useState<PostWithDetails[]>(initialPosts)
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor ?? null)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -104,6 +106,8 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
         </div>
       </div>
 
+      <StoriesBar me={me} />
+
       <CreatePost onPostCreated={post => setPosts(prev => [post as PostWithDetails, ...prev])} />
 
       {filtered.length === 0 ? (
@@ -123,6 +127,7 @@ export function FeedClient({ initialPosts, initialNextCursor, currentUserId }: F
             post={post}
             currentUserId={currentUserId}
             onDelete={postId => setPosts(prev => prev.filter(p => p.id !== postId))}
+            onShared={shared => setPosts(prev => [shared, ...prev])}
           />
         ))
       )}

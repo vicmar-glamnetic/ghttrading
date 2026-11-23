@@ -189,14 +189,88 @@ body {
 
 /* Full-bleed pages.
 
-   The main column is capped for readability (max-w-2xl up to max-w-7xl), which
+   The workspace column is capped for readability (max-w-6xl), which
    is right for text but wastes half the screen on the MT5 terminal, where every
    pixel is chart. A page opts out by marking its root element with
    data-full-width and then fills the whole space between the two sidebars.
 
    The attribute inside :has() gives this rule more specificity than Tailwind's
-   max-w-* utilities on <main>, so it wins at every breakpoint no matter which
-   order the two land in the stylesheet — verified from 800px to 2400px. */
-main:has(> [data-full-width]) {
+   max-w-* utility on that column, so it wins no matter which order the two land
+   in the stylesheet. */
+main > div:has(> [data-full-width]) {
   max-width: none;
+}
+
+/* Scroll areas with no visible scrollbar: the icon rail, the stories row, the
+   market panel. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* ── Feed, stories and drawer motion ──────────────────────────────────────
+
+   Entrances use fill-mode `backwards`, never `forwards`: once one ends the
+   element has no transform left on it, so fixed-position modals inside still
+   position against the viewport. All of it is off under reduced motion. */
+:root { --ght-ease: cubic-bezier(0.22, 1, 0.36, 1); }
+
+@property --ght-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes ght-fade { from { opacity: 0; } }
+@keyframes ght-pop  { from { opacity: 0; transform: translateY(8px) scale(0.97); } }
+@keyframes ght-tick { from { opacity: 0.4; transform: translateY(-3px); } }
+@keyframes ght-spin-angle { to { --ght-angle: 360deg; } }
+@keyframes ght-burst {
+  0%   { transform: scale(0.4) rotate(-12deg); }
+  55%  { transform: scale(1.35) rotate(6deg); }
+  100% { transform: none; }
+}
+@keyframes ght-sheet-up  { from { transform: translateY(100%); } }
+@keyframes ght-drawer-in { from { transform: translateX(-100%); } }
+/* Always ends: onAnimationEnd is what clears the emoji. */
+@keyframes ght-story-react {
+  0%   { opacity: 0; transform: translateY(20px) scale(0.6); }
+  25%  { opacity: 1; transform: translateY(0) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-140px) scale(1); }
+}
+
+/* Unseen story ring, slowly turning. */
+.story-ring {
+  background: conic-gradient(from var(--ght-angle), #d4b159, #ad9045, #8a7234, #f0dca0, #d4b159);
+  animation: ght-spin-angle 3s linear infinite;
+}
+.story-card { transition: transform 0.2s var(--ght-ease), box-shadow 0.2s var(--ght-ease); }
+.story-card:active { transform: scale(0.97); }
+.story-media { transition: transform 0.45s var(--ght-ease); }
+.story-pick { transition: transform 0.2s var(--ght-ease), filter 0.2s; }
+@media (hover: hover) {
+  .story-card:hover { box-shadow: 0 10px 26px -14px rgb(0 0 0 / 0.7); }
+  .story-card:hover .story-media { transform: scale(1.06); }
+  .story-pick:hover { transform: translateY(-2px); filter: brightness(1.1); }
+}
+.story-viewer { animation: ght-fade 0.2s ease-out backwards; }
+.story-frame  { animation: ght-pop 0.28s var(--ght-ease) backwards; }
+.story-react-burst { animation: ght-story-react 0.9s ease-out forwards; }
+.sheet-panel { animation: ght-sheet-up 0.32s var(--ght-ease) backwards; }
+
+/* Reactions: the chosen emoji bursts, the picker springs open. */
+.react-pop { display: inline-block; animation: ght-burst 0.45s var(--ght-ease) backwards; }
+/* Opacity only — the post picker is centred with a translate utility. */
+.picker-in { animation: ght-fade 0.18s ease-out backwards; }
+
+.msg-in     { animation: ght-pop 0.25s var(--ght-ease) backwards; }
+.price-tick { display: inline-block; animation: ght-tick 0.4s var(--ght-ease) backwards; }
+
+.drawer-backdrop { animation: ght-fade 0.2s ease-out backwards; }
+.drawer-panel    { animation: ght-drawer-in 0.3s var(--ght-ease) backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .story-ring, .story-viewer, .story-frame, .sheet-panel, .react-pop, .picker-in,
+  .msg-in, .price-tick, .drawer-backdrop, .drawer-panel { animation: none; }
+  .story-react-burst { animation-duration: 0.01ms; }
+  .story-card, .story-media, .story-pick { transition: none; }
 }

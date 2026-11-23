@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { FeedClient } from '@/components/feed/FeedClient'
-import { withReactionSummaries } from '@/lib/postReactions'
+import { postInclude, finalizePosts } from '@/lib/postInclude'
 import type { PostWithDetails } from '@/types'
 
 export default async function FeedPage() {
@@ -12,9 +12,10 @@ export default async function FeedPage() {
   const uid = session.user.id
   const limit = 10
 
-  const [following, pageFollows] = await Promise.all([
+  const [following, pageFollows, me] = await Promise.all([
     db.follow.findMany({ where: { followerId: uid }, select: { followingId: true } }),
     db.pageFollow.findMany({ where: { followerId: uid }, select: { pageId: true } }),
+    db.user.findUnique({ where: { id: uid }, select: { id: true, name: true, image: true } }),
   ])
 
   const followingIds = following.map(f => f.followingId)
@@ -30,20 +31,7 @@ export default async function FeedPage() {
         { privacy: 'public', pageId: null },
       ],
     },
-    include: {
-      author: { select: { id: true, name: true, image: true, username: true } },
-      _count: { select: { likes: true, comments: true } },
-      likes: { where: { userId: uid }, select: { userId: true, type: true } },
-      comments: {
-        take: 3,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          author: { select: { id: true, name: true, image: true, username: true } },
-          _count: { select: { likes: true } },
-          likes: { where: { userId: uid }, select: { userId: true } },
-        },
-      },
-    },
+    include: postInclude(uid),
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
   })
@@ -54,13 +42,14 @@ export default async function FeedPage() {
     nextCursor = next?.id
   }
 
-  const posts = await withReactionSummaries(postsRaw)
+  const posts = await finalizePosts(postsRaw, uid)
 
   return (
     <FeedClient
       initialPosts={posts as unknown as PostWithDetails[]}
       initialNextCursor={nextCursor}
       currentUserId={uid}
+      me={me ?? { id: uid, name: session.user.name ?? null, image: session.user.image ?? null }}
     />
   )
 }

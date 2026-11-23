@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { withReactionSummaries } from '@/lib/postReactions'
+import { postInclude, finalizePosts } from '@/lib/postInclude'
+import { notifyMentions } from '@/lib/mentions'
 
 export async function GET(
   req: Request,
@@ -21,30 +22,7 @@ export async function GET(
 
     const posts = await db.post.findMany({
       where: { groupId },
-      include: {
-        author: { select: { id: true, name: true, image: true, username: true } },
-        group: { select: { id: true, name: true, image: true } },
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-        comments: {
-          where: { parentId: null },
-          take: 3,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            author: { select: { id: true, name: true, image: true, username: true } },
-            _count: { select: { likes: true, replies: true } },
-            likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-            replies: {
-              orderBy: { createdAt: 'asc' },
-              include: {
-                author: { select: { id: true, name: true, image: true, username: true } },
-                _count: { select: { likes: true } },
-                likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-              },
-            },
-          },
-        },
-      },
+      include: postInclude(session.user.id),
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -56,7 +34,7 @@ export async function GET(
       nextCursor = next?.id
     }
 
-    const postsWithReactions = await withReactionSummaries(posts)
+    const postsWithReactions = await finalizePosts(posts, session.user.id)
 
     return NextResponse.json({ posts: postsWithReactions, nextCursor })
   } catch (error) {
@@ -97,17 +75,13 @@ export async function POST(
         authorId: uid,
         groupId,
       },
-      include: {
-        author: { select: { id: true, name: true, image: true, username: true } },
-        group: { select: { id: true, name: true, image: true } },
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: uid }, select: { userId: true, type: true } },
-        comments: { where: { parentId: null }, take: 3, orderBy: { createdAt: 'desc' }, include: { author: { select: { id: true, name: true, image: true, username: true } }, _count: { select: { likes: true, replies: true } }, likes: { where: { userId: uid }, select: { userId: true, type: true } }, replies: { orderBy: { createdAt: 'asc' }, include: { author: { select: { id: true, name: true, image: true, username: true } }, _count: { select: { likes: true } }, likes: { where: { userId: uid }, select: { userId: true, type: true } } } } } },
-      },
+      include: postInclude(uid),
     })
 
     // Touch group updatedAt for ordering
     await db.group.update({ where: { id: groupId }, data: { updatedAt: new Date() } })
+
+    await notifyMentions({ text: post.content, senderId: uid, senderName: session.user.name, link: `/posts/${post.id}`, where: 'post', groupId })
 
     return NextResponse.json({ ...post, reactions: [] }, { status: 201 })
   } catch (error) {

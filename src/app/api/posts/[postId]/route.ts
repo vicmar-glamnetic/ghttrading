@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { summarizeReactions } from '@/lib/postReactions'
+import { postInclude, finalizePosts } from '@/lib/postInclude'
 
 export async function GET(
   _req: Request,
@@ -15,26 +15,13 @@ export async function GET(
 
     const post = await db.post.findUnique({
       where: { id: postId },
-      include: {
-        author: { select: { id: true, name: true, image: true, username: true } },
-        _count: { select: { likes: true, comments: true } },
-        likes: { where: { userId: session.user.id }, select: { userId: true, type: true } },
-        comments: {
-          take: 20,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            author: { select: { id: true, name: true, image: true, username: true } },
-            _count: { select: { likes: true } },
-            likes: { where: { userId: session.user.id }, select: { userId: true } },
-          },
-        },
-      },
+      include: postInclude(session.user.id),
     })
 
     if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const summaries = await summarizeReactions([post.id])
-    return NextResponse.json({ ...post, reactions: summaries[post.id] ?? [] })
+    const [shaped] = await finalizePosts([post], session.user.id)
+    return NextResponse.json(shaped)
   } catch (error) {
     console.error('[POST_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
